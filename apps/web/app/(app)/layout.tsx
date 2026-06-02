@@ -13,6 +13,7 @@ import {
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { SyncStatusBar } from '@/components/shared/SyncStatusBar'
+import { PWAInstallBanner } from '@/components/shared/PWAInstallBanner'
 import type { TenantId } from '@/types/branded'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
@@ -114,6 +115,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-y-auto min-h-0">
         {children}
       </main>
+
+      <PWAInstallBanner />
 
       <nav className="shrink-0 bg-white border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
         {/* Constrain nav items to reasonable width on very wide screens */}
