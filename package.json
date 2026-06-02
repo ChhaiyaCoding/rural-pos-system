@@ -1,6 +1,10 @@
 {
   "name": "rural-pos-system",
   "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "pnpm": ">=9"
+  },
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
