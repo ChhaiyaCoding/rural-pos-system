@@ -99,4 +99,21 @@ export const customerService = {
     const now = nowISO()
     await db.customers.update(id, { deletedAt: now, updatedAt: now })
   },
+
+  /** Seed demo customers on first run (only if DB is empty) */
+  async seedIfEmpty(tenantId: TenantId): Promise<void> {
+    const count = await db.customers.where('tenantId').equals(tenantId).count()
+    if (count > 0) return
+
+    const demos = [
+      { nameKm: 'សុខ ដារ៉ា',   phone: '012 345 678' },
+      { nameKm: 'ចាន់ ប៊ុនណា',  phone: '098 765 432' },
+      { nameKm: 'លី សុភាព',    phone: null           },
+      { nameKm: 'ហ៊ុន វណ្ណៈ',  phone: '011 222 333' },
+      { nameKm: 'ម៉ៅ សុខលី',   phone: null           },
+    ]
+    for (const d of demos) {
+      await customerService.create({ tenantId, ...d })
+    }
+  },
 }

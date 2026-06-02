@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { X, Banknote, NotebookPen, Tag, Search, UserCheck, SplitSquareHorizontal } from 'lucide-react'
+import { X, Banknote, NotebookPen, Tag, Search, UserCheck, SplitSquareHorizontal, UserPlus } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { useSaleStore } from '@/store/sale.store'
+import { customerService } from '@/services/customer.service'
 import { formatKHR, subtractKHR, multiplyKHR, toKHR } from '@/lib/money'
 import type { KHR } from '@/types'
 import type { Customer } from '@/types'
@@ -81,6 +82,28 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
     c.nameKm.toLowerCase().includes(customerSearch.toLowerCase()) ||
     (c.phone ?? '').includes(customerSearch)
   )
+
+  /* Quick-add new customer inline ───────────────────────────── */
+  const [showAddCustomer, setShowAddCustomer] = useState(false)
+  const [newName,         setNewName]         = useState('')
+  const [newPhone,        setNewPhone]        = useState('')
+  const [addingCustomer,  setAddingCustomer]  = useState(false)
+
+  const handleQuickAdd = async () => {
+    if (!newName.trim() || addingCustomer) return
+    setAddingCustomer(true)
+    const result = await customerService.create({
+      tenantId: DEMO_TENANT,
+      nameKm:   newName.trim(),
+      phone:    newPhone.trim() || undefined,
+    })
+    if (result.ok) {
+      setSelectedCustomer(result.data)
+      setShowAddCustomer(false)
+      setNewName(''); setNewPhone('')
+    }
+    setAddingCustomer(false)
+  }
 
   /* Quick-cash chips based on discounted total ───────────────── */
   const quick = useMemo<KHR[]>(() => {
@@ -462,21 +485,79 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
                 ) : (
                   /* Search + list */
                   <div>
-                    <div className="relative mb-1.5">
-                      <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                      <input
-                        type="text"
-                        value={customerSearch}
-                        onChange={(e) => setCustomerSearch(e.target.value)}
-                        placeholder="ស្វែងរកឈ្មោះ..."
-                        className="w-full h-10 pl-8 pr-3 rounded-xl border border-slate-200 text-[13px] placeholder:text-slate-400 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400/20"
-                      />
+                    {/* Search bar + quick-add button */}
+                    <div className="flex gap-2 mb-1.5">
+                      <div className="relative flex-1">
+                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={customerSearch}
+                          onChange={(e) => { setCustomerSearch(e.target.value); setShowAddCustomer(false) }}
+                          placeholder="ស្វែងរកឈ្មោះ..."
+                          className="w-full h-10 pl-8 pr-3 rounded-xl border border-slate-200 text-[13px] placeholder:text-slate-400 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400/20"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setShowAddCustomer(v => !v); setCustomerSearch('') }}
+                        className={[
+                          'shrink-0 w-10 h-10 rounded-xl border flex items-center justify-center transition-colors',
+                          showAddCustomer
+                            ? 'border-primary-500 bg-primary-50 text-primary-700'
+                            : 'border-slate-200 bg-white text-slate-500 active:bg-slate-50',
+                        ].join(' ')}
+                        aria-label="បន្ថែមអតិថិជនថ្មី"
+                      >
+                        <UserPlus size={16} strokeWidth={2.25} />
+                      </button>
                     </div>
+
+                    {/* Quick-add form */}
+                    {showAddCustomer && (
+                      <div className="mb-2 p-3 rounded-xl border border-primary-200 bg-primary-50 space-y-2">
+                        <p className="text-[11px] font-bold text-primary-700 flex items-center gap-1">
+                          <UserPlus size={11} /> អតិថិជនថ្មី
+                        </p>
+                        <input
+                          type="text"
+                          value={newName}
+                          onChange={e => setNewName(e.target.value)}
+                          placeholder="ឈ្មោះ *"
+                          autoFocus
+                          className="w-full h-9 px-3 rounded-lg border border-primary-200 bg-white text-[13px] placeholder:text-slate-300 focus:outline-none focus:border-primary-400"
+                        />
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          value={newPhone}
+                          onChange={e => setNewPhone(e.target.value)}
+                          placeholder="លេខទូរស័ព្ទ (ស្រេចចិត្ត)"
+                          className="w-full h-9 px-3 rounded-lg border border-primary-200 bg-white text-[13px] placeholder:text-slate-300 focus:outline-none focus:border-primary-400"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleQuickAdd}
+                            disabled={!newName.trim() || addingCustomer}
+                            className="flex-1 h-9 rounded-lg bg-primary-600 text-white font-bold text-[12px] disabled:opacity-50 active:bg-primary-700 transition-colors"
+                          >
+                            {addingCustomer ? '…' : '+ បន្ថែម'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setShowAddCustomer(false); setNewName(''); setNewPhone('') }}
+                            className="px-3 h-9 rounded-lg border border-slate-200 text-slate-500 text-[12px] active:bg-slate-50"
+                          >
+                            បោះបង់
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="max-h-36 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100 bg-white">
                       {allCustomers.length === 0 ? (
                         <p className="px-3 py-4 text-center text-[12px] text-slate-400">
-                          ចូល Tab «បំណុល» ដើម្បីបន្ថែមអតិថិជន
+                          ចុច <span className="text-primary-600 font-bold">+</span> ដើម្បីបន្ថែមអតិថិជន
                         </p>
                       ) : filteredCustomers.length === 0 ? (
                         <p className="px-3 py-3 text-center text-[12px] text-slate-400">

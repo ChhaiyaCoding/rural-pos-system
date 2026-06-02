@@ -9,6 +9,7 @@ import { nowISO } from '@/lib/date'
 import { saleService } from '@/services/sale.service'
 import { debtService } from '@/services/debt.service'
 import { productService } from '@/services/product.service'
+import { customerService } from '@/services/customer.service'
 import { db } from '@/db'
 import type { KHR } from '@/types'
 import type { TenantId, UserId, CustomerId } from '@/types/branded'
@@ -64,9 +65,10 @@ export function POSScreen() {
     []
   ) ?? []
 
-  /* Seed mock products to DB on first run */
+  /* Seed mock data to DB on first run */
   useEffect(() => {
     productService.seedIfEmpty(DEMO_TENANT).catch(() => {})
+    customerService.seedIfEmpty(DEMO_TENANT).catch(() => {})
   }, [])
 
   /* Live shift/session activity — grows as sales complete (feels operational) */
