@@ -105,12 +105,12 @@ export const customerService = {
     const count = await db.customers.where('tenantId').equals(tenantId).count()
     if (count > 0) return
 
-    const demos = [
+    const demos: Array<{ nameKm: string; phone?: string }> = [
       { nameKm: 'សុខ ដារ៉ា',   phone: '012 345 678' },
       { nameKm: 'ចាន់ ប៊ុនណា',  phone: '098 765 432' },
-      { nameKm: 'លី សុភាព',    phone: null           },
+      { nameKm: 'លី សុភាព'                           },
       { nameKm: 'ហ៊ុន វណ្ណៈ',  phone: '011 222 333' },
-      { nameKm: 'ម៉ៅ សុខលី',   phone: null           },
+      { nameKm: 'ម៉ៅ សុខលី'                          },
     ]
     for (const d of demos) {
       await customerService.create({ tenantId, ...d })

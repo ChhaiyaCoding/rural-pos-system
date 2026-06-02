@@ -95,7 +95,7 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
     const result = await customerService.create({
       tenantId: DEMO_TENANT,
       nameKm:   newName.trim(),
-      phone:    newPhone.trim() || undefined,
+      ...(newPhone.trim() ? { phone: newPhone.trim() } : {}),
     })
     if (result.ok) {
       setSelectedCustomer(result.data)
