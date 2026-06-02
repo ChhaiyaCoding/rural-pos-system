@@ -1,0 +1,28 @@
+node_modules/
+.next/
+.turbo/
+dist/
+out/
+
+# Supabase
+supabase/.temp/
+supabase/functions/.env
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Claude Code internal settings (may contain API tokens)
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# PWA
+public/sw.js
+public/workbox-*.js
+public/worker-*.js
+public/fallback-*.js
+.vercel

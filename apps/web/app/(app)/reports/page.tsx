@@ -1,0 +1,552 @@
+'use client'
+
+import { useMemo, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { TrendingUp, BarChart2, List, Share2 } from 'lucide-react'
+import { db } from '@/db'
+import { formatKHR } from '@/lib/money'
+import { SaleDetailSheet } from '@/features/sales/components/SaleDetailSheet'
+import { ReportExportSheet } from '@/features/reports/components/ReportExportSheet'
+import { useStoreProfile } from '@/store/storeProfile.store'
+import type { Sale } from '@/types'
+import type { KHR, TenantId } from '@/types/branded'
+
+const DEMO_TENANT = 'tenant-demo' as TenantId
+
+/* ── Period config ────────────────────────────────────────── */
+const PERIODS = [
+  { key: 'today', label: 'ថ្ងៃនេះ', days: 1  },
+  { key: '7d',    label: '៧ ថ្ងៃ',   days: 7  },
+  { key: '30d',   label: '៣០ ថ្ងៃ',  days: 30 },
+] as const
+
+type PeriodKey = (typeof PERIODS)[number]['key']
+type ViewKey   = 'charts' | 'history'
+
+const DAY_SHORT = ['អា', 'ច', 'អ', 'ព', 'ព្រ', 'សុ', 'ស']
+
+const PAYMENT_CONFIG: Record<
+  Sale['paymentType'],
+  { label: string; cls: string; emoji: string }
+> = {
+  cash:    { label: 'សាច់ប្រាក់', cls: 'bg-success-100 text-success-700',  emoji: '💵' },
+  debt:    { label: 'ជំពាក់',    cls: 'bg-danger-100 text-danger-700',    emoji: '📒' },
+  partial: { label: 'ផ្នែក',     cls: 'bg-warning-100 text-warning-700',  emoji: '🔀' },
+}
+
+function getStartISO(key: PeriodKey): string {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  if (key === '7d')  d.setDate(d.getDate() - 6)
+  if (key === '30d') d.setDate(d.getDate() - 29)
+  return d.toISOString()
+}
+
+function dateLabel(iso: string): string {
+  const today     = new Date().toISOString().slice(0, 10)
+  const yesterday = new Date(Date.now() - 86400_000).toISOString().slice(0, 10)
+  if (iso === today)     return 'ថ្ងៃនេះ'
+  if (iso === yesterday) return 'ម្សិលមិញ'
+  const d = new Date(iso + 'T12:00:00')
+  return d.toLocaleDateString('km-KH', { day: 'numeric', month: 'short' })
+}
+
+/* ── Page ─────────────────────────────────────────────────── */
+export default function ReportsPage() {
+  const [period,     setPeriod]     = useState<PeriodKey>('7d')
+  const [view,       setView]       = useState<ViewKey>('charts')
+  const [detail,     setDetail]     = useState<Sale | null>(null)
+  const [showExport, setShowExport] = useState(false)
+
+  const { storeName } = useStoreProfile()
+
+  const startISO = useMemo(() => getStartISO(period), [period])
+  const days     = PERIODS.find(p => p.key === period)!.days
+
+  /* Single reactive query — includes voided sales for history display */
+  const report = useLiveQuery(async () => {
+    const [allSales, customers] = await Promise.all([
+      db.sales
+        .where('tenantId').equals(DEMO_TENANT)
+        .filter(s => s.createdAt >= startISO)
+        .toArray(),
+      db.customers.where('tenantId').equals(DEMO_TENANT).filter(c => !c.deletedAt).toArray(),
+    ])
+    const sales = allSales.filter(s => !s.isVoid)   // charts only count non-void
+    const items = sales.length
+      ? await db.saleItems.where('saleId').anyOf(sales.map(s => s.id)).toArray()
+      : []
+    return { sales, allSales, customers, items }
+  }, [startISO])
+
+  const sales     = report?.sales     ?? []
+  const allSales  = report?.allSales  ?? []
+  const customers = report?.customers ?? []
+  const items     = report?.items     ?? []
+  const isLoading = report === undefined
+
+  /* Aggregates */
+  const totalRevenue = sales.reduce((s, x) => (s + x.totalAmount) as KHR, 0 as KHR)
+  const cashSales    = sales.filter(s => s.paymentType === 'cash')
+  const debtSales    = sales.filter(s => s.paymentType !== 'cash')
+  const totalDebt    = customers.reduce((s, c) => s + (c.debtBalance as number), 0) as KHR
+  const debtorCount  = customers.filter(c => (c.debtBalance as number) > 0).length
+
+  /* Daily revenue for bar chart */
+  const dailyRevenue = useMemo(() => {
+    const map = new Map<string, number>()
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      map.set(d.toISOString().slice(0, 10), 0)
+    }
+    for (const sale of sales) {
+      const key = sale.createdAt.slice(0, 10)
+      if (map.has(key)) map.set(key, (map.get(key) ?? 0) + sale.totalAmount)
+    }
+    return [...map.entries()].map(([date, amount]) => ({ date, amount }))
+  }, [sales, days])
+
+  const maxDaily = Math.max(...dailyRevenue.map(d => d.amount), 1)
+
+  /* Top 5 products by revenue */
+  const topProducts = useMemo(() => {
+    const map = new Map<string, { name: string; qty: number; revenue: number }>()
+    for (const item of items) {
+      const prev = map.get(item.productId) ?? { name: item.nameKm, qty: 0, revenue: 0 }
+      map.set(item.productId, {
+        name:    item.nameKm,
+        qty:     prev.qty + item.qty,
+        revenue: prev.revenue + item.subtotal,
+      })
+    }
+    return [...map.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 5)
+  }, [items])
+
+  const maxProductRevenue = Math.max(...topProducts.map(p => p.revenue), 1)
+  const todayISO          = new Date().toISOString().slice(0, 10)
+
+  /* History: group ALL sales (incl. voided) by date, sorted desc */
+  const groupedSales = useMemo(() => {
+    const sorted = [...allSales].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    const map    = new Map<string, Sale[]>()
+    for (const sale of sorted) {
+      const key = sale.createdAt.slice(0, 10)
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(sale)
+    }
+    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]))
+  }, [allSales])
+
+  /* ─────────────────────────────────────────────────────── */
+  return (
+    <div className="flex flex-col h-full">
+
+      {/* ── Header ──────────────────────────────────────────── */}
+      <header className="shrink-0 px-4 pt-5 pb-3 bg-white border-b border-slate-200">
+        <div className="flex items-center justify-between">
+          <h1 className="text-[19px] font-bold text-slate-900">របាយការណ៍</h1>
+          <button
+            type="button"
+            onClick={() => setShowExport(true)}
+            className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-primary-50 border border-primary-200 text-primary-700 text-[12px] font-bold active:bg-primary-100 transition-colors"
+          >
+            <Share2 size={14} strokeWidth={2.5} />
+            Export
+          </button>
+        </div>
+
+        {/* View toggle */}
+        <div className="flex gap-1.5 mt-3">
+          <button
+            type="button"
+            onClick={() => setView('charts')}
+            className={[
+              'flex-1 h-9 rounded-xl text-[13px] font-bold transition-colors flex items-center justify-center gap-1.5',
+              view === 'charts'
+                ? 'bg-primary-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-500 active:bg-slate-200',
+            ].join(' ')}
+          >
+            <BarChart2 size={14} strokeWidth={2.5} />
+            ក្រាប
+          </button>
+          <button
+            type="button"
+            onClick={() => setView('history')}
+            className={[
+              'flex-1 h-9 rounded-xl text-[13px] font-bold transition-colors flex items-center justify-center gap-1.5',
+              view === 'history'
+                ? 'bg-primary-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-500 active:bg-slate-200',
+            ].join(' ')}
+          >
+            <List size={14} strokeWidth={2.5} />
+            ប្រវត្តិ
+          </button>
+        </div>
+
+        {/* Period tabs */}
+        <div className="flex gap-1.5 mt-2">
+          {PERIODS.map(p => (
+            <button
+              key={p.key}
+              type="button"
+              onClick={() => setPeriod(p.key)}
+              className={[
+                'flex-1 h-8 rounded-lg text-[12px] font-semibold transition-colors',
+                period === p.key
+                  ? 'bg-slate-800 text-white'
+                  : 'bg-slate-100 text-slate-500 active:bg-slate-200',
+              ].join(' ')}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {/* ── Body ─────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto">
+
+        {/* ══════════════════════════════════════════════════════
+            CHARTS VIEW
+        ══════════════════════════════════════════════════════ */}
+        {view === 'charts' && (
+          <div className="px-4 py-4 space-y-4 pb-8">
+
+            {/* Summary cards */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-2xl border bg-primary-50 border-primary-100 p-3">
+                <p className="text-[18px] mb-1.5">💰</p>
+                <p className="text-[10px] font-bold text-primary-500 uppercase tracking-wide leading-none mb-1.5">ចំណូល</p>
+                <p className="text-[13px] font-extrabold text-primary-800 tabular-nums leading-tight break-all">
+                  {isLoading ? '…' : formatKHR(totalRevenue)}
+                </p>
+              </div>
+              <div className="rounded-2xl border bg-success-50 border-success-100 p-3">
+                <p className="text-[18px] mb-1.5">🛒</p>
+                <p className="text-[10px] font-bold text-success-500 uppercase tracking-wide leading-none mb-1.5">ការលក់</p>
+                <p className="text-[20px] font-extrabold text-success-800 tabular-nums leading-tight">
+                  {isLoading ? '…' : sales.length}
+                  <span className="text-[11px] font-semibold ml-0.5 opacity-70">ដង</span>
+                </p>
+              </div>
+              <div className="rounded-2xl border bg-danger-50 border-danger-100 p-3">
+                <p className="text-[18px] mb-1.5">📒</p>
+                <p className="text-[10px] font-bold text-danger-500 uppercase tracking-wide leading-none mb-1.5">ជំពាក់</p>
+                <p className="text-[13px] font-extrabold text-danger-800 tabular-nums leading-tight break-all">
+                  {isLoading ? '…' : formatKHR(totalDebt)}
+                </p>
+              </div>
+            </div>
+
+            {/* Bar chart */}
+            {days > 1 && (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-card px-4 pt-4 pb-3">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                  ចំណូលប្រចាំថ្ងៃ
+                </p>
+                <div className="flex items-end gap-0.5" style={{ height: 80 }}>
+                  {dailyRevenue.map(({ date, amount }) => {
+                    const heightPct = amount > 0 ? Math.max((amount / maxDaily) * 100, 6) : 0
+                    const isToday   = date === todayISO
+                    const d         = new Date(date + 'T12:00:00')
+                    const label     = days <= 7
+                      ? DAY_SHORT[d.getDay()]
+                      : String(d.getDate())
+                    return (
+                      <div key={date} className="flex-1 flex flex-col items-center gap-1 h-full min-w-0">
+                        <div className="flex-1 w-full flex items-end">
+                          <div
+                            className={['w-full rounded-t-sm transition-all duration-300', isToday ? 'bg-primary-500' : 'bg-primary-200'].join(' ')}
+                            style={{ height: `${heightPct}%` }}
+                          />
+                        </div>
+                        <span className={['text-[7px] leading-none shrink-0 font-medium', isToday ? 'text-primary-600 font-bold' : 'text-slate-400'].join(' ')}>
+                          {label}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="flex justify-between mt-2 px-0.5">
+                  <span className="text-[9px] text-slate-300">0</span>
+                  <span className="text-[9px] text-slate-300">{formatKHR(maxDaily as KHR)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Payment breakdown */}
+            {sales.length > 0 && (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-card px-4 pt-4 pb-4">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                  របៀបទូទាត់
+                </p>
+                <div className="space-y-3">
+                  <PaymentRow
+                    emoji="💵" label="សាច់ប្រាក់"
+                    count={cashSales.length} total={sales.length}
+                    amount={cashSales.reduce((s, x) => (s + x.totalAmount) as KHR, 0 as KHR)}
+                    barClass="bg-success-500"
+                  />
+                  <PaymentRow
+                    emoji="📒" label="ជំពាក់"
+                    count={debtSales.length} total={sales.length}
+                    amount={debtSales.reduce((s, x) => (s + x.totalAmount) as KHR, 0 as KHR)}
+                    barClass="bg-danger-400"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Top products */}
+            {topProducts.length > 0 && (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-card px-4 pt-4 pb-4">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                  ទំនិញលក់ច្រើន
+                </p>
+                <div className="space-y-3.5">
+                  {topProducts.map((p, i) => (
+                    <div key={`${p.name}-${i}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          <span className={[
+                            'shrink-0 w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-black',
+                            i === 0 ? 'bg-yellow-400 text-white'
+                            : i === 1 ? 'bg-slate-400 text-white'
+                            : i === 2 ? 'bg-amber-600 text-white'
+                            : 'bg-slate-100 text-slate-500',
+                          ].join(' ')}>
+                            {i + 1}
+                          </span>
+                          <span className="text-[13px] font-semibold text-slate-800 truncate">{p.name}</span>
+                        </div>
+                        <span className="text-[12px] font-bold text-slate-700 tabular-nums ml-2 shrink-0">
+                          {formatKHR(p.revenue as KHR)}
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary-400 rounded-full transition-all duration-500"
+                          style={{ width: `${(p.revenue / maxProductRevenue) * 100}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-0.5">លក់ {p.qty} ដង</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Debt summary */}
+            {debtorCount > 0 && (
+              <div className="rounded-2xl border border-danger-200 bg-danger-50 px-4 py-3.5 flex items-center justify-between">
+                <div>
+                  <p className="text-[13px] font-bold text-danger-700">ជំពាក់សរុបទាំងអស់</p>
+                  <p className="text-[11px] text-danger-500 mt-0.5">{debtorCount} នាក់ជំពាក់</p>
+                </div>
+                <p className="text-[18px] font-extrabold text-danger-700 tabular-nums">{formatKHR(totalDebt)}</p>
+              </div>
+            )}
+
+            {/* Empty */}
+            {!isLoading && sales.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
+                  <TrendingUp size={32} strokeWidth={1.5} className="text-slate-300" />
+                </div>
+                <p className="text-[15px] font-semibold text-slate-700">មិនទាន់មានទិន្នន័យ</p>
+                <p className="text-[13px] text-slate-400 leading-relaxed">ចាប់ផ្តើមលក់ ដើម្បីមើលរបាយការណ៍</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════
+            HISTORY VIEW
+        ══════════════════════════════════════════════════════ */}
+        {view === 'history' && (
+          <div className="pb-8">
+
+            {/* Summary bar */}
+            {sales.length > 0 && (
+              <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
+                <span className="text-[12px] text-slate-500">
+                  ការលក់ <span className="font-bold text-slate-800">{sales.length}</span> ដង
+                </span>
+                <span className="text-[14px] font-extrabold text-primary-700 tabular-nums">
+                  {formatKHR(totalRevenue)}
+                </span>
+              </div>
+            )}
+
+            {/* List */}
+            {isLoading ? (
+              <div className="flex justify-center py-16">
+                <p className="text-[13px] text-slate-400">កំពុងផ្ទុក…</p>
+              </div>
+            ) : groupedSales.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-center px-6">
+                <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
+                  <List size={32} strokeWidth={1.5} className="text-slate-300" />
+                </div>
+                <p className="text-[15px] font-semibold text-slate-700">គ្មានការលក់</p>
+                <p className="text-[13px] text-slate-400">
+                  ក្នុងអំឡុងពេល{PERIODS.find(p => p.key === period)!.label}នេះ
+                </p>
+              </div>
+            ) : (
+              groupedSales.map(([dateISO, daySales]) => {
+                const dayTotal = daySales.reduce((s, x) => s + x.totalAmount, 0) as KHR
+                return (
+                  <div key={dateISO}>
+                    {/* Date group header */}
+                    <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-y border-slate-100 sticky top-0 z-10">
+                      <span className="text-[12px] font-bold text-slate-600">
+                        {dateLabel(dateISO)}
+                      </span>
+                      <span className="text-[11px] font-semibold text-slate-500 tabular-nums">
+                        {daySales.length} ដង · {formatKHR(dayTotal)}
+                      </span>
+                    </div>
+
+                    {/* Sale rows */}
+                    <div className="divide-y divide-slate-50">
+                      {daySales.map((sale) => {
+                        const pt        = PAYMENT_CONFIG[sale.paymentType]
+                        const t         = new Date(sale.createdAt)
+                        const tStr      = t.toLocaleTimeString('km-KH', { hour: '2-digit', minute: '2-digit', hour12: false })
+                        const itemCount = items.filter(i => i.saleId === sale.id).length
+                        const debtAmt   = sale.totalAmount - sale.paidAmount
+                        const isVoid    = sale.isVoid
+
+                        return (
+                          <button
+                            key={sale.id}
+                            type="button"
+                            onClick={() => setDetail(sale)}
+                            className={[
+                              'w-full flex items-center gap-3 px-4 py-3.5 transition-colors text-left',
+                              isVoid ? 'opacity-50 bg-slate-50' : 'active:bg-slate-50',
+                            ].join(' ')}
+                          >
+                            {/* Payment icon */}
+                            <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-[20px] ${isVoid ? 'bg-slate-100 text-slate-400' : pt.cls}`}>
+                              {isVoid ? '❌' : pt.emoji}
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className={['text-[13px] font-semibold shrink-0', isVoid ? 'text-slate-400 line-through' : 'text-slate-800'].join(' ')}>
+                                  {pt.label}
+                                </span>
+                                {isVoid && (
+                                  <span className="text-[10px] font-bold text-danger-500 bg-danger-50 rounded-full px-1.5 py-0.5 shrink-0">
+                                    លុបហើយ
+                                  </span>
+                                )}
+                                {!isVoid && sale.note && (
+                                  <span className="text-[11px] text-slate-400 truncate">
+                                    · {sale.note}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums">
+                                {tStr}
+                                {itemCount > 0 && ` · ${itemCount} មុខ`}
+                              </p>
+                            </div>
+
+                            {/* Amount */}
+                            <div className="shrink-0 text-right">
+                              <p className={['text-[15px] font-bold tabular-nums', isVoid ? 'line-through text-slate-400' : 'text-slate-900'].join(' ')}>
+                                {formatKHR(sale.totalAmount)}
+                              </p>
+                              {!isVoid && sale.paymentType === 'partial' && debtAmt > 0 && (
+                                <p className="text-[10px] text-danger-500 tabular-nums mt-0.5">
+                                  ជំពាក់ {formatKHR(debtAmt as KHR)}
+                                </p>
+                              )}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
+
+      </div>
+
+      {/* Sale detail sheet */}
+      {detail && (
+        <SaleDetailSheet
+          sale={detail}
+          onClose={() => setDetail(null)}
+          onVoided={() => setDetail(null)}
+        />
+      )}
+
+      {/* Export sheet */}
+      {showExport && (
+        <ReportExportSheet
+          onClose={() => setShowExport(false)}
+          periodLabel={PERIODS.find(p => p.key === period)!.label}
+          storeName={storeName}
+          totalRevenue={totalRevenue}
+          salesCount={sales.length}
+          cashCount={cashSales.length}
+          cashAmount={cashSales.reduce((s, x) => (s + x.totalAmount) as KHR, 0 as KHR)}
+          debtCount={debtSales.length}
+          debtAmount={debtSales.reduce((s, x) => (s + x.totalAmount) as KHR, 0 as KHR)}
+          debtorCount={debtorCount}
+          totalDebt={totalDebt}
+          topProducts={topProducts}
+          dateRange={(() => {
+            const d = new Date()
+            const end = d.toLocaleDateString('km-KH', { day: 'numeric', month: 'short' })
+            if (period === 'today') return end
+            const days = PERIODS.find(p => p.key === period)!.days
+            const start = new Date(d)
+            start.setDate(start.getDate() - (days - 1))
+            return `${start.toLocaleDateString('km-KH', { day: 'numeric', month: 'short' })} – ${end}`
+          })()}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ── PaymentRow helper ────────────────────────────────────── */
+function PaymentRow({
+  emoji, label, count, total, amount, barClass,
+}: {
+  emoji: string; label: string
+  count: number; total: number
+  amount: KHR;   barClass: string
+}) {
+  const pct = total === 0 ? 0 : Math.round((count / total) * 100)
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[14px]">{emoji}</span>
+          <span className="text-[13px] font-semibold text-slate-700">{label}</span>
+          <span className="text-[11px] text-slate-400">{count} ដង</span>
+        </div>
+        <div className="flex items-baseline gap-1">
+          <span className="text-[12px] font-bold text-slate-800 tabular-nums">{formatKHR(amount)}</span>
+          <span className="text-[10px] text-slate-400">{pct}%</span>
+        </div>
+      </div>
+      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+        <div className={`h-full ${barClass} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  )
+}

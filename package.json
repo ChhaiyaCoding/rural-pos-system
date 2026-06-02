@@ -1,0 +1,14 @@
+{
+  "name": "rural-pos-system",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "db:types": "supabase gen types typescript --local > apps/web/src/types/supabase.ts"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3"
+  }
+}

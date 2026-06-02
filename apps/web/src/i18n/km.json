@@ -1,0 +1,109 @@
+{
+  "nav": {
+    "sales":     "លក់",
+    "inventory": "ស្តុក",
+    "debt":      "បំណុល",
+    "reports":   "របាយការណ៍",
+    "settings":  "ការកំណត់"
+  },
+  "common": {
+    "save":      "រក្សាទុក",
+    "cancel":    "បោះបង់",
+    "delete":    "លុប",
+    "confirm":   "បញ្ជាក់",
+    "search":    "ស្វែងរក",
+    "add":       "បន្ថែម",
+    "edit":      "កែប្រែ",
+    "back":      "ត្រឡប់",
+    "done":      "រួចរាល់",
+    "loading":   "កំពុងផ្ទុក...",
+    "error":     "មានបញ្ហា",
+    "retry":     "ព្យាយាមម្តងទៀត",
+    "total":     "សរុប",
+    "date":      "កាលបរិច្ឆេទ",
+    "note":      "កំណត់ចំណាំ"
+  },
+  "auth": {
+    "email":        "អ៊ីមែល",
+    "password":     "លេខសម្ងាត់",
+    "login":        "ចូលប្រើ",
+    "logout":       "ចេញពីគណនី",
+    "appName":      "POS ហាង",
+    "appTagline":   "ប្រព័ន្ធគ្រប់គ្រងការលក់"
+  },
+  "sales": {
+    "title":         "លក់ទំនិញ",
+    "scanBarcode":   "ស្កែនបាកូដ",
+    "searchProduct": "ស្វែងរកទំនិញ",
+    "cart":          "រទេះ",
+    "emptyCart":     "រទេះទំនិញទទេ",
+    "checkout":      "ទូទាត់",
+    "paymentType": {
+      "cash":    "បង់ជាសាច់ប្រាក់",
+      "debt":    "ជំពាក់",
+      "partial": "បង់មួយផ្នែក"
+    },
+    "totalAmount": "ចំនួនទឹកប្រាក់សរុប",
+    "paidAmount":  "ចំនួនទឹកប្រាក់បានបង់",
+    "change":      "ប្រាក់អាប់",
+    "confirmSale": "បញ្ជាក់ការលក់",
+    "saleSuccess": "ការលក់បានជោគជ័យ",
+    "printReceipt":"បោះពុម្ពវិក្កយបត្រ",
+    "shareReceipt":"ចែករំលែកវិក្កយបត្រ"
+  },
+  "inventory": {
+    "title":        "ស្តុកទំនិញ",
+    "addProduct":   "បន្ថែមទំនិញ",
+    "productName":  "ឈ្មោះទំនិញ",
+    "barcode":      "បាកូដ",
+    "unit":         "ឯកតា",
+    "costPrice":    "តម្លៃទិញ",
+    "sellPrice":    "តម្លៃលក់",
+    "stockQty":     "ចំនួននៅក្នុងស្តុក",
+    "lowStock":     "ស្តុកស្ទើរអស់",
+    "outOfStock":   "ស្តុកអស់",
+    "adjustStock":  "កែប្រែស្តុក"
+  },
+  "debt": {
+    "title":         "បំណុលអតិថិជន",
+    "addCustomer":   "បន្ថែមអតិថិជន",
+    "customerName":  "ឈ្មោះអតិថិជន",
+    "phone":         "លេខទូរស័ព្ទ",
+    "debtBalance":   "ចំនួនបំណុល",
+    "recordPayment": "ទទួលការទូទាត់",
+    "paymentAmount": "ចំនួនទឹកប្រាក់",
+    "history":       "ប្រវត្តិការទូទាត់",
+    "charge":        "ជំពាក់",
+    "payment":       "ទូទាត់",
+    "noDebt":        "គ្មានបំណុល"
+  },
+  "reports": {
+    "title":        "របាយការណ៍",
+    "dailySummary": "សង្ខេបប្រចាំថ្ងៃ",
+    "totalSales":   "ការលក់សរុប",
+    "topProducts":  "ទំនិញលក់ដាច់ជាងគេ",
+    "debtAging":    "ការវិភាគបំណុល"
+  },
+  "settings": {
+    "title":       "ការកំណត់",
+    "shopInfo":    "ព័ត៌មានហាង",
+    "shopName":    "ឈ្មោះហាង",
+    "users":       "គ្រប់គ្រងអ្នកប្រើ",
+    "subscription":"ការជាវ",
+    "backup":      "ការបម្រុងទុកទិន្នន័យ",
+    "syncStatus":  "ស្ថានភាព Sync"
+  },
+  "sync": {
+    "offline":  "គ្មានអ៊ីនធឺណិត — ទិន្នន័យត្រូវបានរក្សាទុក",
+    "syncing":  "កំពុង Sync...",
+    "pending":  "{{count}} កំណត់ត្រាកំពុងរង់ចាំ"
+  },
+  "errors": {
+    "productNotFound":     "រកមិនឃើញទំនិញ",
+    "customerNotFound":    "រកមិនឃើញអតិថិជន",
+    "insufficientStock":   "ស្តុកមិនគ្រប់គ្រាន់",
+    "invalidPayment":      "ការទូទាត់មិនត្រឹមត្រូវ",
+    "syncFailed":          "ការ Sync បរាជ័យ — នឹងព្យាយាមម្តងទៀត",
+    "unknown":             "មានបញ្ហាមិនស្គាល់"
+  }
+}
