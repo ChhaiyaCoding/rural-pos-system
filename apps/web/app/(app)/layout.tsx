@@ -59,46 +59,43 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     []
   ) ?? 0
 
-  /* ── Low-stock notification ──────────────────────────────────── */
-  const prevAlertRef    = useRef<number | null>(null)
-  const notifiedIdsRef  = useRef<Set<string>>(new Set())
+  /* ── Low-stock notification (useEffect — proper side-effect) ── */
+  const mountedRef     = useRef(false)
+  const notifiedIdsRef = useRef<Set<string>>(new Set())
 
-  useLiveQuery(async () => {
-    // Only run after first load (prevAlertRef initialized)
-    if (prevAlertRef.current === null) {
-      prevAlertRef.current = 0
-      return
-    }
+  useEffect(() => {
+    // Skip on first mount — only notify when count changes after load
+    if (!mountedRef.current) { mountedRef.current = true; return }
+    if (stockAlertCount === 0) return
 
-    const lowProducts = await db.products
+    // Fetch product details for newly-low items
+    db.products
       .where('tenantId').equals(DEMO_TENANT)
       .filter(p => !p.deletedAt && p.stockQty <= p.lowStockThreshold)
       .toArray()
+      .then(lowProducts => {
+        const newlyLow = lowProducts.filter(p => !notifiedIdsRef.current.has(p.id))
+        if (newlyLow.length === 0) return
+        newlyLow.forEach(p => notifiedIdsRef.current.add(p.id))
 
-    // Find newly-low products not yet notified this session
-    const newlyLow = lowProducts.filter(p => !notifiedIdsRef.current.has(p.id))
-
-    if (newlyLow.length === 0) return
-
-    // Mark as notified so we don't repeat
-    newlyLow.forEach(p => notifiedIdsRef.current.add(p.id))
-
-    // Show one grouped notification for all new alerts
-    if (newlyLow.length === 1) {
-      const p = newlyLow[0]!
-      const isOut = p.stockQty === 0
-      showNotif(
-        isOut ? '⚠️ អស់ស្តុក!' : '⚠️ ស្តុកតិច!',
-        isOut
-          ? `${p.nameKm} — អស់ស្តុក`
-          : `${p.nameKm} — នៅ ${p.stockQty} ${p.unit} (ដល់កំណត់ ${p.lowStockThreshold})`
-      )
-    } else {
-      showNotif(
-        '⚠️ ស្តុកទាប!',
-        `ទំនិញ ${newlyLow.length} មុខ ស្តុកចុះទាប — ចូល ស្តុក ដើម្បីពិនិត្យ`
-      )
-    }
+        if (newlyLow.length === 1) {
+          const p = newlyLow[0]!
+          const isOut = p.stockQty === 0
+          showNotif(
+            isOut ? '⚠️ អស់ស្តុក!' : '⚠️ ស្តុកតិច!',
+            isOut
+              ? `${p.nameKm} — អស់ស្តុក`
+              : `${p.nameKm} — នៅ ${p.stockQty} ${p.unit} (ដល់កំណត់ ${p.lowStockThreshold})`
+          )
+        } else {
+          showNotif(
+            '⚠️ ស្តុកទាប!',
+            `ទំនិញ ${newlyLow.length} មុខ ស្តុកចុះទាប — ចូល ស្តុក ដើម្បីពិនិត្យ`
+          )
+        }
+      })
+      .catch(() => { /* silent */ })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stockAlertCount])
 
   /** Customers who currently owe money */

@@ -110,7 +110,8 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
   const [deleting,   setDeleting]   = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef   = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
 
   /* ── Barcode duplicate check ───────────────────────── */
   useEffect(() => {
@@ -260,14 +261,34 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
 
               {/* Buttons */}
               <div className="flex-1 space-y-2">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full h-9 rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-slate-700 flex items-center justify-center gap-2 active:bg-slate-50 transition-colors"
-                >
-                  <Camera size={15} className="text-slate-400" />
-                  {imageUri ? 'ប្តូររូបភាព' : 'ជ្រើសរូប / ថតរូប'}
-                </button>
+                {/* Two-button row: Camera | Gallery */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="h-9 rounded-xl border border-primary-200 bg-primary-50 text-[12px] font-semibold text-primary-700 flex items-center justify-center gap-1.5 active:bg-primary-100 transition-colors"
+                  >
+                    <Camera size={14} strokeWidth={2.25} />
+                    ថតរូប
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-9 rounded-xl border border-slate-200 bg-white text-[12px] font-semibold text-slate-600 flex items-center justify-center gap-1.5 active:bg-slate-50 transition-colors"
+                  >
+                    🖼️ ជ្រើសរូប
+                  </button>
+                </div>
+                {/* Camera input — opens rear camera directly */}
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleImagePick}
+                />
+                {/* Gallery input — photo library picker */}
                 <input
                   ref={fileInputRef}
                   type="file"
