@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { X, Printer, Share2, RotateCcw, CheckCircle2, Check } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { X, Printer, Share2, RotateCcw, CheckCircle2, Check, ImageDown } from 'lucide-react'
 import { formatKHR, toKHR, addKHR } from '@/lib/money'
 import { formatDateTimeKm } from '@/lib/date'
 import { useStoreProfile } from '@/store/storeProfile.store'
@@ -116,7 +116,10 @@ function buildShareText(data: ReceiptData, storeName = 'ហាងលក់ទំ
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function SaleReceiptSheet({ data, onClose }: Props) {
-  const [copied, setCopied] = useState(false)
+  const [copied,        setCopied]        = useState(false)
+  const [capturing,     setCapturing]     = useState(false)
+  const [imageDone,     setImageDone]     = useState(false)
+  const receiptRef = useRef<HTMLDivElement>(null)
   const {
     storeName, storeAddress, storePhone, storeLogo,
     cashierName: defaultCashier, receiptFooter,
@@ -134,9 +137,8 @@ export function SaleReceiptSheet({ data, onClose }: Props) {
   const displayInitial = displayName.charAt(0) || 'ហ'
   const cashier        = data.cashierName ?? defaultCashier
 
-  /* ── Share / copy ────────────────────────────────────────────── */
+  /* ── Share text (copy fallback) ─────────────────────────────── */
   const handleShare = async () => {
-    // Build share text with live store name
     const text = buildShareText(data, displayName, receiptShowPhone ? displayPhone : '', displayFooter, receiptHeaderNote.trim())
     if (typeof navigator !== 'undefined' && navigator.share) {
       await navigator.share({ title: `វិក្កយបត្រ #${data.receiptNumber}`, text })
@@ -144,6 +146,49 @@ export function SaleReceiptSheet({ data, onClose }: Props) {
       await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 2200)
+    }
+  }
+
+  /* ── Capture receipt as image → share / download ────────────── */
+  const handleShareImage = async () => {
+    if (!receiptRef.current || capturing) return
+    setCapturing(true)
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const canvas = await html2canvas(receiptRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,            // retina quality
+        useCORS: true,
+        logging: false,
+      })
+
+      const fileName = `receipt-${data.receiptNumber}.png`
+
+      // Try Web Share API with file (mobile: Telegram, FB Messenger, etc.)
+      if (navigator.canShare) {
+        const blob = await new Promise<Blob>((res, rej) =>
+          canvas.toBlob((b) => b ? res(b) : rej(new Error('toBlob failed')), 'image/png')
+        )
+        const file = new File([blob], fileName, { type: 'image/png' })
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: `វិក្កយបត្រ #${data.receiptNumber}` })
+          setImageDone(true)
+          setTimeout(() => setImageDone(false), 2500)
+          return
+        }
+      }
+
+      // Fallback: download PNG
+      const link = document.createElement('a')
+      link.download = fileName
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+      setImageDone(true)
+      setTimeout(() => setImageDone(false), 2500)
+    } catch {
+      // silent — user dismissed share sheet or unsupported
+    } finally {
+      setCapturing(false)
     }
   }
 
@@ -191,8 +236,8 @@ export function SaleReceiptSheet({ data, onClose }: Props) {
         {/* ══ Receipt paper (scrollable) ════════════════════════ */}
         <div className="flex-1 overflow-y-auto min-h-0 p-4">
 
-          {/* Paper card */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
+          {/* Paper card — ref for image capture */}
+          <div ref={receiptRef} className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
 
             {/* ── Perforation top ─────────────────────────────── */}
             <div className="flex items-center gap-[3px] px-1 py-2 border-b border-dashed border-slate-300">
@@ -393,30 +438,38 @@ export function SaleReceiptSheet({ data, onClose }: Props) {
               onClick={handlePrint}
             />
 
-            {/* Share / Copy */}
+            {/* Share image → Telegram / FB / download */}
+            <ActionButton
+              icon={
+                capturing ? (
+                  <span className="w-[18px] h-[18px] border-2 border-primary-400 border-t-transparent rounded-full animate-spin inline-block" />
+                ) : imageDone ? (
+                  <Check size={18} strokeWidth={2.5} className="text-success-600" />
+                ) : (
+                  <ImageDown size={18} strokeWidth={2} />
+                )
+              }
+              label={capturing ? 'កំពុងរៀបចំ…' : imageDone ? 'រួចហើយ!' : 'រូបភាព'}
+              onClick={handleShareImage}
+              active={imageDone}
+              loading={capturing}
+            />
+
+            {/* Share text */}
             <ActionButton
               icon={copied
                 ? <Check size={18} strokeWidth={2.5} className="text-success-600" />
                 : <Share2 size={18} strokeWidth={2} />
               }
-              label={copied ? 'បានចម្លង!' : 'ចែករំលែក'}
+              label={copied ? 'បានចម្លង!' : 'អត្ថបទ'}
               onClick={handleShare}
               active={copied}
             />
 
-            {/* Refund — future-ready, disabled */}
-            <ActionButton
-              icon={<RotateCcw size={18} strokeWidth={2} />}
-              label="សងវិញ"
-              disabled
-              danger
-            />
-
           </div>
 
-          {/* Refund coming-soon note */}
           <p className="text-center text-[10px] text-slate-300 mt-2">
-            * មុខងារ «សងវិញ» នឹងមានក្នុង version បន្ទាប់
+            «រូបភាព» → share ទៅ Telegram · Facebook ផ្ទាល់
           </p>
         </div>
 
@@ -438,6 +491,7 @@ function ActionButton({
   disabled = false,
   danger = false,
   active = false,
+  loading = false,
 }: {
   icon: React.ReactNode
   label: string
@@ -445,22 +499,25 @@ function ActionButton({
   disabled?: boolean
   danger?: boolean
   active?: boolean
+  loading?: boolean
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || loading}
       className={[
         'flex flex-col items-center justify-center gap-1.5 h-[60px] rounded-xl border transition-colors',
         'min-h-0 min-w-0',
         disabled
           ? 'border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed opacity-60'
-          : danger
-            ? 'border-danger-200 bg-danger-50 text-danger-400 active:bg-danger-100'
-            : active
-              ? 'border-success-200 bg-success-50 text-success-600'
-              : 'border-slate-200 bg-slate-50 text-slate-600 active:bg-slate-100',
+          : loading
+            ? 'border-primary-200 bg-primary-50 text-primary-500'
+            : danger
+              ? 'border-danger-200 bg-danger-50 text-danger-400 active:bg-danger-100'
+              : active
+                ? 'border-success-200 bg-success-50 text-success-600'
+                : 'border-slate-200 bg-slate-50 text-slate-600 active:bg-slate-100',
       ].join(' ')}
     >
       {icon}

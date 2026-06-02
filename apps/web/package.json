@@ -17,6 +17,7 @@
     "@zxing/library": "^0.22.0",
     "dexie": "^4.0.10",
     "dexie-react-hooks": "^1.1.7",
+    "html2canvas": "^1.4.1",
     "lucide-react": "^0.469.0",
     "next": "^15.3.2",
     "next-intl": "^3.26.3",
