@@ -27,3 +27,8 @@ public/worker-*.js
 public/fallback-*.js
 .vercel
 apps/web/*.bak
+
+# Monorepo tooling — not needed by Vercel (root dir = apps/web)
+turbo.json
+pnpm-workspace.yaml
+pnpm-lock.yaml
