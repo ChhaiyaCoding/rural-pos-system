@@ -5,9 +5,18 @@ export async function middleware(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  // MVP mode: if Supabase is not configured yet, skip auth entirely so the
-  // UI is testable out of the box. Remove this guard once auth is wired up.
+  // Demo mode: if Supabase is not configured, check for demo session cookie.
+  // Demo login sets `pos-auth` in localStorage (Zustand persist) — we read a
+  // lightweight `pos-demo-session` cookie that the login page sets on demo sign-in.
   if (!supabaseUrl || !supabaseKey) {
+    const isLoginRoute = request.nextUrl.pathname === '/login'
+    const hasDemo = request.cookies.has('pos-demo-session')
+    if (!hasDemo && !isLoginRoute) {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    if (hasDemo && isLoginRoute) {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
     return NextResponse.next({ request })
   }
 
