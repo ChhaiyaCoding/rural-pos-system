@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useRef } from 'react'
 import {
   ShoppingCart,
   Package,
@@ -16,6 +17,23 @@ import type { TenantId } from '@/types/branded'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
+/* ── Notification helpers ────────────────────────────────────────── */
+
+/** Request notification permission once — silently if already decided */
+async function requestNotifPermission() {
+  if (typeof Notification === 'undefined') return
+  if (Notification.permission === 'default') {
+    await Notification.requestPermission()
+  }
+}
+
+/** Show a browser notification (requires permission granted) */
+function showNotif(title: string, body: string, icon = '/icons/icon-192x192.png') {
+  if (typeof Notification === 'undefined') return
+  if (Notification.permission !== 'granted') return
+  new Notification(title, { body, icon, badge: icon, tag: 'low-stock' })
+}
+
 const NAV = [
   { href: '/',          icon: ShoppingCart, label: 'លក់'       },
   { href: '/inventory', icon: Package,      label: 'ស្តុក'      },
@@ -27,6 +45,9 @@ const NAV = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
+  /* ── Notification permission (once on mount) ─────────────────── */
+  useEffect(() => { requestNotifPermission() }, [])
+
   /* ── Alert counts (reactive) ────────────────────────────────── */
 
   /** Products where stock ≤ threshold (includes 0 = out-of-stock) */
@@ -37,6 +58,48 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       .count(),
     []
   ) ?? 0
+
+  /* ── Low-stock notification ──────────────────────────────────── */
+  const prevAlertRef    = useRef<number | null>(null)
+  const notifiedIdsRef  = useRef<Set<string>>(new Set())
+
+  useLiveQuery(async () => {
+    // Only run after first load (prevAlertRef initialized)
+    if (prevAlertRef.current === null) {
+      prevAlertRef.current = 0
+      return
+    }
+
+    const lowProducts = await db.products
+      .where('tenantId').equals(DEMO_TENANT)
+      .filter(p => !p.deletedAt && p.stockQty <= p.lowStockThreshold)
+      .toArray()
+
+    // Find newly-low products not yet notified this session
+    const newlyLow = lowProducts.filter(p => !notifiedIdsRef.current.has(p.id))
+
+    if (newlyLow.length === 0) return
+
+    // Mark as notified so we don't repeat
+    newlyLow.forEach(p => notifiedIdsRef.current.add(p.id))
+
+    // Show one grouped notification for all new alerts
+    if (newlyLow.length === 1) {
+      const p = newlyLow[0]!
+      const isOut = p.stockQty === 0
+      showNotif(
+        isOut ? '⚠️ អស់ស្តុក!' : '⚠️ ស្តុកតិច!',
+        isOut
+          ? `${p.nameKm} — អស់ស្តុក`
+          : `${p.nameKm} — នៅ ${p.stockQty} ${p.unit} (ដល់កំណត់ ${p.lowStockThreshold})`
+      )
+    } else {
+      showNotif(
+        '⚠️ ស្តុកទាប!',
+        `ទំនិញ ${newlyLow.length} មុខ ស្តុកចុះទាប — ចូល ស្តុក ដើម្បីពិនិត្យ`
+      )
+    }
+  }, [stockAlertCount])
 
   /** Customers who currently owe money */
   const debtorCount = useLiveQuery(
