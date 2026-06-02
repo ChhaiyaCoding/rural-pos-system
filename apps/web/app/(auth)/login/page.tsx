@@ -58,17 +58,17 @@ export default function LoginPage() {
 
       if (authError) { setError(toKhmerError(authError.message)); return }
 
-      const uid = data.user?.id as UserId | undefined
+      const uid = data.user?.id ? (data.user.id as UserId) : undefined
       if (!uid) { setError('មានបញ្ហា — សូម ព្យាយាម ម្ដងទៀត'); return }
 
-      // Fetch tenant from profile table
+      // Fetch tenant from profile table (cast uid to string — Supabase eq doesn't accept branded types)
       const { data: profile } = await supabase
         .from('profiles')
         .select('tenant_id')
-        .eq('id', uid)
+        .eq('id', uid as string)
         .single()
 
-      const tenantId = (profile?.tenant_id ?? DEMO_TENANT_ID) as TenantId
+      const tenantId = ((profile as { tenant_id?: string } | null)?.tenant_id ?? DEMO_TENANT_ID) as TenantId
       setAuth(uid, tenantId)
       router.replace('/')
     } catch {
