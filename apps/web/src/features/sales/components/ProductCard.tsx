@@ -1,7 +1,7 @@
 'use client'
 
 import { useSaleStore } from '@/store/sale.store'
-import { formatKHR } from '@/lib/money'
+import { formatKHR, formatUSD } from '@/lib/money'
 import type { Product } from '@/types'
 
 interface ProductCardProps {
@@ -109,6 +109,11 @@ export function ProductCard({ product, onFly }: ProductCardProps) {
         </span>
         <span className="text-[10px] font-medium text-slate-400 whitespace-nowrap">/{product.unit}</span>
       </div>
+
+      {/* USD equivalent */}
+      <span className="text-[11px] font-bold text-primary-600 tabular-nums whitespace-nowrap">
+        {formatUSD(product.sellPrice)}
+      </span>
     </button>
   )
 }

@@ -4,10 +4,18 @@ import { useEffect } from 'react'
 import { NextIntlClientProvider } from 'next-intl'
 import { startSyncEngine } from '@/sync/engine'
 import { useSyncStore } from '@/store/sync.store'
+import { useStoreProfile } from '@/store/storeProfile.store'
+import { setExchangeRate } from '@/lib/money'
 import kmMessages from '@/i18n/km.json'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const setOnline = useSyncStore((s) => s.setOnline)
+  const exchangeRate = useStoreProfile((s) => s.exchangeRate)
+
+  /* Keep the pure money lib in sync with the user's configured rate */
+  useEffect(() => {
+    setExchangeRate(exchangeRate)
+  }, [exchangeRate])
 
   useEffect(() => {
     // Sync real network state after hydration — store defaults to true on server

@@ -14,6 +14,8 @@ export interface StoreProfile {
   receiptShowCashier: boolean
   receiptShowPhone: boolean
   receiptShowAddress: boolean
+  // ── Currency ──
+  exchangeRate: number       // KHR per 1 USD (display conversion only)
 }
 
 interface StoreProfileActions {
@@ -35,6 +37,7 @@ export const useStoreProfile = create<StoreProfile & StoreProfileActions>()(
       receiptShowCashier: true,
       receiptShowPhone:   true,
       receiptShowAddress: true,
+      exchangeRate:       4000,
 
       update: (patch) => set(patch),
       clearLogo: () => set({ storeLogo: null }),

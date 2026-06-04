@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Plus, Search, Users } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
-import { formatKHR, toKHR } from '@/lib/money'
+import { formatKHR, formatUSD, toKHR } from '@/lib/money'
 import { CustomerFormSheet } from '@/features/debt/components/CustomerFormSheet'
 import { CustomerDetailSheet } from '@/features/debt/components/CustomerDetailSheet'
 import type { Customer } from '@/types'
@@ -49,7 +49,7 @@ export default function DebtPage() {
           <div className="mt-2 flex gap-2">
             <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-danger-700 bg-danger-50 border border-danger-100 rounded-full px-2.5 py-1">
               <span className="w-1.5 h-1.5 rounded-full bg-danger-500" />
-              {debtorCount} នាក់ជំពាក់ · {formatKHR(totalDebt)}
+              {debtorCount} នាក់ជំពាក់ · {formatKHR(totalDebt)} · {formatUSD(totalDebt)}
             </span>
           </div>
         )}
@@ -121,9 +121,14 @@ export default function DebtPage() {
                 {/* Balance */}
                 <div className="shrink-0 text-right">
                   {hasDebt ? (
-                    <p className="text-[14px] font-bold text-danger-600 tabular-nums">
-                      {formatKHR(customer.debtBalance)}
-                    </p>
+                    <>
+                      <p className="text-[14px] font-bold text-danger-600 tabular-nums leading-tight">
+                        {formatKHR(customer.debtBalance)}
+                      </p>
+                      <p className="text-[11px] font-bold text-primary-600 tabular-nums">
+                        {formatUSD(customer.debtBalance)}
+                      </p>
+                    </>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-success-700 bg-success-50 rounded-full px-2 py-0.5">
                       ✓ សងអស់

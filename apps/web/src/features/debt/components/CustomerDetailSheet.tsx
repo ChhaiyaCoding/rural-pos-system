@@ -5,7 +5,7 @@ import { X, Phone, MapPin, ArrowDownLeft, ArrowUpRight, Banknote, Pencil, CheckC
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { debtService } from '@/services/debt.service'
-import { formatKHR, toKHR } from '@/lib/money'
+import { formatKHR, formatUSD, toKHR } from '@/lib/money'
 import { formatDateTimeKm, nowISO } from '@/lib/date'
 import { useStoreProfile } from '@/store/storeProfile.store'
 import { CustomerEditSheet } from './CustomerEditSheet'
@@ -222,10 +222,13 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
             <div className="shrink-0 text-right">
               <p className="text-[11px] text-slate-400 mb-0.5">ជំពាក់សរុប</p>
               <p className={[
-                'text-[20px] font-extrabold tabular-nums transition-all duration-500',
+                'text-[20px] font-extrabold tabular-nums transition-all duration-500 leading-tight',
                 hasDebt ? 'text-danger-600' : 'text-success-600',
               ].join(' ')}>
                 {formatKHR(live.debtBalance)}
+              </p>
+              <p className="text-[12px] font-bold text-primary-600 tabular-nums">
+                {formatUSD(live.debtBalance)}
               </p>
             </div>
           </div>
@@ -470,10 +473,13 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
           <div className="text-right">
             <p className="text-[10px] text-slate-400">ជំពាក់សរុប</p>
             <p className={[
-              'text-[22px] font-extrabold tabular-nums',
+              'text-[22px] font-extrabold tabular-nums leading-tight',
               live.debtBalance > 0 ? 'text-danger-600' : 'text-success-600',
             ].join(' ')}>
               {formatKHR(live.debtBalance)}
+            </p>
+            <p className="text-[12px] font-bold text-primary-600 tabular-nums">
+              {formatUSD(live.debtBalance)}
             </p>
           </div>
         </div>
@@ -527,10 +533,12 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
           <div className="flex justify-between items-center">
             <p className="text-[12px] font-bold text-slate-600">នៅជំពាក់ (ចុងក្រោយ)</p>
             <p className={[
-              'text-[18px] font-extrabold tabular-nums',
+              'text-[18px] font-extrabold tabular-nums text-right leading-tight',
               live.debtBalance > 0 ? 'text-danger-600' : 'text-success-600',
             ].join(' ')}>
-              {live.debtBalance > 0 ? formatKHR(live.debtBalance) : '✅ អស់ហើយ'}
+              {live.debtBalance > 0
+                ? <>{formatKHR(live.debtBalance)}<span className="block text-[12px] text-primary-600">{formatUSD(live.debtBalance)}</span></>
+                : '✅ អស់ហើយ'}
             </p>
           </div>
           <p className="text-[10px] text-slate-300 mt-2 text-center">

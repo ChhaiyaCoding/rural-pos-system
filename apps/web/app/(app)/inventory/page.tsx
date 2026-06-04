@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { Plus, Package, Search, PackagePlus } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
-import { formatKHR } from '@/lib/money'
+import { formatKHR, formatUSD } from '@/lib/money'
 import { productMatchesQuery } from '@/lib/search'
 import { ProductFormSheet } from '@/features/inventory/components/ProductFormSheet'
 import { RestockSheet } from '@/features/inventory/components/RestockSheet'
@@ -211,6 +211,9 @@ export default function InventoryPage() {
                     </p>
                     <p className="text-[12px] font-semibold text-slate-700 tabular-nums mt-0.5">
                       {formatKHR(product.sellPrice)}
+                    </p>
+                    <p className="text-[10px] font-bold text-primary-600 tabular-nums">
+                      {formatUSD(product.sellPrice)}
                     </p>
                     {isAlert && (
                       <span className={[

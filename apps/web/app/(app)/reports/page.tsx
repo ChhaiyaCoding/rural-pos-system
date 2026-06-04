@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { TrendingUp, BarChart2, List, Share2 } from 'lucide-react'
 import { db } from '@/db'
-import { formatKHR } from '@/lib/money'
+import { formatKHR, formatUSD } from '@/lib/money'
 import { SaleDetailSheet } from '@/features/sales/components/SaleDetailSheet'
 import { ReportExportSheet } from '@/features/reports/components/ReportExportSheet'
 import { useStoreProfile } from '@/store/storeProfile.store'
@@ -223,6 +223,9 @@ export default function ReportsPage() {
                 <p className="text-[13px] font-extrabold text-primary-800 tabular-nums leading-tight break-all">
                   {isLoading ? '…' : formatKHR(totalRevenue)}
                 </p>
+                <p className="text-[11px] font-bold text-primary-500 tabular-nums">
+                  {isLoading ? '' : formatUSD(totalRevenue)}
+                </p>
               </div>
               <div className="rounded-2xl border bg-success-50 border-success-100 p-3">
                 <p className="text-[18px] mb-1.5">🛒</p>
@@ -237,6 +240,9 @@ export default function ReportsPage() {
                 <p className="text-[10px] font-bold text-danger-500 uppercase tracking-wide leading-none mb-1.5">ជំពាក់</p>
                 <p className="text-[13px] font-extrabold text-danger-800 tabular-nums leading-tight break-all">
                   {isLoading ? '…' : formatKHR(totalDebt)}
+                </p>
+                <p className="text-[11px] font-bold text-danger-500 tabular-nums">
+                  {isLoading ? '' : formatUSD(totalDebt)}
                 </p>
               </div>
             </div>

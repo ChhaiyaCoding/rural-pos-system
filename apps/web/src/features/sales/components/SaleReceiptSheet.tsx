@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { X, Printer, Share2, RotateCcw, CheckCircle2, Check, ImageDown } from 'lucide-react'
-import { formatKHR, toKHR, addKHR } from '@/lib/money'
+import { formatKHR, formatUSD, toKHR, addKHR } from '@/lib/money'
 import { formatDateTimeKm } from '@/lib/date'
 import { useStoreProfile } from '@/store/storeProfile.store'
 import type { KHR } from '@/types'
@@ -97,6 +97,7 @@ function buildShareText(data: ReceiptData, storeName = 'ហាងលក់ទំ
     discount > 0 ? line('បញ្ចុះតម្លៃ', `-${formatKHR(discount)}`) : '',
     '══════════════════════════════',
     line('សរុបចុងក្រោយ', formatKHR(data.totalAmount)),
+    line('', formatUSD(data.totalAmount)),
     '──────────────────────────────',
     isCash ? `ប្រភេទ: សាច់ប្រាក់` : 'ប្រភេទ: ជំពាក់',
     isCash && data.cashReceived
@@ -349,9 +350,14 @@ export function SaleReceiptSheet({ data, onClose }: Props) {
               <span className="text-[14px] font-extrabold text-slate-900">
                 សរុបចុងក្រោយ
               </span>
-              <span className="text-[22px] font-extrabold text-slate-900 tabular-nums tracking-tight">
-                {formatKHR(data.totalAmount)}
-              </span>
+              <div className="text-right">
+                <span className="block text-[22px] font-extrabold text-slate-900 tabular-nums tracking-tight leading-tight">
+                  {formatKHR(data.totalAmount)}
+                </span>
+                <span className="block text-[14px] font-bold text-primary-600 tabular-nums">
+                  {formatUSD(data.totalAmount)}
+                </span>
+              </div>
             </div>
 
             {/* ── Dashed divider ───────────────────────────────── */}

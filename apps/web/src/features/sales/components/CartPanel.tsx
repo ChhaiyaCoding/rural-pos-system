@@ -2,7 +2,7 @@
 
 import { ShoppingCart, Banknote, NotebookPen, Plus, SplitSquareHorizontal } from 'lucide-react'
 import { useSaleStore } from '@/store/sale.store'
-import { formatKHR } from '@/lib/money'
+import { formatKHR, formatUSD } from '@/lib/money'
 import { CartLineItem } from './CartLineItem'
 
 interface CartPanelProps {
@@ -93,9 +93,14 @@ export function CartPanel({ onPay }: CartPanelProps) {
           <div className="border-t border-dashed border-slate-200" />
           <div className="flex items-end justify-between pt-1">
             <span className="text-[13px] font-medium text-slate-500 mb-1">សរុបទឹកប្រាក់</span>
-            <span className="text-[30px] font-extrabold text-slate-900 tabular-nums leading-none tracking-tight">
-              {formatKHR(total)}
-            </span>
+            <div className="text-right">
+              <span className="block text-[30px] font-extrabold text-slate-900 tabular-nums leading-none tracking-tight">
+                {formatKHR(total)}
+              </span>
+              <span className="block text-[13px] font-bold text-primary-600 tabular-nums mt-0.5">
+                {formatUSD(total)}
+              </span>
+            </div>
           </div>
         </div>
 

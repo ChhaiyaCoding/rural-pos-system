@@ -6,7 +6,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { useSaleStore } from '@/store/sale.store'
 import { customerService } from '@/services/customer.service'
-import { formatKHR, subtractKHR, multiplyKHR, toKHR } from '@/lib/money'
+import { formatKHR, formatUSD, subtractKHR, multiplyKHR, toKHR } from '@/lib/money'
 import type { KHR } from '@/types'
 import type { Customer } from '@/types'
 import type { TenantId, CustomerId } from '@/types/branded'
@@ -202,6 +202,10 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
                 </span>
               </div>
             )}
+            {/* USD equivalent of amount due */}
+            <p className="text-right text-[13px] font-bold text-primary-600 tabular-nums mt-0.5">
+              {formatUSD(discountedTotal)}
+            </p>
           </div>
 
           {/* ── Discount toggle + section ─────────────────────── */}
@@ -316,9 +320,14 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
               {/* Change due */}
               <div className="flex items-center justify-between rounded-xl bg-success-50 px-4 py-3">
                 <span className="text-[13px] font-medium text-success-700">ប្រាក់អាប់</span>
-                <span className="text-[20px] font-extrabold text-success-700 tabular-nums">
-                  {formatKHR(change > 0 ? change : toKHR(0))}
-                </span>
+                <div className="text-right">
+                  <span className="block text-[20px] font-extrabold text-success-700 tabular-nums leading-tight">
+                    {formatKHR(change > 0 ? change : toKHR(0))}
+                  </span>
+                  <span className="block text-[12px] font-bold text-success-600 tabular-nums">
+                    {formatUSD(change > 0 ? change : toKHR(0))}
+                  </span>
+                </div>
               </div>
             </div>
           ) : isPartial ? (
@@ -442,9 +451,14 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
               {/* Debt amount */}
               <div className="flex items-center justify-between rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
                 <span className="text-[13px] font-medium text-slate-500">ចំនួនជំពាក់</span>
-                <span className="text-[22px] font-extrabold text-slate-900 tabular-nums">
-                  {formatKHR(discountedTotal)}
-                </span>
+                <div className="text-right">
+                  <span className="block text-[22px] font-extrabold text-slate-900 tabular-nums leading-tight">
+                    {formatKHR(discountedTotal)}
+                  </span>
+                  <span className="block text-[12px] font-bold text-primary-600 tabular-nums">
+                    {formatUSD(discountedTotal)}
+                  </span>
+                </div>
               </div>
 
               {/* Customer picker */}

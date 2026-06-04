@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Trash2, Minus, Plus, Tag, X } from 'lucide-react'
 import { useSaleStore } from '@/store/sale.store'
-import { formatKHR, multiplyKHR, toKHR } from '@/lib/money'
+import { formatKHR, formatUSD, multiplyKHR, toKHR } from '@/lib/money'
 import { PRODUCT_EMOJI } from '../mock-products'
 import type { CartItem } from '@/types'
 import type { KHR } from '@/types/branded'
@@ -65,14 +65,22 @@ export function CartLineItem({ item }: { item: CartItem }) {
                   <span className="text-[11px] font-medium text-slate-400 line-through tabular-nums block leading-none">
                     {formatKHR(gross)}
                   </span>
-                  <span className="text-[14px] font-bold text-success-700 tabular-nums tracking-tight">
+                  <span className="text-[14px] font-bold text-success-700 tabular-nums tracking-tight block leading-tight">
                     {formatKHR(net)}
+                  </span>
+                  <span className="text-[10px] font-bold text-primary-600 tabular-nums block leading-none">
+                    {formatUSD(net)}
                   </span>
                 </>
               ) : (
-                <span className="text-[14px] font-bold text-slate-900 tabular-nums tracking-tight">
-                  {formatKHR(gross)}
-                </span>
+                <>
+                  <span className="text-[14px] font-bold text-slate-900 tabular-nums tracking-tight block leading-tight">
+                    {formatKHR(gross)}
+                  </span>
+                  <span className="text-[10px] font-bold text-primary-600 tabular-nums block leading-none">
+                    {formatUSD(gross)}
+                  </span>
+                </>
               )}
             </div>
           </div>

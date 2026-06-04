@@ -18,7 +18,7 @@ export default function SettingsPage() {
     storeName, storeAddress, storePhone,
     storeLogo, cashierName, receiptFooter,
     receiptHeaderNote, receiptShowLogo, receiptShowCashier,
-    receiptShowPhone, receiptShowAddress,
+    receiptShowPhone, receiptShowAddress, exchangeRate,
     update, clearLogo,
   } = useStoreProfile()
 
@@ -30,6 +30,7 @@ export default function SettingsPage() {
   const [footer,     setFooter]     = useState(receiptFooter)
   const [headerNote, setHeaderNote] = useState(receiptHeaderNote)
   const [threshold,  setThreshold]  = useState('5')   // low-stock default
+  const [rate,       setRate]       = useState(String(exchangeRate))
   const [saved,      setSaved]      = useState(false)
   const [showPreview,  setShowPreview]  = useState(false)
   const [showBackup,   setShowBackup]   = useState(false)
@@ -53,6 +54,7 @@ export default function SettingsPage() {
 
   /* ── Save ─────────────────────────────────────────────── */
   const handleSave = () => {
+    const parsedRate = Math.max(1, Number(rate) || 4000)
     update({
       storeName:         name.trim()    || 'ហាងលក់ទំនិញ',
       storeAddress:      address.trim() || 'ភ្នំពេញ · Cambodia',
@@ -60,6 +62,7 @@ export default function SettingsPage() {
       cashierName:       cashier.trim() || 'សុខា',
       receiptFooter:     footer.trim()  || '🙏 អរគុណដែលបានមកទិញ!',
       receiptHeaderNote: headerNote.trim(),
+      exchangeRate:      parsedRate,
     })
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
@@ -71,7 +74,8 @@ export default function SettingsPage() {
     phone.trim()      !== storePhone    ||
     cashier.trim()    !== cashierName   ||
     footer.trim()     !== receiptFooter ||
-    headerNote.trim() !== receiptHeaderNote
+    headerNote.trim() !== receiptHeaderNote ||
+    (Number(rate) || 4000) !== exchangeRate
 
   const displayName = name.trim() || storeName
 
@@ -174,6 +178,34 @@ export default function SettingsPage() {
             <SectionHeader icon={<User size={14} />} label="អ្នកគិតលុយ" />
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <Field label="ឈ្មោះ" value={cashier} onChange={setCashier} placeholder="សុខា" />
+            </div>
+          </section>
+
+          {/* ══ Currency / exchange rate ═════════════════════ */}
+          <section>
+            <SectionHeader icon={<span className="text-[13px] leading-none">💵</span>} label="រូបិយប័ណ្ណ" />
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="flex items-center gap-3 px-4 py-3">
+                <span className="text-[12px] text-slate-400 shrink-0 leading-snug">
+                  អត្រាប្ដូរ · $1 =
+                </span>
+                <div className="flex items-center gap-2 flex-1 justify-end">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={rate}
+                    onChange={(e) => setRate(e.target.value)}
+                    min="1"
+                    className="w-24 h-9 rounded-lg border border-slate-200 text-center text-[15px] font-bold text-slate-900 focus:outline-none focus:border-primary-500"
+                  />
+                  <span className="text-[13px] text-slate-500 font-medium">៛</span>
+                </div>
+              </div>
+              <div className="px-4 pb-3">
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  💱 តម្លៃ​ទាំងអស់​បង្ហាញ​ទាំង ៛ និង $ — DB រក្សាទុក​ជា ៛ ប៉ុណ្ណោះ
+                </p>
+              </div>
             </div>
           </section>
 
