@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Trash2, Camera, ChevronDown, ChevronUp, ScanLine, CheckCircle2, AlertCircle, History } from 'lucide-react'
+import { X, Trash2, Camera, ChevronDown, ChevronUp, ScanLine, CheckCircle2, AlertCircle, History, Pencil, Plus, Check } from 'lucide-react'
 import { productService } from '@/services/product.service'
 import { db } from '@/db'
 import { toKHR } from '@/lib/money'
+import { useUnitStore } from '@/store/unit.store'
 import { BarcodeScanMini } from './BarcodeScanMini'
 import { StockHistorySheet } from './StockHistorySheet'
 import type { Product } from '@/types'
@@ -17,12 +18,6 @@ const EMOJIS = [
   '🍬','🪥','🧻','🧼','🍶','🥩','🐟','🧅','🥬','🌾',
   '🫚','☕','🧃','🍭','📦','🧁','🍌','🍊','🥜','🫘',
   '💊','🩹','🧰','🔧','👕','👖','👟','🛒','🎯','🏷️',
-]
-
-const UNITS = [
-  'ថង់','ដប','ចំណិត','ហ្គីឡូ','ផ្ទាំង','ជំហរ',
-  'កំប៉ុង','ហ្វូង','ក្រឡាប់','ដំ','កញ្ចប់','លីត្រ',
-  'ម៉ែត្រ','បំណែក','ជោ','មុខ','គ្រាប់','ប្រអប់',
 ]
 
 const CATEGORIES = [
@@ -92,12 +87,19 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
   const [customCategory, setCustomCategory] = useState(
     !CATEGORIES.some((c) => c.id === product?.categoryId) ? (product?.categoryId ?? '') : ''
   )
-  const [unit,       setUnit]       = useState(
-    UNITS.includes(product?.unit ?? 'ថង់') ? (product?.unit ?? 'ថង់') : '__custom__'
-  )
-  const [customUnit, setCustomUnit] = useState(
-    !UNITS.includes(product?.unit ?? 'ថង់') ? (product?.unit ?? '') : ''
-  )
+  /* Units — managed & persisted in a dedicated store */
+  const units       = useUnitStore((s) => s.units)
+  const addUnit     = useUnitStore((s) => s.addUnit)
+  const renameUnit  = useUnitStore((s) => s.renameUnit)
+  const removeUnit  = useUnitStore((s) => s.removeUnit)
+
+  const [unit, setUnit] = useState(product?.unit ?? units[0] ?? 'ថង់')
+
+  /* Unit management UI state */
+  const [manageUnits,   setManageUnits]   = useState(false)
+  const [newUnit,       setNewUnit]       = useState('')
+  const [editingUnit,   setEditingUnit]   = useState<string | null>(null)
+  const [editUnitValue, setEditUnitValue] = useState('')
   const [sellPrice,  setSellPrice]  = useState(product?.sellPrice  ? String(product.sellPrice)  : '')
   const [stockQty,   setStockQty]   = useState(product?.stockQty   != null ? String(product.stockQty) : '')
   const [lowStock,   setLowStock]   = useState(product?.lowStockThreshold != null ? String(product.lowStockThreshold) : '5')
@@ -130,10 +132,45 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
     return () => { cancelled = true }
   }, [barcode, product?.id])
 
-  const effectiveUnit     = unit === '__custom__'     ? customUnit     : unit
+  const effectiveUnit    = unit.trim()
   const effectiveCatId   = categoryId === '__custom_cat__' ? customCategory : categoryId
   const effectiveBarcode = barcode.trim() || null
-  const canSave = name.trim() && sellPrice && Number(sellPrice) > 0 && effectiveUnit.trim() && effectiveCatId.trim() && barcodeStatus !== 'dup'
+  const canSave = name.trim() && sellPrice && Number(sellPrice) > 0 && effectiveUnit && effectiveCatId.trim() && barcodeStatus !== 'dup'
+
+  /* If editing a product whose unit isn't in the list, add it so it's selectable */
+  useEffect(() => {
+    if (product?.unit && !units.includes(product.unit)) {
+      addUnit(product.unit)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  /* ── Unit management handlers ───────────────────────── */
+  const handleAddUnit = () => {
+    const u = newUnit.trim()
+    if (!u) return
+    addUnit(u)
+    setUnit(u)
+    setNewUnit('')
+  }
+  const startRenameUnit = (u: string) => {
+    setEditingUnit(u)
+    setEditUnitValue(u)
+  }
+  const commitRenameUnit = () => {
+    const nv = editUnitValue.trim()
+    if (nv && editingUnit) {
+      renameUnit(editingUnit, nv)
+      if (unit === editingUnit) setUnit(nv)
+    }
+    setEditingUnit(null)
+  }
+  const handleRemoveUnit = (u: string) => {
+    const remaining = units.filter((x) => x !== u)
+    removeUnit(u)
+    if (unit === u) setUnit(remaining[0] ?? '')
+    if (editingUnit === u) setEditingUnit(null)
+  }
 
   const handleImagePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -464,47 +501,100 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
             )}
           </div>
 
-          {/* Unit */}
+          {/* Unit — selectable + manageable (add / rename / delete) */}
           <div>
-            <p className="text-[12px] font-semibold text-slate-500 mb-1.5">ឯកតា</p>
-            <div className="flex flex-wrap gap-2">
-              {UNITS.map((u) => (
-                <button
-                  key={u}
-                  type="button"
-                  onClick={() => { setUnit(u); setCustomUnit('') }}
-                  className={[
-                    'h-9 px-3 rounded-lg border text-[13px] font-medium transition-colors',
-                    unit === u
-                      ? 'border-primary-500 bg-primary-50 text-primary-700'
-                      : 'border-slate-200 text-slate-600 active:bg-slate-50',
-                  ].join(' ')}
-                >
-                  {u}
-                </button>
-              ))}
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[12px] font-semibold text-slate-500">ឯកតា</p>
               <button
                 type="button"
-                onClick={() => setUnit('__custom__')}
-                className={[
-                  'h-9 px-3 rounded-lg border text-[13px] font-medium transition-colors',
-                  unit === '__custom__'
-                    ? 'border-primary-500 bg-primary-50 text-primary-700'
-                    : 'border-slate-200 text-slate-600 active:bg-slate-50',
-                ].join(' ')}
+                onClick={() => { setManageUnits((v) => !v); setEditingUnit(null) }}
+                className="min-h-0 min-w-0 flex items-center gap-1 text-[11px] font-semibold text-primary-600 active:text-primary-700 px-1 py-0.5"
               >
-                ផ្សេង…
+                {manageUnits
+                  ? <><Check size={12} strokeWidth={2.5} /> រួចរាល់</>
+                  : <><Pencil size={11} strokeWidth={2.25} /> កែ</>}
               </button>
             </div>
-            {unit === '__custom__' && (
+
+            <div className="flex flex-wrap gap-2">
+              {units.map((u) =>
+                editingUnit === u ? (
+                  /* Inline rename */
+                  <div key={u} className="flex items-center gap-1">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editUnitValue}
+                      onChange={(e) => setEditUnitValue(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') commitRenameUnit() }}
+                      className="h-9 w-24 px-2 rounded-lg border border-primary-400 text-[13px] font-medium text-slate-900 outline-none focus:ring-2 focus:ring-primary-400/20"
+                    />
+                    <button
+                      type="button"
+                      onClick={commitRenameUnit}
+                      className="min-h-0 min-w-0 w-9 h-9 flex items-center justify-center rounded-lg bg-primary-600 text-white active:bg-primary-700"
+                      aria-label="រក្សាទុក"
+                    >
+                      <Check size={15} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                ) : (
+                  <div key={u} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => (manageUnits ? startRenameUnit(u) : setUnit(u))}
+                      className={[
+                        'h-9 px-3 rounded-lg border text-[13px] font-medium transition-colors',
+                        manageUnits
+                          ? 'border-slate-300 bg-white text-slate-700 active:bg-slate-50'
+                          : unit === u
+                            ? 'border-primary-500 bg-primary-50 text-primary-700'
+                            : 'border-slate-200 text-slate-600 active:bg-slate-50',
+                      ].join(' ')}
+                    >
+                      {u}
+                    </button>
+                    {manageUnits && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveUnit(u)}
+                        className="min-h-0 min-w-0 absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-danger-500 text-white flex items-center justify-center shadow-sm"
+                        aria-label={`លុប ${u}`}
+                      >
+                        <X size={9} strokeWidth={3} />
+                      </button>
+                    )}
+                  </div>
+                )
+              )}
+            </div>
+
+            {manageUnits && (
+              <p className="text-[10px] text-slate-400 mt-1.5">
+                ចុច​ឯកតា​ដើម្បី​កែ​ឈ្មោះ · ចុច × ដើម្បី​លុប
+              </p>
+            )}
+
+            {/* Add new unit */}
+            <div className="flex gap-2 mt-2">
               <input
                 type="text"
-                value={customUnit}
-                onChange={(e) => setCustomUnit(e.target.value)}
-                placeholder="វាយឯកតាផ្ទាល់…"
-                className="mt-2 w-full h-10 rounded-xl border border-slate-200 px-3 text-[14px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500"
+                value={newUnit}
+                onChange={(e) => setNewUnit(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddUnit() } }}
+                placeholder="បន្ថែម​ឯកតា​ថ្មី…"
+                className="flex-1 h-10 rounded-xl border border-slate-200 px-3 text-[14px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500 min-w-0"
               />
-            )}
+              <button
+                type="button"
+                onClick={handleAddUnit}
+                disabled={!newUnit.trim()}
+                className="shrink-0 h-10 px-3.5 rounded-xl bg-primary-600 text-white text-[13px] font-bold flex items-center gap-1 disabled:opacity-40 active:bg-primary-700 transition-colors"
+              >
+                <Plus size={15} strokeWidth={2.5} />
+                បន្ថែម
+              </button>
+            </div>
           </div>
 
           {/* Sell price + Cost price */}
