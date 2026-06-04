@@ -1,6 +1,6 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { getPending, markSynced, markError, pendingCount } from './queue'
 import { useSyncStore } from '@/store/sync.store'
 import { useAuthStore } from '@/store/auth.store'
@@ -12,6 +12,10 @@ const POLL_INTERVAL_MS = 30_000
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
 export async function runSync(): Promise<void> {
+  // MVP / demo mode: no backend configured — keep everything local, never
+  // attempt to reach Supabase (it would throw and surface as a runtime error).
+  if (!isSupabaseConfigured()) return
+
   const { tenantId } = useAuthStore.getState()
   if (!tenantId) return
 

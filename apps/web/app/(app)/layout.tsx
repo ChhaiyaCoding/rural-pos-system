@@ -118,9 +118,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <PWAInstallBanner />
 
-      <nav className="shrink-0 bg-white border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
+      <nav className="shrink-0 bg-white border-t border-slate-200 pt-1 pb-[env(safe-area-inset-bottom)]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 10px)' }}>
         {/* Constrain nav items to reasonable width on very wide screens */}
-        <div className="flex h-[58px] max-w-screen-md mx-auto">
+        <div className="flex h-[64px] max-w-screen-md mx-auto">
           {NAV.map(({ href, icon: Icon, label }) => {
             const active = pathname === href
 
