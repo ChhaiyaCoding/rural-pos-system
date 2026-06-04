@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { X, Phone, MapPin, ArrowDownLeft, ArrowUpRight, Banknote, Pencil, CheckCircle2, ChevronRight } from 'lucide-react'
+import { useState, useMemo, useRef } from 'react'
+import { X, Phone, MapPin, ArrowDownLeft, ArrowUpRight, Banknote, Pencil, CheckCircle2, ChevronRight, Share2, ImageDown, Check } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { debtService } from '@/services/debt.service'
 import { formatKHR, toKHR } from '@/lib/money'
-import { formatDateTimeKm } from '@/lib/date'
+import { formatDateTimeKm, nowISO } from '@/lib/date'
+import { useStoreProfile } from '@/store/storeProfile.store'
 import { CustomerEditSheet } from './CustomerEditSheet'
 import type { Customer, DebtTransaction } from '@/types'
 import type { TenantId, CustomerId, KHR } from '@/types/branded'
@@ -22,11 +23,16 @@ interface Props {
 const QUICK_AMTS = [1_000, 2_000, 5_000, 10_000, 20_000, 50_000]
 
 export function CustomerDetailSheet({ customer, onClose }: Props) {
-  const [payAmount,  setPayAmount]  = useState('')
-  const [paying,     setPaying]     = useState(false)
-  const [showPay,    setShowPay]    = useState(false)
-  const [editing,    setEditing]    = useState(false)
-  const [paySuccess, setPaySuccess] = useState<{ paid: KHR; after: KHR } | null>(null)
+  const [payAmount,   setPayAmount]   = useState('')
+  const [paying,      setPaying]      = useState(false)
+  const [showPay,     setShowPay]     = useState(false)
+  const [editing,     setEditing]     = useState(false)
+  const [paySuccess,  setPaySuccess]  = useState<{ paid: KHR; after: KHR } | null>(null)
+  const [capturing,   setCapturing]   = useState(false)
+  const [shareOk,     setShareOk]     = useState(false)
+  const statementRef = useRef<HTMLDivElement>(null)
+
+  const { storeName, storePhone, receiptShowPhone } = useStoreProfile()
 
   /* Live customer (balance updates in real-time) */
   const live = useLiveQuery(
@@ -84,6 +90,43 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
   /* ── Dismiss success banner after 4 s ───────────────── */
   const dismissSuccess = () => setPaySuccess(null)
 
+  /* ── Share debt statement as image ──────────────────── */
+  const handleShareStatement = async () => {
+    if (!statementRef.current || capturing) return
+    setCapturing(true)
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const canvas = await html2canvas(statementRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      })
+      const fileName = `debt-${live.nameKm}-${nowISO().slice(0,10)}.png`
+
+      if (navigator.canShare) {
+        const blob = await new Promise<Blob>((res, rej) =>
+          canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png')
+        )
+        const file = new File([blob], fileName, { type: 'image/png' })
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: `សេចក្ដីសង្ខេបបំណុល — ${live.nameKm}` })
+          setShareOk(true)
+          setTimeout(() => setShareOk(false), 2500)
+          return
+        }
+      }
+      // Fallback: download
+      const link = document.createElement('a')
+      link.download = fileName
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+      setShareOk(true)
+      setTimeout(() => setShareOk(false), 2500)
+    } catch { /* silent */ }
+    finally { setCapturing(false) }
+  }
+
   /* ─────────────────────────────────────────────────────── */
   return (
     <div
@@ -101,6 +144,28 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
         <div className="shrink-0 flex items-center justify-between px-4 h-14 border-b border-slate-200">
           <span className="text-[16px] font-bold text-slate-900">ព័ត៌មានអតិថិជន</span>
           <div className="flex items-center gap-2">
+            {/* Share statement as image */}
+            <button
+              type="button"
+              onClick={handleShareStatement}
+              disabled={capturing}
+              className={[
+                'h-9 px-3 flex items-center gap-1.5 rounded-full text-[12px] font-bold transition-colors',
+                shareOk
+                  ? 'bg-success-50 text-success-600'
+                  : 'bg-slate-100 text-slate-600 active:bg-slate-200',
+              ].join(' ')}
+              aria-label="ចែករំលែកបំណុល"
+            >
+              {capturing ? (
+                <span className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin inline-block" />
+              ) : shareOk ? (
+                <Check size={14} strokeWidth={2.5} />
+              ) : (
+                <ImageDown size={14} strokeWidth={2.25} />
+              )}
+              {capturing ? '…' : shareOk ? 'Done!' : 'Share'}
+            </button>
             <button
               type="button"
               onClick={() => setEditing(true)}
@@ -361,6 +426,116 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
             )}
           </div>
 
+        </div>
+      </div>
+
+      {/* ── Hidden statement card — captured by html2canvas ─── */}
+      <div
+        ref={statementRef}
+        className="absolute -left-[9999px] top-0 w-[360px] bg-white"
+        aria-hidden="true"
+      >
+        {/* Header */}
+        <div className="bg-primary-600 px-5 py-4 text-white">
+          <p className="text-[13px] font-bold opacity-80">
+            {storeName || 'ហាងលក់ទំនិញ'}
+          </p>
+          {receiptShowPhone && storePhone && (
+            <p className="text-[11px] opacity-60 mt-0.5">📞 {storePhone}</p>
+          )}
+          <p className="text-[10px] opacity-50 mt-1">
+            បង្កើតថ្ងៃ: {formatDateTimeKm(nowISO())}
+          </p>
+        </div>
+
+        {/* Title */}
+        <div className="px-5 py-3 border-b border-slate-200 bg-slate-50">
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+            សេចក្ដីសង្ខេបបំណុល
+          </p>
+        </div>
+
+        {/* Customer info */}
+        <div className="px-5 py-4 flex items-center gap-3 border-b border-slate-100">
+          <div className={[
+            'w-12 h-12 rounded-full flex items-center justify-center text-[20px] font-bold shrink-0',
+            live.debtBalance > 0 ? 'bg-danger-100 text-danger-700' : 'bg-success-100 text-success-700',
+          ].join(' ')}>
+            {live.nameKm.charAt(0)}
+          </div>
+          <div className="flex-1">
+            <p className="text-[16px] font-extrabold text-slate-900">{live.nameKm}</p>
+            {live.phone && <p className="text-[12px] text-slate-400 mt-0.5">📞 {live.phone}</p>}
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] text-slate-400">ជំពាក់សរុប</p>
+            <p className={[
+              'text-[22px] font-extrabold tabular-nums',
+              live.debtBalance > 0 ? 'text-danger-600' : 'text-success-600',
+            ].join(' ')}>
+              {formatKHR(live.debtBalance)}
+            </p>
+          </div>
+        </div>
+
+        {/* Transactions */}
+        <div className="px-5 pt-3 pb-1">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+            ប្រវត្តិប្រតិបត្តិការ
+          </p>
+        </div>
+        <div className="divide-y divide-slate-100">
+          {txnsWithBalance.slice(0, 10).map((txn) => {
+            const isPay = txn.type === 'payment'
+            return (
+              <div key={txn.id} className="flex items-center gap-3 px-5 py-2.5">
+                <div className={[
+                  'w-7 h-7 rounded-full flex items-center justify-center text-[12px] shrink-0',
+                  isPay ? 'bg-success-100 text-success-600' : 'bg-danger-100 text-danger-600',
+                ].join(' ')}>
+                  {isPay ? '↑' : '↓'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-semibold text-slate-800">
+                    {isPay ? 'ទទួលប្រាក់' : 'ជំពាក់ (ការលក់)'}
+                  </p>
+                  <p className="text-[10px] text-slate-400">{formatDateTimeKm(txn.createdAt)}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className={[
+                    'text-[13px] font-bold tabular-nums',
+                    isPay ? 'text-success-600' : 'text-danger-600',
+                  ].join(' ')}>
+                    {isPay ? '−' : '+'}{formatKHR(txn.amount)}
+                  </p>
+                  <p className="text-[10px] text-slate-400 tabular-nums">
+                    នៅ {formatKHR(txn.runningBalance)}
+                  </p>
+                </div>
+              </div>
+            )
+          })}
+          {txnsWithBalance.length > 10 && (
+            <p className="px-5 py-2 text-[11px] text-slate-400 text-center">
+              + {txnsWithBalance.length - 10} ប្រតិបត្តិការ​ទៀត
+            </p>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t-2 border-slate-800 mt-2">
+          <div className="flex justify-between items-center">
+            <p className="text-[12px] font-bold text-slate-600">នៅជំពាក់ (ចុងក្រោយ)</p>
+            <p className={[
+              'text-[18px] font-extrabold tabular-nums',
+              live.debtBalance > 0 ? 'text-danger-600' : 'text-success-600',
+            ].join(' ')}>
+              {live.debtBalance > 0 ? formatKHR(live.debtBalance) : '✅ អស់ហើយ'}
+            </p>
+          </div>
+          <p className="text-[10px] text-slate-300 mt-2 text-center">
+            {storeName || 'POS ហាង'} · បង្កើតដោយ Rural POS
+          </p>
         </div>
       </div>
 
