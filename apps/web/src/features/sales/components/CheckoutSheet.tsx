@@ -7,6 +7,7 @@ import { db } from '@/db'
 import { useSaleStore } from '@/store/sale.store'
 import { customerService } from '@/services/customer.service'
 import { formatKHR, formatUSD, subtractKHR, multiplyKHR, toKHR } from '@/lib/money'
+import { useStoreProfile } from '@/store/storeProfile.store'
 import type { KHR } from '@/types'
 import type { Customer } from '@/types'
 import type { TenantId, CustomerId } from '@/types/branded'
@@ -27,11 +28,13 @@ interface CheckoutSheetProps {
 
 const DENOMS         = [1000, 2000, 5000, 10000, 20000, 50000, 100000]
 const DISCOUNT_CHIPS = [500, 1000, 2000, 5000] as const
+const USD_NOTES      = [1, 5, 10, 20, 50, 100]
 
 export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) {
   const cart  = useSaleStore((s) => s.cart)
   const total = useSaleStore((s) => s.cartTotal)()
   const count = useSaleStore((s) => s.cartCount)()
+  const exchangeRate = useStoreProfile((s) => s.exchangeRate)
 
   const isCash    = type === 'cash'
   const isPartial = type === 'partial'
@@ -282,39 +285,94 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
           {/* ── Payment-specific section ─────────────────────── */}
           {isCash ? (
             <div className="px-4 pb-3 space-y-3 border-t border-slate-100 pt-3">
-              {/* Amount tendered */}
+              {/* Amount tendered — editable (manual entry, any amount) */}
               <div>
-                <p className="text-[12px] font-medium text-slate-500 mb-1.5">
-                  ប្រាក់ទទួលពីអតិថិជន
-                </p>
-                <div className="flex items-baseline justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <span className="text-[12px] text-slate-400">ប្រាក់ដៃ</span>
-                  <span className="text-[24px] font-extrabold text-slate-900 tabular-nums">
-                    {formatKHR(tendered)}
-                  </span>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-[12px] font-medium text-slate-500">
+                    ប្រាក់ទទួលពីអតិថិជន
+                  </p>
+                  {tendered > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setTendered(toKHR(0))}
+                      className="min-h-0 min-w-0 text-[11px] text-slate-400 active:text-slate-600"
+                    >
+                      សម្អាត ×
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center rounded-xl border border-slate-200 bg-white overflow-hidden focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/15">
+                  <span className="pl-4 text-[12px] text-slate-400 shrink-0">ប្រាក់ដៃ</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={tendered === 0 ? '' : String(tendered)}
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value, 10)
+                      setTendered(toKHR(isNaN(n) || n < 0 ? 0 : n))
+                    }}
+                    placeholder="0"
+                    className="flex-1 h-12 px-3 text-right text-[24px] font-extrabold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none tabular-nums min-w-0"
+                  />
+                  <span className="pr-4 text-[14px] text-slate-400 shrink-0">៛</span>
+                </div>
+                {tendered > 0 && (
+                  <p className="text-right text-[12px] font-bold text-primary-600 tabular-nums mt-1">
+                    ≈ {formatUSD(tendered)}
+                  </p>
+                )}
+              </div>
+
+              {/* Quick-cash — Riel notes */}
+              <div>
+                <p className="text-[11px] font-semibold text-slate-400 mb-1.5">ប្រាក់រៀល</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {quick.map((amt, i) => {
+                    const selected = tendered === amt
+                    return (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => setTendered(amt)}
+                        className={[
+                          'h-11 rounded-lg border text-[13px] font-bold tabular-nums transition-colors',
+                          selected
+                            ? 'border-primary-500 bg-primary-50 text-primary-700'
+                            : 'border-slate-200 text-slate-700 active:bg-slate-50',
+                        ].join(' ')}
+                      >
+                        {i === 0 ? 'ប្រាក់គត់' : formatKHR(amt)}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
-              {/* Quick-cash chips */}
-              <div className="grid grid-cols-3 gap-2">
-                {quick.map((amt, i) => {
-                  const selected = tendered === amt
-                  return (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => setTendered(amt)}
-                      className={[
-                        'h-12 rounded-lg border text-[13px] font-bold tabular-nums transition-colors',
-                        selected
-                          ? 'border-primary-500 bg-primary-50 text-primary-700'
-                          : 'border-slate-200 text-slate-700 active:bg-slate-50',
-                      ].join(' ')}
-                    >
-                      {i === 0 ? 'ប្រាក់គត់' : formatKHR(amt)}
-                    </button>
-                  )
-                })}
+              {/* Quick-cash — Dollar notes (auto-convert to ៛) */}
+              <div>
+                <p className="text-[11px] font-semibold text-slate-400 mb-1.5">ប្រាក់ដុល្លារ ($)</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {USD_NOTES.map((usd) => {
+                    const khr = toKHR(usd * exchangeRate)
+                    const selected = tendered === khr
+                    return (
+                      <button
+                        key={usd}
+                        type="button"
+                        onClick={() => setTendered(khr)}
+                        className={[
+                          'h-12 rounded-lg border transition-colors flex flex-col items-center justify-center leading-none gap-0.5',
+                          selected
+                            ? 'border-primary-500 bg-primary-50 text-primary-700'
+                            : 'border-slate-200 text-slate-700 active:bg-slate-50',
+                        ].join(' ')}
+                      >
+                        <span className="text-[14px] font-bold tabular-nums">${usd}</span>
+                        <span className="text-[9px] font-semibold text-slate-400 tabular-nums">{formatKHR(khr)}</span>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               {/* Change due */}
