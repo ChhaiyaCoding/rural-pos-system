@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Search, ScanLine, X, CheckCircle2, ShoppingCart, ChevronUp, Receipt } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useSaleStore } from '@/store/sale.store'
@@ -16,6 +16,7 @@ import type { TenantId, UserId, CustomerId } from '@/types/branded'
 import { type CategoryId } from '../mock-products'
 import { productMatchesQuery } from '@/lib/search'
 import { ProductCard } from './ProductCard'
+import { FlyToCartOverlay, type FlyItem } from '@/components/shared/FlyToCartOverlay'
 import { CartPanel } from './CartPanel'
 import { CheckoutSheet } from './CheckoutSheet'
 import { CategoryTabs } from './CategoryTabs'
@@ -48,6 +49,8 @@ export function POSScreen() {
   const [scanning,    setScanning]    = useState(false)
   const [openShift,   setOpenShift]   = useState(false)
   const [closeShift,  setCloseShift]  = useState(false)
+  const [flyItems,    setFlyItems]    = useState<FlyItem[]>([])
+  const cartBtnRef = useRef<HTMLButtonElement>(null)
 
   const { cashierName } = useStoreProfile()
 
@@ -115,6 +118,19 @@ export function POSScreen() {
   useEffect(() => {
     if (cart.length === 0) setCartOpen(false)
   }, [cart.length])
+
+  /* ── Fly-to-cart animation ───────────────────────────────────── */
+  const handleFly = (startX: number, startY: number, emoji: string, imageUri: string | null) => {
+    // Target: cart button (mobile) or cart panel header (tablet)
+    let endX = 40, endY = window.innerHeight - 40   // fallback bottom-left
+    if (cartBtnRef.current) {
+      const r = cartBtnRef.current.getBoundingClientRect()
+      endX = r.left + r.width  / 2
+      endY = r.top  + r.height / 2
+    }
+    const id = `fly-${Date.now()}-${Math.random()}`
+    setFlyItems(prev => [...prev, { id, emoji, imageUri, startX, startY, endX, endY }])
+  }
 
   /* Step 1 — open the checkout/confirmation sheet for the chosen method */
   const handlePay = (type: 'cash' | 'debt' | 'partial') => {
@@ -340,6 +356,7 @@ export function POSScreen() {
                   key={product.id}
                   product={product}
                   index={i}
+                  onFly={handleFly}
                 />
               ))}
             </div>
@@ -351,6 +368,7 @@ export function POSScreen() {
           <div className="md:hidden shrink-0 px-3 pb-3 pt-1 bg-surface">
             <button
               type="button"
+              ref={cartBtnRef}
               onClick={() => setCartOpen(true)}
               className={[
                 'w-full h-14 rounded-xl bg-primary-600 text-white',
@@ -548,6 +566,14 @@ export function POSScreen() {
           onClose={() => setCloseShift(false)}
         />
       )}
+
+      {/* ════════════════════════════════════════════════════
+          FLY-TO-CART ANIMATION OVERLAY
+      ════════════════════════════════════════════════════ */}
+      <FlyToCartOverlay
+        items={flyItems}
+        onDone={(id) => setFlyItems(prev => prev.filter(f => f.id !== id))}
+      />
     </div>
   )
 }

@@ -5,11 +5,12 @@ import { formatKHR } from '@/lib/money'
 import type { Product } from '@/types'
 
 interface ProductCardProps {
-  product: Product
-  index: number
+  product:   Product
+  index:     number
+  onFly?:    (startX: number, startY: number, emoji: string, imageUri: string | null) => void
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, onFly }: ProductCardProps) {
   const addToCart = useSaleStore((s) => s.addToCart)
   /* qty of THIS product already in the cart — drives the selected state */
   const inCart = useSaleStore(
@@ -21,15 +22,22 @@ export function ProductCard({ product }: ProductCardProps) {
   const isSelected   = inCart > 0
   const emoji        = product.emoji || '📦'
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (isOutOfStock) return
     addToCart(product)
+    // Fly animation — pass center of the image container
+    if (onFly) {
+      const rect = e.currentTarget.getBoundingClientRect()
+      const cx = rect.left + rect.width  / 2
+      const cy = rect.top  + rect.height * 0.28   // roughly center of image area
+      onFly(cx, cy, emoji, product.imageUri ?? null)
+    }
   }
 
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={(e) => handleClick(e)}
       disabled={isOutOfStock}
       className={[
         'group relative flex flex-col text-left select-none touch-manipulation',

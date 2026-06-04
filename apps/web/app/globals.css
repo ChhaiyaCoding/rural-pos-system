@@ -79,6 +79,12 @@
   to   { transform: translateY(0); }
 }
 
+@keyframes fly-pop {
+  0%   { transform: scale(1);    opacity: 1; }
+  15%  { transform: scale(1.2);  opacity: 1; }
+  100% { transform: scale(0.15); opacity: 0; }
+}
+
 @layer base {
   *,
   *::before,
