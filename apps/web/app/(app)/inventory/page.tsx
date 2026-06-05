@@ -128,7 +128,7 @@ export default function InventoryPage() {
         </div>
 
         {/* Category tabs */}
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-0.5 scrollbar-none">
+        <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar py-0.5">
           {TABS.map((t) => {
             const count = t.id === 'all' ? products.length
                         : t.id === 'low' ? alertCount
@@ -141,18 +141,23 @@ export default function InventoryPage() {
                 type="button"
                 onClick={() => setTab(t.id)}
                 className={[
-                  'shrink-0 h-8 px-3 rounded-full text-[12px] font-semibold transition-colors flex items-center gap-1.5',
+                  'min-h-0 shrink-0 h-10 px-4 rounded-full whitespace-nowrap',
+                  'text-[13px] font-semibold transition-colors flex items-center gap-1.5',
                   isActive
-                    ? isAlert ? 'bg-warning-500 text-white' : 'bg-primary-600 text-white'
+                    ? isAlert ? 'bg-warning-500 text-white shadow-sm' : 'bg-primary-600 text-white shadow-sm'
                     : isAlert && alertCount > 0
-                      ? 'bg-warning-100 text-warning-700 active:bg-warning-200'
-                      : 'bg-slate-100 text-slate-600 active:bg-slate-200',
+                      ? 'bg-warning-100 text-warning-700 border border-warning-200 active:bg-warning-200'
+                      : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50',
                 ].join(' ')}
               >
                 {t.label}
                 <span className={[
-                  'text-[10px] font-bold tabular-nums',
-                  isActive ? 'opacity-80' : isAlert && alertCount > 0 ? 'text-warning-600' : 'text-slate-400',
+                  'tabular-nums text-[11px] font-bold rounded-full px-1.5 min-w-[18px] text-center',
+                  isActive
+                    ? 'bg-white/20 text-white'
+                    : isAlert && alertCount > 0
+                      ? 'bg-warning-200/60 text-warning-700'
+                      : 'bg-slate-100 text-slate-500',
                 ].join(' ')}>
                   {count}
                 </span>
