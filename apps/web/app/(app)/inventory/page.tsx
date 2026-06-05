@@ -8,32 +8,11 @@ import { formatKHR, formatUSD } from '@/lib/money'
 import { productMatchesQuery } from '@/lib/search'
 import { ProductFormSheet } from '@/features/inventory/components/ProductFormSheet'
 import { RestockSheet } from '@/features/inventory/components/RestockSheet'
+import { useCategoryStore } from '@/store/category.store'
 import type { Product } from '@/types'
 import type { TenantId } from '@/types/branded'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
-
-const CATEGORY_LABELS: Record<string, string> = {
-  food:         'ម្ហូបអាហារ',
-  drink:        'ភេសជ្ជៈ',
-  household:    'គ្រឿងប្រើប្រាស់',
-  medicine:     'ថ្នាំ/សុខភាព',
-  construction: 'គ្រឿងសំណង់',
-  clothing:     'សំលៀកបំពាក់',
-  other:        'ផ្សេងៗ',
-}
-
-const TABS = [
-  { id: 'all',          label: 'ទាំងអស់'        },
-  { id: 'low',          label: '⚠️ ស្ដុកតិច'    },  // alert filter
-  { id: 'food',         label: 'ម្ហូបអាហារ'     },
-  { id: 'drink',        label: 'ភេសជ្ជៈ'        },
-  { id: 'household',    label: 'គ្រឿងប្រើប្រាស់' },
-  { id: 'medicine',     label: 'ថ្នាំ/សុខភាព'   },
-  { id: 'construction', label: 'គ្រឿងសំណង់'     },
-  { id: 'clothing',     label: 'សំលៀកបំពាក់'    },
-  { id: 'other',        label: 'ផ្សេងៗ'          },
-]
 
 export default function InventoryPage() {
   const [search,    setSearch]    = useState('')
@@ -41,6 +20,21 @@ export default function InventoryPage() {
   const [editing,   setEditing]   = useState<Product | null>(null)
   const [addOpen,   setAddOpen]   = useState(false)
   const [restocking, setRestocking] = useState<Product | null>(null)
+
+  /* Categories from the shared store — labels + filter tabs stay in sync */
+  const categories = useCategoryStore((s) => s.categories)
+  const CATEGORY_LABELS = useMemo(
+    () => Object.fromEntries(categories.map((c) => [c.id, c.label])),
+    [categories]
+  )
+  const TABS = useMemo(
+    () => [
+      { id: 'all', label: 'ទាំងអស់' },
+      { id: 'low', label: '⚠️ ស្ដុកតិច' },
+      ...categories.map((c) => ({ id: c.id, label: c.label })),
+    ],
+    [categories]
+  )
 
   const products = useLiveQuery(
     () => db.products.where('tenantId').equals(DEMO_TENANT).filter((p) => !p.deletedAt).toArray(),

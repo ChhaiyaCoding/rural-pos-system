@@ -1,19 +1,23 @@
 'use client'
 
-import { CATEGORIES, type CategoryId } from '../mock-products'
-
-interface CategoryTabsProps {
-  active: CategoryId
-  onChange: (id: CategoryId) => void
-  /** Optional per-category product counts shown as a badge */
-  counts?: Partial<Record<CategoryId, number>>
+export interface TabCategory {
+  id: string
+  label: string
 }
 
-export function CategoryTabs({ active, onChange, counts }: CategoryTabsProps) {
+interface CategoryTabsProps {
+  categories: TabCategory[]
+  active: string
+  onChange: (id: string) => void
+  /** Optional per-category product counts shown as a badge */
+  counts?: Record<string, number>
+}
+
+export function CategoryTabs({ categories, active, onChange, counts }: CategoryTabsProps) {
   return (
     /* Full-bleed horizontal scroll — pills align with the header's px-4 edges */
     <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 py-0.5">
-      {CATEGORIES.map((c) => {
+      {categories.map((c) => {
         const isActive = c.id === active
         const count = counts?.[c.id]
         return (
@@ -31,7 +35,7 @@ export function CategoryTabs({ active, onChange, counts }: CategoryTabsProps) {
                 : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50',
             ].join(' ')}
           >
-            {c.labelKm}
+            {c.label}
             {typeof count === 'number' && (
               <span
                 className={[

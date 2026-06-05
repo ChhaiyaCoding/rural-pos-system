@@ -13,13 +13,13 @@ import { customerService } from '@/services/customer.service'
 import { db } from '@/db'
 import type { KHR } from '@/types'
 import type { TenantId, UserId, CustomerId } from '@/types/branded'
-import { type CategoryId } from '../mock-products'
 import { productMatchesQuery } from '@/lib/search'
+import { useCategoryStore } from '@/store/category.store'
 import { ProductCard } from './ProductCard'
+import { CategoryTabs, type TabCategory } from './CategoryTabs'
 import { FlyToCartOverlay, type FlyItem } from '@/components/shared/FlyToCartOverlay'
 import { CartPanel } from './CartPanel'
 import { CheckoutSheet } from './CheckoutSheet'
-import { CategoryTabs } from './CategoryTabs'
 import { SaleReceiptSheet, type ReceiptData } from './SaleReceiptSheet'
 import { BarcodeScannerSheet } from './BarcodeScannerSheet'
 import { OpenShiftSheet } from './OpenShiftSheet'
@@ -41,7 +41,7 @@ type Success = {
 
 export function POSScreen() {
   const [search,     setSearch]     = useState('')
-  const [category,   setCategory]   = useState<CategoryId>('all')
+  const [category,   setCategory]   = useState<string>('all')
   const [isCartOpen, setCartOpen]   = useState(false)
   const [checkout,   setCheckout]   = useState<{ type: 'cash' | 'debt' | 'partial' } | null>(null)
   const [success,    setSuccess]    = useState<Success>(null)
@@ -61,6 +61,9 @@ export function POSScreen() {
   ) as CashDrawer | null | undefined
 
   const shiftOpen = !!currentDrawer
+
+  /* Managed categories (shared store) — drives the filter tabs */
+  const categories = useCategoryStore((s) => s.categories)
 
   /* Products from DB (live — updates when stock changes) */
   const dbProducts = useLiveQuery(
@@ -98,14 +101,20 @@ export function POSScreen() {
 
   /* Live per-category counts for the tab badges */
   const categoryCounts = useMemo(() => {
-    const counts: Partial<Record<CategoryId, number>> = { all: dbProducts.length }
+    const counts: Record<string, number> = { all: dbProducts.length }
     for (const p of dbProducts) {
-      const c = p.categoryId as Exclude<CategoryId, 'all'>
+      const c = p.categoryId
       if (!c) continue
       counts[c] = (counts[c] ?? 0) + 1
     }
     return counts
   }, [dbProducts])
+
+  /* Tab list — "all" first, then managed categories from the store */
+  const tabCategories = useMemo<TabCategory[]>(
+    () => [{ id: 'all', label: 'ទាំងអស់' }, ...categories.map((c) => ({ id: c.id, label: c.label }))],
+    [categories]
+  )
 
   /* Auto-dismiss success banner — pause when receipt sheet is open */
   useEffect(() => {
@@ -335,7 +344,7 @@ export function POSScreen() {
           </div>
 
           {/* Category tabs */}
-          <CategoryTabs active={category} onChange={setCategory} counts={categoryCounts} />
+          <CategoryTabs categories={tabCategories} active={category} onChange={setCategory} counts={categoryCounts} />
         </header>
 
         {/* ── Product grid ─────────────────────────────────── */}

@@ -6,6 +6,7 @@ import { productService } from '@/services/product.service'
 import { db } from '@/db'
 import { toKHR } from '@/lib/money'
 import { useUnitStore } from '@/store/unit.store'
+import { useCategoryStore } from '@/store/category.store'
 import { BarcodeScanMini } from './BarcodeScanMini'
 import { StockHistorySheet } from './StockHistorySheet'
 import type { Product } from '@/types'
@@ -81,12 +82,21 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
   const [emoji,         setEmoji]         = useState(product?.emoji      ?? '📦')
   const [name,          setName]          = useState(product?.nameKm     ?? '')
   const [nameEn,        setNameEn]        = useState(product?.nameEn     ?? '')
-  const [categoryId,    setCategoryId]    = useState(
-    CATEGORIES.some((c) => c.id === product?.categoryId) ? (product?.categoryId ?? 'food') : '__custom_cat__'
-  )
-  const [customCategory, setCustomCategory] = useState(
-    !CATEGORIES.some((c) => c.id === product?.categoryId) ? (product?.categoryId ?? '') : ''
-  )
+  /* Categories — managed & persisted in a dedicated store */
+  const categories      = useCategoryStore((s) => s.categories)
+  const addCategory     = useCategoryStore((s) => s.addCategory)
+  const renameCategory  = useCategoryStore((s) => s.renameCategory)
+  const removeCategory  = useCategoryStore((s) => s.removeCategory)
+  const ensureCategory  = useCategoryStore((s) => s.ensureCategory)
+
+  const [categoryId, setCategoryId] = useState(product?.categoryId ?? categories[0]?.id ?? 'food')
+
+  /* Category management UI state */
+  const [manageCats,    setManageCats]    = useState(false)
+  const [newCat,        setNewCat]        = useState('')
+  const [editingCat,    setEditingCat]    = useState<string | null>(null)
+  const [editCatValue,  setEditCatValue]  = useState('')
+
   /* Units — managed & persisted in a dedicated store */
   const units       = useUnitStore((s) => s.units)
   const addUnit     = useUnitStore((s) => s.addUnit)
@@ -133,17 +143,42 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
   }, [barcode, product?.id])
 
   const effectiveUnit    = unit.trim()
-  const effectiveCatId   = categoryId === '__custom_cat__' ? customCategory : categoryId
+  const effectiveCatId   = categoryId.trim()
   const effectiveBarcode = barcode.trim() || null
-  const canSave = name.trim() && sellPrice && Number(sellPrice) > 0 && effectiveUnit && effectiveCatId.trim() && barcodeStatus !== 'dup'
+  const canSave = name.trim() && sellPrice && Number(sellPrice) > 0 && effectiveUnit && effectiveCatId && barcodeStatus !== 'dup'
 
-  /* If editing a product whose unit isn't in the list, add it so it's selectable */
+  /* If editing a product whose unit/category isn't in the list, add it so it stays selectable */
   useEffect(() => {
-    if (product?.unit && !units.includes(product.unit)) {
-      addUnit(product.unit)
+    if (product?.unit && !units.includes(product.unit)) addUnit(product.unit)
+    if (product?.categoryId && !categories.some((c) => c.id === product.categoryId)) {
+      ensureCategory(product.categoryId)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  /* ── Category management handlers ───────────────────── */
+  const handleAddCat = () => {
+    const label = newCat.trim()
+    if (!label) return
+    const id = addCategory(label)
+    if (id) setCategoryId(id)
+    setNewCat('')
+  }
+  const startRenameCat = (id: string) => {
+    setEditingCat(id)
+    setEditCatValue(categories.find((c) => c.id === id)?.label ?? '')
+  }
+  const commitRenameCat = () => {
+    const nv = editCatValue.trim()
+    if (nv && editingCat) renameCategory(editingCat, nv)
+    setEditingCat(null)
+  }
+  const handleRemoveCat = (id: string) => {
+    const remaining = categories.filter((c) => c.id !== id)
+    removeCategory(id)
+    if (categoryId === id) setCategoryId(remaining[0]?.id ?? '')
+    if (editingCat === id) setEditingCat(null)
+  }
 
   /* ── Unit management handlers ───────────────────────── */
   const handleAddUnit = () => {
@@ -458,47 +493,100 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
             )}
           </div>
 
-          {/* Category */}
+          {/* Category — selectable + manageable (add / rename / delete) */}
           <div>
-            <p className="text-[12px] font-semibold text-slate-500 mb-1.5">ប្រភេទ</p>
-            <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => { setCategoryId(cat.id); setCustomCategory('') }}
-                  className={[
-                    'h-9 px-3 rounded-xl border text-[12px] font-semibold transition-colors',
-                    categoryId === cat.id
-                      ? 'border-primary-500 bg-primary-50 text-primary-700'
-                      : 'border-slate-200 text-slate-600 active:bg-slate-50',
-                  ].join(' ')}
-                >
-                  {cat.label}
-                </button>
-              ))}
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[12px] font-semibold text-slate-500">ប្រភេទ</p>
               <button
                 type="button"
-                onClick={() => setCategoryId('__custom_cat__')}
-                className={[
-                  'h-9 px-3 rounded-xl border text-[12px] font-semibold transition-colors',
-                  categoryId === '__custom_cat__'
-                    ? 'border-primary-500 bg-primary-50 text-primary-700'
-                    : 'border-slate-200 text-slate-600 active:bg-slate-50',
-                ].join(' ')}
+                onClick={() => { setManageCats((v) => !v); setEditingCat(null) }}
+                className="min-h-0 min-w-0 flex items-center gap-1 text-[11px] font-semibold text-primary-600 active:text-primary-700 px-1 py-0.5"
               >
-                ផ្សេង…
+                {manageCats
+                  ? <><Check size={12} strokeWidth={2.5} /> រួចរាល់</>
+                  : <><Pencil size={11} strokeWidth={2.25} /> កែ</>}
               </button>
             </div>
-            {categoryId === '__custom_cat__' && (
+
+            <div className="flex flex-wrap gap-2">
+              {categories.map((cat) =>
+                editingCat === cat.id ? (
+                  /* Inline rename */
+                  <div key={cat.id} className="flex items-center gap-1">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editCatValue}
+                      onChange={(e) => setEditCatValue(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') commitRenameCat() }}
+                      className="h-9 w-28 px-2 rounded-xl border border-primary-400 text-[12px] font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-primary-400/20"
+                    />
+                    <button
+                      type="button"
+                      onClick={commitRenameCat}
+                      className="min-h-0 min-w-0 w-9 h-9 flex items-center justify-center rounded-xl bg-primary-600 text-white active:bg-primary-700"
+                      aria-label="រក្សាទុក"
+                    >
+                      <Check size={15} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                ) : (
+                  <div key={cat.id} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => (manageCats ? startRenameCat(cat.id) : setCategoryId(cat.id))}
+                      className={[
+                        'h-9 px-3 rounded-xl border text-[12px] font-semibold transition-colors',
+                        manageCats
+                          ? 'border-slate-300 bg-white text-slate-700 active:bg-slate-50'
+                          : categoryId === cat.id
+                            ? 'border-primary-500 bg-primary-50 text-primary-700'
+                            : 'border-slate-200 text-slate-600 active:bg-slate-50',
+                      ].join(' ')}
+                    >
+                      {cat.label}
+                    </button>
+                    {manageCats && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCat(cat.id)}
+                        className="min-h-0 min-w-0 absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-danger-500 text-white flex items-center justify-center shadow-sm"
+                        aria-label={`លុប ${cat.label}`}
+                      >
+                        <X size={9} strokeWidth={3} />
+                      </button>
+                    )}
+                  </div>
+                )
+              )}
+            </div>
+
+            {manageCats && (
+              <p className="text-[10px] text-slate-400 mt-1.5">
+                ចុច​ប្រភេទ​ដើម្បី​កែ​ឈ្មោះ · ចុច × ដើម្បី​លុប
+              </p>
+            )}
+
+            {/* Add new category */}
+            <div className="flex gap-2 mt-2">
               <input
                 type="text"
-                value={customCategory}
-                onChange={(e) => setCustomCategory(e.target.value)}
-                placeholder="វាយប្រភេទផ្ទាល់…"
-                className="mt-2 w-full h-10 rounded-xl border border-slate-200 px-3 text-[14px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500"
+                value={newCat}
+                onChange={(e) => setNewCat(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCat() } }}
+                placeholder="បន្ថែម​ប្រភេទ​ថ្មី…"
+                className="flex-1 h-10 rounded-xl border border-slate-200 px-3 text-[14px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500 min-w-0"
               />
-            )}
+              <button
+                type="button"
+                onClick={handleAddCat}
+                disabled={!newCat.trim()}
+                className="shrink-0 h-10 px-3.5 rounded-xl bg-primary-600 text-white text-[13px] font-bold flex items-center gap-1 disabled:opacity-40 active:bg-primary-700 transition-colors"
+              >
+                <Plus size={15} strokeWidth={2.5} />
+                បន្ថែម
+              </button>
+            </div>
           </div>
 
           {/* Unit — selectable + manageable (add / rename / delete) */}
