@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Plus, Package, Search, PackagePlus } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
@@ -21,18 +21,11 @@ export default function InventoryPage() {
   const [addOpen,   setAddOpen]   = useState(false)
   const [restocking, setRestocking] = useState<Product | null>(null)
 
-  /* Categories from the shared store — labels + filter tabs stay in sync */
+  /* Categories from the shared store — labels for display stay complete,
+     but filter tabs only show categories that actually have products */
   const categories = useCategoryStore((s) => s.categories)
   const CATEGORY_LABELS = useMemo(
     () => Object.fromEntries(categories.map((c) => [c.id, c.label])),
-    [categories]
-  )
-  const TABS = useMemo(
-    () => [
-      { id: 'all', label: 'ទាំងអស់' },
-      { id: 'low', label: '⚠️ ស្ដុកតិច' },
-      ...categories.map((c) => ({ id: c.id, label: c.label })),
-    ],
     [categories]
   )
 
@@ -46,6 +39,30 @@ export default function InventoryPage() {
   ).length
   const outCount = products.filter((p) => p.stockQty === 0).length
   const alertCount = lowStockCount + outCount
+
+  /* Per-category product counts → drive which filter tabs are visible */
+  const categoryCounts = useMemo(() => {
+    const m: Record<string, number> = {}
+    for (const p of products) m[p.categoryId] = (m[p.categoryId] ?? 0) + 1
+    return m
+  }, [products])
+
+  /* Tabs: all + low + only categories that actually have products */
+  const TABS = useMemo(
+    () => [
+      { id: 'all', label: 'ទាំងអស់' },
+      { id: 'low', label: '⚠️ ស្ដុកតិច' },
+      ...categories
+        .filter((c) => (categoryCounts[c.id] ?? 0) > 0)
+        .map((c) => ({ id: c.id, label: c.label })),
+    ],
+    [categories, categoryCounts]
+  )
+
+  /* If the active category tab becomes empty, fall back to "all" */
+  useEffect(() => {
+    if (tab !== 'all' && tab !== 'low' && (categoryCounts[tab] ?? 0) === 0) setTab('all')
+  }, [categoryCounts, tab])
 
   const filtered = useMemo(() => {
     const base = products.filter((p) => {

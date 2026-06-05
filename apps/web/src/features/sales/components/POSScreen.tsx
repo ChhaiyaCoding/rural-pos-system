@@ -110,11 +110,22 @@ export function POSScreen() {
     return counts
   }, [dbProducts])
 
-  /* Tab list — "all" first, then managed categories from the store */
+  /* Tab list — "all" first, then only categories that actually have products
+     (empty / unused categories stay hidden from the filter bar) */
   const tabCategories = useMemo<TabCategory[]>(
-    () => [{ id: 'all', label: 'ទាំងអស់' }, ...categories.map((c) => ({ id: c.id, label: c.label }))],
-    [categories]
+    () => [
+      { id: 'all', label: 'ទាំងអស់' },
+      ...categories
+        .filter((c) => (categoryCounts[c.id] ?? 0) > 0)
+        .map((c) => ({ id: c.id, label: c.label })),
+    ],
+    [categories, categoryCounts]
   )
+
+  /* If the active filter's category becomes empty, fall back to "all" */
+  useEffect(() => {
+    if (category !== 'all' && (categoryCounts[category] ?? 0) === 0) setCategory('all')
+  }, [categoryCounts, category])
 
   /* Auto-dismiss success banner — pause when receipt sheet is open */
   useEffect(() => {
