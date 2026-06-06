@@ -5,6 +5,7 @@ import { Plus, Search, Users } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { formatKHR, formatUSD, toKHR } from '@/lib/money'
+import { getDueInfo } from '@/lib/dueDate'
 import { CustomerFormSheet } from '@/features/debt/components/CustomerFormSheet'
 import { CustomerDetailSheet } from '@/features/debt/components/CustomerDetailSheet'
 import type { Customer } from '@/types'
@@ -32,6 +33,8 @@ export default function DebtPage() {
   const owingCount   = customers.filter((c) => c.debtBalance > 0).length
   const paidCount    = customers.filter((c) => c.debtBalance <= 0).length
   const debtorCount  = owingCount
+  const overdueCount = customers.filter((c) => getDueInfo(c).status === 'overdue').length
+  const dueSoonCount = customers.filter((c) => getDueInfo(c).status === 'due-soon').length
 
   const TABS: Array<{ id: DebtTab; label: string; count: number; tone: 'primary' | 'danger' | 'success' }> = [
     { id: 'all',   label: 'ទាំងអស់',  count: customers.length, tone: 'primary' },
@@ -61,13 +64,25 @@ export default function DebtPage() {
           <span className="text-[12px] text-slate-400 font-medium">{customers.length} នាក់</span>
         </div>
 
-        {/* Summary chip */}
-        {debtorCount > 0 && (
-          <div className="mt-2 flex gap-2">
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-danger-700 bg-danger-50 border border-danger-100 rounded-full px-2.5 py-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-danger-500" />
-              {debtorCount} នាក់ជំពាក់ · {formatKHR(totalDebt)} · {formatUSD(totalDebt)}
-            </span>
+        {/* Summary chips */}
+        {(debtorCount > 0 || overdueCount > 0 || dueSoonCount > 0) && (
+          <div className="mt-2 flex gap-2 flex-wrap">
+            {debtorCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-danger-700 bg-danger-50 border border-danger-100 rounded-full px-2.5 py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-danger-500" />
+                {debtorCount} នាក់ជំពាក់ · {formatKHR(totalDebt)} · {formatUSD(totalDebt)}
+              </span>
+            )}
+            {overdueCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-danger-700 bg-danger-100 border border-danger-200 rounded-full px-2.5 py-1">
+                🔴 ផុតថ្ងៃសង {overdueCount} នាក់
+              </span>
+            )}
+            {dueSoonCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-warning-700 bg-warning-100 border border-warning-200 rounded-full px-2.5 py-1">
+                🟠 ជិតដល់ថ្ងៃសង {dueSoonCount} នាក់
+              </span>
+            )}
           </div>
         )}
 
@@ -138,6 +153,12 @@ export default function DebtPage() {
           {filtered.map((customer) => {
             const hasDebt = customer.debtBalance > 0
             const initial = customer.nameKm.charAt(0) || '?'
+            const due = getDueInfo(customer)
+            const dueLabel =
+              due.daysUntilDue === null ? null
+              : due.daysUntilDue < 0  ? `🔴 ផុតថ្ងៃសង ${-due.daysUntilDue} ថ្ងៃ`
+              : due.daysUntilDue === 0 ? '🟠 ត្រូវសងថ្ងៃនេះ'
+              : `🟠 នៅ ${due.daysUntilDue} ថ្ងៃ`
             return (
               <button
                 key={customer.id}
@@ -168,6 +189,14 @@ export default function DebtPage() {
                   <p className="text-[14px] font-semibold text-slate-900 truncate">{customer.nameKm}</p>
                   {customer.phone && (
                     <p className="text-[12px] text-slate-400 mt-0.5">{customer.phone}</p>
+                  )}
+                  {(due.status === 'overdue' || due.status === 'due-soon') && dueLabel && (
+                    <span className={[
+                      'inline-block mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                      due.status === 'overdue' ? 'bg-danger-100 text-danger-700' : 'bg-warning-100 text-warning-700',
+                    ].join(' ')}>
+                      {dueLabel}
+                    </span>
                   )}
                 </div>
 

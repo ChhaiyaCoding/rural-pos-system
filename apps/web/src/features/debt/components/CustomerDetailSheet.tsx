@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useMemo, useRef } from 'react'
-import { X, Phone, MapPin, ArrowDownLeft, ArrowUpRight, Banknote, Pencil, CheckCircle2, ChevronRight, Share2, ImageDown, Check } from 'lucide-react'
+import { X, Phone, MapPin, ArrowDownLeft, ArrowUpRight, Banknote, Pencil, CheckCircle2, ChevronRight, Share2, ImageDown, Check, CalendarClock } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { debtService } from '@/services/debt.service'
+import { customerService } from '@/services/customer.service'
 import { formatKHR, formatUSD, toKHR, getExchangeRate } from '@/lib/money'
-import { formatDateTimeKm, nowISO } from '@/lib/date'
+import { formatDateTimeKm, nowISO, todayISODate, addDaysISODate } from '@/lib/date'
+import { getDueInfo } from '@/lib/dueDate'
 import { useStoreProfile } from '@/store/storeProfile.store'
 import { CustomerEditSheet } from './CustomerEditSheet'
 import type { Customer, DebtTransaction } from '@/types'
@@ -61,6 +63,26 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
 
   const hasDebt = live.debtBalance > 0
   const initial = live.nameKm.charAt(0) || '?'
+
+  /* ── Due date ──────────────────────────────────────────── */
+  const [savingDue, setSavingDue] = useState(false)
+  const dueInfo = getDueInfo(live)
+  const handleSetDue = async (date: string | null) => {
+    if (savingDue) return
+    setSavingDue(true)
+    await customerService.setDueDate(live.id as CustomerId, date)
+    setSavingDue(false)
+  }
+  const dueBadge =
+    dueInfo.status === 'overdue'  ? { text: 'ផុតកំណត់', cls: 'bg-danger-100 text-danger-700' }
+    : dueInfo.status === 'due-soon' ? { text: 'ជិតដល់',  cls: 'bg-warning-100 text-warning-700' }
+    : dueInfo.status === 'upcoming' ? { text: 'មានពេល',  cls: 'bg-success-100 text-success-700' }
+    : null
+  const dueText =
+    dueInfo.daysUntilDue === null ? ''
+    : dueInfo.daysUntilDue < 0  ? `ផុតកំណត់ ${-dueInfo.daysUntilDue} ថ្ងៃ`
+    : dueInfo.daysUntilDue === 0 ? 'ត្រូវសងថ្ងៃនេះ'
+    : `នៅសល់ ${dueInfo.daysUntilDue} ថ្ងៃ`
 
   /* Parsed input → normalized to ៛ (the debt is always stored in ៛).
      When paying in $, convert at the configured exchange rate. */
@@ -237,6 +259,84 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
               </p>
             </div>
           </div>
+
+          {/* ─ Due date (repayment deadline) ─────────── */}
+          {hasDebt && (
+            <div className="px-4 pt-4">
+              <div className={[
+                'rounded-2xl border p-4',
+                dueInfo.status === 'overdue'  ? 'border-danger-200 bg-danger-50'
+                : dueInfo.status === 'due-soon' ? 'border-warning-200 bg-warning-50'
+                : 'border-slate-200 bg-white',
+              ].join(' ')}>
+                <div className="flex items-center justify-between mb-2.5">
+                  <p className="text-[12px] font-bold text-slate-500 flex items-center gap-1.5">
+                    <CalendarClock size={14} strokeWidth={2.25} /> ថ្ងៃកំណត់សង
+                  </p>
+                  {dueBadge && (
+                    <span className={['text-[11px] font-bold px-2 py-0.5 rounded-full', dueBadge.cls].join(' ')}>
+                      {dueBadge.text}
+                    </span>
+                  )}
+                </div>
+
+                {/* Date picker + clear */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={live.dueDate ?? ''}
+                    onChange={(e) => handleSetDue(e.target.value || null)}
+                    className="flex-1 h-11 px-3 rounded-xl border border-slate-200 bg-white text-[14px] font-semibold text-slate-800 focus:outline-none focus:border-primary-500"
+                  />
+                  {live.dueDate && (
+                    <button
+                      type="button"
+                      onClick={() => handleSetDue(null)}
+                      aria-label="លុបថ្ងៃកំណត់"
+                      className="shrink-0 w-11 h-11 rounded-xl border border-slate-200 bg-white text-slate-400 flex items-center justify-center active:bg-slate-100"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Status detail */}
+                {live.dueDate ? (
+                  <p className="mt-2 text-[12px] tabular-nums">
+                    <span className={[
+                      'font-bold',
+                      dueInfo.status === 'overdue' ? 'text-danger-700'
+                      : dueInfo.status === 'due-soon' ? 'text-warning-700'
+                      : 'text-slate-600',
+                    ].join(' ')}>
+                      {dueText}
+                    </span>
+                    {dueInfo.daysPostponed > 0 && (
+                      <span className="text-slate-500"> · បានពន្យា {dueInfo.daysPostponed} ថ្ងៃ</span>
+                    )}
+                  </p>
+                ) : (
+                  <p className="mt-2 text-[11px] text-slate-400">
+                    មិនទាន់កំណត់ថ្ងៃសង — ជ្រើសថ្ងៃ ឬ ប្រើប៊ូតុងខាងក្រោម
+                  </p>
+                )}
+
+                {/* Quick postpone */}
+                <div className="flex gap-2 mt-2.5">
+                  {[7, 15, 30].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => handleSetDue(addDaysISODate(live.dueDate || todayISODate(), n))}
+                      className="flex-1 h-9 rounded-lg border border-slate-200 bg-white text-[12px] font-semibold text-slate-600 active:bg-slate-50"
+                    >
+                      +{n} ថ្ងៃ
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ─ Success banner ────────────────────────── */}
           {paySuccess && (

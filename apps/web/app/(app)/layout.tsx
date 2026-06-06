@@ -12,6 +12,8 @@ import {
 } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
+import { getDueInfo } from '@/lib/dueDate'
+import { todayISODate } from '@/lib/date'
 import { SyncStatusBar } from '@/components/shared/SyncStatusBar'
 import { PWAInstallBanner } from '@/components/shared/PWAInstallBanner'
 import type { TenantId } from '@/types/branded'
@@ -29,10 +31,10 @@ async function requestNotifPermission() {
 }
 
 /** Show a browser notification (requires permission granted) */
-function showNotif(title: string, body: string, icon = '/icons/icon-192x192.png') {
+function showNotif(title: string, body: string, tag = 'pos', icon = '/icons/icon-192x192.png') {
   if (typeof Notification === 'undefined') return
   if (Notification.permission !== 'granted') return
-  new Notification(title, { body, icon, badge: icon, tag: 'low-stock' })
+  new Notification(title, { body, icon, badge: icon, tag })
 }
 
 const NAV = [
@@ -107,6 +109,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       .count(),
     []
   ) ?? 0
+
+  /* ── Debt due-date reminder (once per app session) ──────────── */
+  const dueCustomers = useLiveQuery(
+    () => db.customers
+      .where('tenantId').equals(DEMO_TENANT)
+      .filter(c => !c.deletedAt && (c.debtBalance as number) > 0 && !!c.dueDate)
+      .toArray(),
+    []
+  ) ?? []
+
+  const dueNotifiedRef = useRef(false)
+  useEffect(() => {
+    if (dueNotifiedRef.current) return
+    if (dueCustomers.length === 0) return   // wait until data has loaded
+
+    const today = todayISODate()
+    const overdue: string[] = []
+    const soon:    string[] = []
+    for (const c of dueCustomers) {
+      const s = getDueInfo(c, today).status
+      if (s === 'overdue') overdue.push(c.nameKm)
+      else if (s === 'due-soon') soon.push(c.nameKm)
+    }
+    if (overdue.length === 0 && soon.length === 0) return
+
+    dueNotifiedRef.current = true   // only once per session
+    const names = [...overdue, ...soon].slice(0, 3).join(', ')
+    const more  = overdue.length + soon.length - 3
+    const title = overdue.length > 0 ? '🔴 បំណុលផុតថ្ងៃសង!' : '🟠 បំណុលជិតដល់ថ្ងៃសង'
+    const body  =
+      `សូមទាក់ទង៖ ${names}${more > 0 ? ` និង ${more} នាក់ទៀត` : ''}` +
+      ` — ផុតថ្ងៃ ${overdue.length} · ជិតដល់ ${soon.length}`
+    showNotif(title, body, 'debt-due')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dueCustomers])
 
   return (
     <div className="flex flex-col h-dvh w-full max-w-[430px] md:max-w-full mx-auto bg-white">

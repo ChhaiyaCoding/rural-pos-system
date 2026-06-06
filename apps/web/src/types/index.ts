@@ -33,6 +33,10 @@ export interface Customer {
   address: string | null
   imageUri: string | null
   debtBalance: KHR
+  /** Date the customer should repay by — 'YYYY-MM-DD', null if none set */
+  dueDate: string | null
+  /** First due date ever set — baseline for "postponed X days" tracking */
+  dueDateOriginal: string | null
   createdAt: string
   updatedAt: string
   deletedAt: string | null

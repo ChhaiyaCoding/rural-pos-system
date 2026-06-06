@@ -25,6 +25,8 @@ export const customerService = {
       address: input.address ?? null,
       imageUri: input.imageUri ?? null,
       debtBalance: toKHR(0),
+      dueDate: null,
+      dueDateOriginal: null,
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
@@ -100,6 +102,38 @@ export const customerService = {
     await db.customers.update(id, { deletedAt: now, updatedAt: now })
   },
 
+  /** Set / change / clear the repayment due date ('YYYY-MM-DD' or null).
+   *  Records the first date set as `dueDateOriginal` so we can show how many
+   *  days a repayment has since been postponed. */
+  async setDueDate(id: CustomerId, dueDate: string | null): Promise<Result<Customer>> {
+    const now = nowISO()
+    await db.transaction('rw', [db.customers, db.syncQueue], async () => {
+      const existing = await db.customers.get(id)
+      const patch: Partial<Customer> = { dueDate, updatedAt: now }
+      if (dueDate) {
+        // First time a due date is assigned → that's the baseline
+        if (!existing?.dueDateOriginal) patch.dueDateOriginal = dueDate
+      } else {
+        // Clearing the due date resets the postpone baseline too
+        patch.dueDateOriginal = null
+      }
+      await db.customers.update(id, patch)
+      const updated = await db.customers.get(id)
+      if (updated) {
+        await enqueue({
+          tenantId:  updated.tenantId,
+          tableName: 'customers',
+          recordId:  id,
+          operation: 'UPDATE',
+          payload:   JSON.stringify(updated),
+        })
+      }
+    })
+    const result = await db.customers.get(id)
+    if (!result) return { ok: false, error: { code: 'CUSTOMER_NOT_FOUND', customerId: id } }
+    return { ok: true, data: result }
+  },
+
   /** Seed demo customers on first run (only if DB is empty).
    *  Uses fixed IDs + bulkPut so it stays idempotent even when called
    *  twice concurrently (React StrictMode double-invokes effects in dev) —
@@ -124,6 +158,8 @@ export const customerService = {
       address: null,
       imageUri: null,
       debtBalance: toKHR(0),
+      dueDate: null,
+      dueDateOriginal: null,
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
