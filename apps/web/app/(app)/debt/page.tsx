@@ -12,8 +12,11 @@ import type { TenantId } from '@/types/branded'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
+type DebtTab = 'all' | 'owing' | 'paid'
+
 export default function DebtPage() {
   const [search,   setSearch]   = useState('')
+  const [tab,      setTab]      = useState<DebtTab>('all')
   const [adding,   setAdding]   = useState(false)
   const [selected, setSelected] = useState<Customer | null>(null)
 
@@ -25,14 +28,28 @@ export default function DebtPage() {
     []
   ) ?? []
 
-  const filtered = customers.filter((c) =>
-    search === '' ||
-    c.nameKm.toLowerCase().includes(search.toLowerCase()) ||
-    (c.phone ?? '').includes(search)
-  )
-
   const totalDebt    = toKHR(customers.reduce((s, c) => s + c.debtBalance, 0))
-  const debtorCount  = customers.filter((c) => c.debtBalance > 0).length
+  const owingCount   = customers.filter((c) => c.debtBalance > 0).length
+  const paidCount    = customers.filter((c) => c.debtBalance <= 0).length
+  const debtorCount  = owingCount
+
+  const TABS: Array<{ id: DebtTab; label: string; count: number; tone: 'primary' | 'danger' | 'success' }> = [
+    { id: 'all',   label: 'ទាំងអស់',  count: customers.length, tone: 'primary' },
+    { id: 'owing', label: 'នៅជំពាក់', count: owingCount,       tone: 'danger'  },
+    { id: 'paid',  label: 'សងអស់',    count: paidCount,        tone: 'success' },
+  ]
+
+  const filtered = customers
+    .filter((c) =>
+      tab === 'all'   ? true
+      : tab === 'owing' ? c.debtBalance > 0
+      : c.debtBalance <= 0
+    )
+    .filter((c) =>
+      search === '' ||
+      c.nameKm.toLowerCase().includes(search.toLowerCase()) ||
+      (c.phone ?? '').includes(search)
+    )
 
   return (
     <div className="flex flex-col h-full">
@@ -65,6 +82,37 @@ export default function DebtPage() {
             className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 text-[13px] placeholder:text-slate-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
           />
         </div>
+
+        {/* Filter tabs */}
+        <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar py-0.5">
+          {TABS.map((t) => {
+            const isActive = tab === t.id
+            const activeBg =
+              t.tone === 'danger'  ? 'bg-danger-600 text-white shadow-sm'
+              : t.tone === 'success' ? 'bg-success-600 text-white shadow-sm'
+              : 'bg-primary-600 text-white shadow-sm'
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                className={[
+                  'min-h-0 shrink-0 h-10 px-4 rounded-full whitespace-nowrap',
+                  'text-[13px] font-semibold transition-colors flex items-center gap-1.5',
+                  isActive ? activeBg : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50',
+                ].join(' ')}
+              >
+                {t.label}
+                <span className={[
+                  'tabular-nums text-[11px] font-bold rounded-full px-1.5 min-w-[18px] text-center',
+                  isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500',
+                ].join(' ')}>
+                  {t.count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </header>
 
       {/* List */}
@@ -77,8 +125,13 @@ export default function DebtPage() {
           <p className="text-[13px] text-slate-400">ចុច + ដើម្បីបន្ថែមអតិថិជនដំបូង</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-[13px] text-slate-400">រកមិនឃើញ «{search}»</p>
+        <div className="flex-1 flex items-center justify-center px-6 text-center">
+          <p className="text-[13px] text-slate-400">
+            {search !== ''   ? `រកមិនឃើញ «${search}»`
+            : tab === 'owing' ? 'គ្មានអ្នកជំពាក់ទេ 🎉'
+            : tab === 'paid'  ? 'មិនទាន់មានអ្នកសងអស់'
+            : 'មិនទាន់មានអតិថិជន'}
+          </p>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
