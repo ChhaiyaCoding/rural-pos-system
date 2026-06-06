@@ -5,13 +5,19 @@ import { useRouter } from 'next/navigation'
 import {
   Camera, X, Store, User, FileText, Check,
   Package, ChevronRight, Info, ShieldAlert, Receipt, Database,
-  LogOut, Loader2,
+  LogOut, Loader2, Trash2,
 } from 'lucide-react'
 import { useStoreProfile } from '@/store/storeProfile.store'
 import { useAuthStore } from '@/store/auth.store'
 import { BackupSheet } from '@/features/settings/components/BackupSheet'
+import { backupService } from '@/services/backup.service'
+import { productService } from '@/services/product.service'
+import { customerService } from '@/services/customer.service'
 import { formatKHR } from '@/lib/money'
 import { toKHR } from '@/lib/money'
+import type { TenantId } from '@/types/branded'
+
+const DEMO_TENANT = 'tenant-demo' as TenantId
 
 export default function SettingsPage() {
   const {
@@ -36,6 +42,8 @@ export default function SettingsPage() {
   const [showBackup,   setShowBackup]   = useState(false)
   const [showSignOut,  setShowSignOut]  = useState(false)
   const [signingOut,   setSigningOut]   = useState(false)
+  const [showReset,    setShowReset]    = useState(false)
+  const [resetting,    setResetting]    = useState(false)
 
   const router    = useRouter()
   const clearAuth = useAuthStore((s) => s.clearAuth)
@@ -98,6 +106,21 @@ export default function SettingsPage() {
       router.replace('/login')
     } catch {
       setSigningOut(false)
+    }
+  }
+
+  /* ── Reset all data → wipe + restore demo data ─────────────── */
+  const handleResetData = async () => {
+    setResetting(true)
+    try {
+      await backupService.clearAll()
+      // Re-seed fresh demo data so the app isn't left empty
+      await productService.seedIfEmpty(DEMO_TENANT)
+      await customerService.seedIfEmpty(DEMO_TENANT)
+      // Full reload so every screen + cart picks up the clean data
+      window.location.href = '/'
+    } catch {
+      setResetting(false)
     }
   }
 
@@ -390,7 +413,13 @@ export default function SettingsPage() {
           <section>
             <SectionHeader icon={<ShieldAlert size={14} />} label="ផ្នែកគ្រោះថ្នាក់" danger />
             <div className="bg-white rounded-2xl border border-danger-100 shadow-sm divide-y divide-slate-100 overflow-hidden">
-              <SettingRow label="លុបទិន្នន័យទាំងអស់" sub="Reset ទំនិញ · ការលក់ · បំណុល" danger />
+              <SettingRow
+                label="លុបទិន្នន័យទាំងអស់"
+                sub="Reset ទំនិញ · ការលក់ · បំណុល"
+                icon={<Trash2 size={15} strokeWidth={2} />}
+                onClick={() => setShowReset(true)}
+                danger
+              />
               <SettingRow
                 label="ចេញពីគណនី"
                 sub="ចេញចោល session នៅ device នេះ"
@@ -413,6 +442,57 @@ export default function SettingsPage() {
       {/* Backup / Restore sheet */}
       {showBackup && (
         <BackupSheet onClose={() => setShowBackup(false)} />
+      )}
+
+      {/* ── Reset data confirm dialog ────────────────────────── */}
+      {showReset && (
+        <div
+          className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/60"
+          onClick={() => !resetting && setShowReset(false)}
+        >
+          <div
+            className="w-full md:max-w-sm bg-white rounded-t-2xl md:rounded-2xl shadow-pop animate-sheet-up px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Icon + title */}
+            <div className="flex flex-col items-center gap-3 pb-4 border-b border-slate-100">
+              <div className="w-14 h-14 rounded-full bg-danger-50 flex items-center justify-center">
+                <Trash2 size={26} className="text-danger-500" strokeWidth={2} />
+              </div>
+              <div className="text-center">
+                <p className="text-[16px] font-bold text-slate-900">លុបទិន្នន័យទាំងអស់?</p>
+                <p className="text-[13px] text-slate-400 mt-1 leading-snug">
+                  ទំនិញ · ការលក់ · បំណុល នឹងត្រូវលុបចេញ<br />
+                  ហើយដាក់ទិន្នន័យ demo ឡើងវិញ។<br />
+                  សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។
+                </p>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="mt-4 space-y-2.5">
+              <button
+                type="button"
+                onClick={handleResetData}
+                disabled={resetting}
+                className="w-full h-13 rounded-xl bg-danger-600 text-white font-bold text-[15px] flex items-center justify-center gap-2 active:bg-danger-700 disabled:opacity-60 transition-colors"
+              >
+                {resetting
+                  ? <><Loader2 size={18} className="animate-spin" /> កំពុងលុប…</>
+                  : <><Trash2 size={18} strokeWidth={2.25} /> បាទ/ចាស លុប</>
+                }
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowReset(false)}
+                disabled={resetting}
+                className="w-full h-12 rounded-xl border border-slate-200 text-slate-600 font-semibold text-[14px] active:bg-slate-50 transition-colors"
+              >
+                បោះបង់
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Sign Out confirm dialog ──────────────────────────── */}

@@ -143,6 +143,27 @@ export const backupService = {
     }
   },
 
+  /* ── Wipe every table (factory reset) ────────────────────── */
+  async clearAll(): Promise<void> {
+    await db.transaction(
+      'rw',
+      [db.products, db.customers, db.sales, db.saleItems,
+       db.debtTransactions, db.cashDrawers, db.stockMovements, db.syncQueue],
+      async () => {
+        await Promise.all([
+          db.products.clear(),
+          db.customers.clear(),
+          db.sales.clear(),
+          db.saleItems.clear(),
+          db.debtTransactions.clear(),
+          db.cashDrawers.clear(),
+          db.stockMovements.clear(),
+          db.syncQueue.clear(),
+        ])
+      }
+    )
+  },
+
   /* ── Read a File → parsed + validated BackupFile ─────────── */
   async readFile(file: File): Promise<BackupFile> {
     const text = await file.text()
