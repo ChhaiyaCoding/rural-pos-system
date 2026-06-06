@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { X, Trash2, Camera, ChevronDown, ChevronUp, ScanLine, CheckCircle2, AlertCircle, History, Pencil, Plus, Check } from 'lucide-react'
 import { productService } from '@/services/product.service'
 import { db } from '@/db'
-import { toKHR } from '@/lib/money'
+import { toKHR, formatKHR, getExchangeRate } from '@/lib/money'
 import { useUnitStore } from '@/store/unit.store'
 import { useCategoryStore } from '@/store/category.store'
 import { BarcodeScanMini } from './BarcodeScanMini'
@@ -114,6 +114,22 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
   const [stockQty,   setStockQty]   = useState(product?.stockQty   != null ? String(product.stockQty) : '')
   const [lowStock,   setLowStock]   = useState(product?.lowStockThreshold != null ? String(product.lowStockThreshold) : '5')
   const [costPrice,  setCostPrice]  = useState(product?.costPrice  ? String(product.costPrice)  : '')
+  const [priceCurrency, setPriceCurrency] = useState<'KHR' | 'USD'>('KHR')
+
+  /* Toggle the price inputs between ៛ and $ — convert current values so they
+     stay equivalent (prices are always stored in ៛). */
+  const switchPriceCurrency = (cur: 'KHR' | 'USD') => {
+    if (cur === priceCurrency) return
+    const rate = getExchangeRate()
+    const conv = (val: string): string => {
+      const n = Number(val)
+      if (!val || isNaN(n) || n === 0) return val
+      return cur === 'USD' ? String(+(n / rate).toFixed(4)) : String(Math.round(n * rate))
+    }
+    setSellPrice(conv(sellPrice))
+    setCostPrice(conv(costPrice))
+    setPriceCurrency(cur)
+  }
   const [barcode,    setBarcode]    = useState(product?.barcode ?? '')
   const [barcodeStatus, setBarcodeStatus] = useState<'idle' | 'ok' | 'dup'>('idle')
   const [showScanner, setShowScanner] = useState(false)
@@ -220,10 +236,14 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
     if (!canSave || saving) return
     setSaving(true)
     try {
-      const sell = toKHR(Number(sellPrice))
+      const rate = getExchangeRate()
+      const toRiel = (v: string) =>
+        priceCurrency === 'USD' ? Math.round((Number(v) || 0) * rate) : Math.round(Number(v) || 0)
+      const sellRiel = toRiel(sellPrice)
+      const sell = toKHR(sellRiel)
       const cost = costPrice && Number(costPrice) > 0
-        ? toKHR(Number(costPrice))
-        : toKHR(Math.round(Number(sellPrice) * 0.7))
+        ? toKHR(toRiel(costPrice))
+        : toKHR(Math.round(sellRiel * 0.7))
       const qty  = Math.max(0, Number(stockQty) || 0)
       const low  = Math.max(0, Number(lowStock)  || 5)
 
@@ -685,41 +705,71 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
             </div>
           </div>
 
-          {/* Sell price + Cost price */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-[12px] font-semibold text-slate-500 mb-1.5">តម្លៃលក់ (រៀល) *</p>
-              <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:border-primary-500">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={sellPrice}
-                  onChange={(e) => setSellPrice(e.target.value)}
-                  placeholder="0"
-                  className="flex-1 h-12 px-3 text-[16px] font-bold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none"
-                />
-                <span className="pr-3 text-[13px] text-slate-400">៛</span>
+          {/* Price — sell + cost, enter in ៛ or $ */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[12px] font-semibold text-slate-500">តម្លៃ</p>
+              <div className="flex items-center rounded-lg border border-slate-200 bg-white overflow-hidden">
+                {(['KHR', 'USD'] as const).map((cur) => (
+                  <button
+                    key={cur}
+                    type="button"
+                    onClick={() => switchPriceCurrency(cur)}
+                    className={[
+                      'min-h-0 min-w-0 h-7 px-3 text-[13px] font-bold tabular-nums transition-colors',
+                      priceCurrency === cur ? 'bg-primary-600 text-white' : 'text-slate-500 active:bg-slate-50',
+                    ].join(' ')}
+                  >
+                    {cur === 'KHR' ? '៛' : '$'}
+                  </button>
+                ))}
               </div>
             </div>
-            <div>
-              <p className="text-[12px] font-semibold text-slate-500 mb-1.5">ថ្លៃទិញ (ស្រេចចិត្ត)</p>
-              <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:border-primary-500">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={costPrice}
-                  onChange={(e) => setCostPrice(e.target.value)}
-                  placeholder={sellPrice ? String(Math.round(Number(sellPrice) * 0.7)) : '0'}
-                  className="flex-1 h-12 px-3 text-[16px] font-semibold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none"
-                />
-                <span className="pr-3 text-[13px] text-slate-400">៛</span>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[12px] font-semibold text-slate-500 mb-1.5">តម្លៃលក់ *</p>
+                <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:border-primary-500">
+                  <span className="pl-3 text-[13px] font-bold text-slate-400 shrink-0">{priceCurrency === 'USD' ? '$' : '៛'}</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={sellPrice}
+                    onChange={(e) => setSellPrice(e.target.value)}
+                    placeholder="0"
+                    className="flex-1 h-12 px-3 text-[16px] font-bold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none min-w-0"
+                  />
+                </div>
+                {priceCurrency === 'USD' && Number(sellPrice) > 0 && (
+                  <p className="text-[10px] text-slate-400 mt-1 tabular-nums">
+                    ≈ {formatKHR(toKHR(Math.round(Number(sellPrice) * getExchangeRate())))}
+                  </p>
+                )}
               </div>
-              {/* Profit margin hint */}
-              {sellPrice && costPrice && Number(costPrice) > 0 && Number(sellPrice) > 0 && (
-                <p className="text-[10px] text-success-600 mt-1 font-semibold">
-                  ចំណេញ {Math.round(((Number(sellPrice) - Number(costPrice)) / Number(sellPrice)) * 100)}%
-                </p>
-              )}
+              <div>
+                <p className="text-[12px] font-semibold text-slate-500 mb-1.5">ថ្លៃទិញ (ស្រេចចិត្ត)</p>
+                <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:border-primary-500">
+                  <span className="pl-3 text-[13px] font-bold text-slate-400 shrink-0">{priceCurrency === 'USD' ? '$' : '៛'}</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={costPrice}
+                    onChange={(e) => setCostPrice(e.target.value)}
+                    placeholder={sellPrice ? String(+(Number(sellPrice) * 0.7).toFixed(priceCurrency === 'USD' ? 2 : 0)) : '0'}
+                    className="flex-1 h-12 px-3 text-[16px] font-semibold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none min-w-0"
+                  />
+                </div>
+                {priceCurrency === 'USD' && Number(costPrice) > 0 && (
+                  <p className="text-[10px] text-slate-400 mt-1 tabular-nums">
+                    ≈ {formatKHR(toKHR(Math.round(Number(costPrice) * getExchangeRate())))}
+                  </p>
+                )}
+                {/* Profit margin hint */}
+                {sellPrice && costPrice && Number(costPrice) > 0 && Number(sellPrice) > 0 && (
+                  <p className="text-[10px] text-success-600 mt-1 font-semibold">
+                    ចំណេញ {Math.round(((Number(sellPrice) - Number(costPrice)) / Number(sellPrice)) * 100)}%
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
