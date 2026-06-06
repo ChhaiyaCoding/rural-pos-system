@@ -2,7 +2,7 @@
 
 import { useRef } from 'react'
 import { X, Printer, Share2, CheckCircle2 } from 'lucide-react'
-import { formatKHR } from '@/lib/money'
+import { formatKHR, formatUSD } from '@/lib/money'
 import type { KHR } from '@/types/branded'
 
 interface TopProduct {
@@ -93,6 +93,7 @@ export function ReportExportSheet({
           <div class="section">
             <div class="section-title">ចំណូលសរុប</div>
             <div class="big-num">${formatKHR(totalRevenue)}</div>
+            <div style="font-size:15px;color:#2563eb;font-weight:700;margin-top:2px">${formatUSD(totalRevenue)}</div>
             <div style="font-size:13px;color:#64748b;margin-top:4px">${salesCount} ការលក់</div>
           </div>
 
@@ -100,11 +101,11 @@ export function ReportExportSheet({
             <div class="section-title">របៀបទូទាត់</div>
             <div class="row">
               <span class="label">💵 សាច់ប្រាក់</span>
-              <span><span class="badge cash">${cashCount} ដង</span> <span class="value">${formatKHR(cashAmount)}</span></span>
+              <span><span class="badge cash">${cashCount} ដង</span> <span class="value">${formatKHR(cashAmount)} · ${formatUSD(cashAmount)}</span></span>
             </div>
             <div class="row">
               <span class="label">📒 ជំពាក់</span>
-              <span><span class="badge debt">${debtCount} ដង</span> <span class="value">${formatKHR(debtAmount)}</span></span>
+              <span><span class="badge debt">${debtCount} ដង</span> <span class="value">${formatKHR(debtAmount)} · ${formatUSD(debtAmount)}</span></span>
             </div>
           </div>
 
@@ -117,7 +118,7 @@ export function ReportExportSheet({
                   <span class="rank ${i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : ''}">${i + 1}</span>
                   <span class="label">${p.name}</span>
                 </span>
-                <span class="value">${formatKHR(p.revenue as KHR)}</span>
+                <span class="value">${formatKHR(p.revenue as KHR)} · ${formatUSD(p.revenue as KHR)}</span>
               </div>
             `).join('')}
           </div>
@@ -128,7 +129,7 @@ export function ReportExportSheet({
             <div class="section-title">បំណុលអតិថិជន</div>
             <div class="row">
               <span class="label">👥 ${debtorCount} នាក់ជំពាក់</span>
-              <span class="value" style="color:#dc2626">${formatKHR(totalDebt)}</span>
+              <span class="value" style="color:#dc2626">${formatKHR(totalDebt)} · ${formatUSD(totalDebt)}</span>
             </div>
           </div>
           ` : ''}
@@ -149,20 +150,20 @@ export function ReportExportSheet({
   /* ── Share (Web Share API) ─────────────────────────── */
   const handleShare = async () => {
     const top5 = topProducts.slice(0, 5)
-      .map((p, i) => `  ${i + 1}. ${p.name} — ${formatKHR(p.revenue as KHR)}`)
+      .map((p, i) => `  ${i + 1}. ${p.name} — ${formatKHR(p.revenue as KHR)} · ${formatUSD(p.revenue as KHR)}`)
       .join('\n')
 
     const text = [
       `📊 របាយការណ៍${periodLabel} — ${storeName}`,
       `📅 ${dateRange}`,
       ``,
-      `💰 ចំណូលសរុប: ${formatKHR(totalRevenue)}`,
+      `💰 ចំណូលសរុប: ${formatKHR(totalRevenue)} · ${formatUSD(totalRevenue)}`,
       `🛒 ការលក់: ${salesCount} ដង`,
       ``,
-      `💵 សាច់ប្រាក់: ${cashCount} ដង · ${formatKHR(cashAmount)}`,
-      `📒 ជំពាក់: ${debtCount} ដង · ${formatKHR(debtAmount)}`,
+      `💵 សាច់ប្រាក់: ${cashCount} ដង · ${formatKHR(cashAmount)} · ${formatUSD(cashAmount)}`,
+      `📒 ជំពាក់: ${debtCount} ដង · ${formatKHR(debtAmount)} · ${formatUSD(debtAmount)}`,
       top5 ? `\n🏆 ទំនិញលក់ច្រើន:\n${top5}` : '',
-      debtorCount > 0 ? `\n👥 បំណុលសរុប: ${formatKHR(totalDebt)} (${debtorCount} នាក់)` : '',
+      debtorCount > 0 ? `\n👥 បំណុលសរុប: ${formatKHR(totalDebt)} · ${formatUSD(totalDebt)} (${debtorCount} នាក់)` : '',
       ``,
       `📱 Rural POS System`,
     ].filter(Boolean).join('\n')
@@ -217,6 +218,7 @@ export function ReportExportSheet({
             <div className="px-5 py-4 border-b border-slate-100 text-center">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">ចំណូលសរុប</p>
               <p className="text-[32px] font-extrabold text-slate-900 tabular-nums">{formatKHR(totalRevenue)}</p>
+              <p className="text-[14px] font-bold text-primary-600 tabular-nums">{formatUSD(totalRevenue)}</p>
               <p className="text-[12px] text-slate-400 mt-0.5">{salesCount} ការលក់</p>
             </div>
 
@@ -229,7 +231,10 @@ export function ReportExportSheet({
                   <span className="text-[13px] font-semibold text-slate-700">សាច់ប្រាក់</span>
                   <span className="text-[11px] text-slate-400">{cashCount} ដង</span>
                 </div>
-                <span className="text-[14px] font-bold text-success-700 tabular-nums">{formatKHR(cashAmount)}</span>
+                <span className="text-right">
+                  <span className="block text-[14px] font-bold text-success-700 tabular-nums">{formatKHR(cashAmount)}</span>
+                  <span className="block text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(cashAmount)}</span>
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -237,7 +242,10 @@ export function ReportExportSheet({
                   <span className="text-[13px] font-semibold text-slate-700">ជំពាក់</span>
                   <span className="text-[11px] text-slate-400">{debtCount} ដង</span>
                 </div>
-                <span className="text-[14px] font-bold text-danger-600 tabular-nums">{formatKHR(debtAmount)}</span>
+                <span className="text-right">
+                  <span className="block text-[14px] font-bold text-danger-600 tabular-nums">{formatKHR(debtAmount)}</span>
+                  <span className="block text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(debtAmount)}</span>
+                </span>
               </div>
             </div>
 
@@ -256,8 +264,9 @@ export function ReportExportSheet({
                       </span>
                       <span className="text-[12px] font-semibold text-slate-700 truncate">{p.name}</span>
                     </div>
-                    <span className="text-[12px] font-bold text-slate-700 tabular-nums shrink-0 ml-2">
-                      {formatKHR(p.revenue as KHR)}
+                    <span className="text-right shrink-0 ml-2">
+                      <span className="block text-[12px] font-bold text-slate-700 tabular-nums">{formatKHR(p.revenue as KHR)}</span>
+                      <span className="block text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(p.revenue as KHR)}</span>
                     </span>
                   </div>
                 ))}
@@ -272,7 +281,10 @@ export function ReportExportSheet({
                     <p className="text-[12px] font-bold text-danger-700">👥 បំណុលអតិថិជន</p>
                     <p className="text-[10px] text-slate-400">{debtorCount} នាក់ជំពាក់</p>
                   </div>
-                  <p className="text-[16px] font-extrabold text-danger-700 tabular-nums">{formatKHR(totalDebt)}</p>
+                  <div className="text-right">
+                    <p className="text-[16px] font-extrabold text-danger-700 tabular-nums">{formatKHR(totalDebt)}</p>
+                    <p className="text-[11px] font-bold text-primary-600 tabular-nums">{formatUSD(totalDebt)}</p>
+                  </div>
                 </div>
               </div>
             )}

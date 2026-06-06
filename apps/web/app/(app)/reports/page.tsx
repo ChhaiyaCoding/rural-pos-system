@@ -328,8 +328,13 @@ export default function ReportsPage() {
                           </span>
                           <span className="text-[13px] font-semibold text-slate-800 truncate">{p.name}</span>
                         </div>
-                        <span className="text-[12px] font-bold text-slate-700 tabular-nums ml-2 shrink-0">
-                          {formatKHR(p.revenue as KHR)}
+                        <span className="text-right ml-2 shrink-0">
+                          <span className="block text-[12px] font-bold text-slate-700 tabular-nums">
+                            {formatKHR(p.revenue as KHR)}
+                          </span>
+                          <span className="block text-[10px] font-bold text-primary-600 tabular-nums">
+                            {formatUSD(p.revenue as KHR)}
+                          </span>
                         </span>
                       </div>
                       <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -352,7 +357,10 @@ export default function ReportsPage() {
                   <p className="text-[13px] font-bold text-danger-700">ជំពាក់សរុបទាំងអស់</p>
                   <p className="text-[11px] text-danger-500 mt-0.5">{debtorCount} នាក់ជំពាក់</p>
                 </div>
-                <p className="text-[18px] font-extrabold text-danger-700 tabular-nums">{formatKHR(totalDebt)}</p>
+                <div className="text-right">
+                  <p className="text-[18px] font-extrabold text-danger-700 tabular-nums">{formatKHR(totalDebt)}</p>
+                  <p className="text-[12px] font-bold text-primary-600 tabular-nums">{formatUSD(totalDebt)}</p>
+                </div>
               </div>
             )}
 
@@ -381,8 +389,13 @@ export default function ReportsPage() {
                 <span className="text-[12px] text-slate-500">
                   ការលក់ <span className="font-bold text-slate-800">{sales.length}</span> ដង
                 </span>
-                <span className="text-[14px] font-extrabold text-primary-700 tabular-nums">
-                  {formatKHR(totalRevenue)}
+                <span className="text-right">
+                  <span className="block text-[14px] font-extrabold text-primary-700 tabular-nums">
+                    {formatKHR(totalRevenue)}
+                  </span>
+                  <span className="block text-[10px] font-bold text-primary-500 tabular-nums">
+                    {formatUSD(totalRevenue)}
+                  </span>
                 </span>
               </div>
             )}
@@ -413,7 +426,7 @@ export default function ReportsPage() {
                         {dateLabel(dateISO)}
                       </span>
                       <span className="text-[11px] font-semibold text-slate-500 tabular-nums">
-                        {daySales.length} ដង · {formatKHR(dayTotal)}
+                        {daySales.length} ដង · {formatKHR(dayTotal)} · <span className="text-primary-600">{formatUSD(dayTotal)}</span>
                       </span>
                     </div>
 
@@ -470,9 +483,14 @@ export default function ReportsPage() {
                               <p className={['text-[15px] font-bold tabular-nums', isVoid ? 'line-through text-slate-400' : 'text-slate-900'].join(' ')}>
                                 {formatKHR(sale.totalAmount)}
                               </p>
+                              {!isVoid && (
+                                <p className="text-[10px] font-bold text-primary-600 tabular-nums">
+                                  {formatUSD(sale.totalAmount)}
+                                </p>
+                              )}
                               {!isVoid && sale.paymentType === 'partial' && debtAmt > 0 && (
                                 <p className="text-[10px] text-danger-500 tabular-nums mt-0.5">
-                                  ជំពាក់ {formatKHR(debtAmt as KHR)}
+                                  ជំពាក់ {formatKHR(debtAmt as KHR)} · {formatUSD(debtAmt as KHR)}
                                 </p>
                               )}
                             </div>
@@ -547,6 +565,7 @@ function PaymentRow({
         </div>
         <div className="flex items-baseline gap-1">
           <span className="text-[12px] font-bold text-slate-800 tabular-nums">{formatKHR(amount)}</span>
+          <span className="text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(amount)}</span>
           <span className="text-[10px] text-slate-400">{pct}%</span>
         </div>
       </div>
