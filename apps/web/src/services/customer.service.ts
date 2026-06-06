@@ -100,20 +100,35 @@ export const customerService = {
     await db.customers.update(id, { deletedAt: now, updatedAt: now })
   },
 
-  /** Seed demo customers on first run (only if DB is empty) */
+  /** Seed demo customers on first run (only if DB is empty).
+   *  Uses fixed IDs + bulkPut so it stays idempotent even when called
+   *  twice concurrently (React StrictMode double-invokes effects in dev) —
+   *  random-UUID inserts would otherwise create duplicate customers. */
   async seedIfEmpty(tenantId: TenantId): Promise<void> {
     const count = await db.customers.where('tenantId').equals(tenantId).count()
     if (count > 0) return
 
-    const demos: Array<{ nameKm: string; phone?: string }> = [
-      { nameKm: 'សុខ ដារ៉ា',   phone: '012 345 678' },
-      { nameKm: 'ចាន់ ប៊ុនណា',  phone: '098 765 432' },
-      { nameKm: 'លី សុភាព'                           },
-      { nameKm: 'ហ៊ុន វណ្ណៈ',  phone: '011 222 333' },
-      { nameKm: 'ម៉ៅ សុខលី'                          },
+    const now = nowISO()
+    const demos: Array<{ id: string; nameKm: string; phone?: string }> = [
+      { id: 'cust-demo-1', nameKm: 'សុខ ដារ៉ា',   phone: '012 345 678' },
+      { id: 'cust-demo-2', nameKm: 'ចាន់ ប៊ុនណា',  phone: '098 765 432' },
+      { id: 'cust-demo-3', nameKm: 'លី សុភាព'                           },
+      { id: 'cust-demo-4', nameKm: 'ហ៊ុន វណ្ណៈ',  phone: '011 222 333' },
+      { id: 'cust-demo-5', nameKm: 'ម៉ៅ សុខលី'                          },
     ]
-    for (const d of demos) {
-      await customerService.create({ tenantId, ...d })
-    }
+    const seeded: Customer[] = demos.map((d) => ({
+      id: d.id as CustomerId,
+      tenantId,
+      nameKm: d.nameKm,
+      phone: d.phone ?? null,
+      address: null,
+      imageUri: null,
+      debtBalance: toKHR(0),
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+      syncedAt: null,
+    }))
+    await db.customers.bulkPut(seeded)
   },
 }
