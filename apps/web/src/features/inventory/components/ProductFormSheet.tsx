@@ -779,7 +779,7 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
                 +
               </button>
             </div>
-            <p className="text-[11px] text-warning-600 mt-1">⚠️ ស្ដុកធ្លាក់ចុះ ≤ {lowStock || '5'} — ជូនដំណឹង</p>
+            <p className="text-[11px] text-warning-600 mt-1">⚠️ ស្តុកធ្លាក់ចុះ ≤ {lowStock || '5'} — ជូនដំណឹង</p>
           </div>
         </div>
 

@@ -67,7 +67,7 @@ export function RestockSheet({ product, onClose, onRestocked }: Props) {
         <div className="flex items-center justify-between px-4 h-14 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <Package size={16} strokeWidth={2.25} className="text-primary-500" />
-            <span className="text-[15px] font-bold text-slate-900">បន្ថែមស្ដុក</span>
+            <span className="text-[15px] font-bold text-slate-900">បន្ថែមស្តុក</span>
           </div>
           <button
             type="button"
@@ -96,7 +96,7 @@ export function RestockSheet({ product, onClose, onRestocked }: Props) {
             </div>
             {/* Current stock badge */}
             <div className="shrink-0 text-right">
-              <p className="text-[10px] text-slate-400 mb-0.5">ស្ដុកបច្ចុប្បន្ន</p>
+              <p className="text-[10px] text-slate-400 mb-0.5">ស្តុកបច្ចុប្បន្ន</p>
               <p className={[
                 'text-[18px] font-extrabold tabular-nums',
                 isOut ? 'text-danger-600' : isLow ? 'text-warning-600' : 'text-success-700',
@@ -117,7 +117,7 @@ export function RestockSheet({ product, onClose, onRestocked }: Props) {
                 បន្ថែម +{success} {product.unit} ជោគជ័យ!
               </p>
               <p className="text-[13px] text-slate-500 tabular-nums">
-                ស្ដុកថ្មី: <span className="font-bold text-slate-800">{product.stockQty + success} {product.unit}</span>
+                ស្តុកថ្មី: <span className="font-bold text-slate-800">{product.stockQty + success} {product.unit}</span>
               </p>
             </div>
           ) : (
@@ -166,7 +166,7 @@ export function RestockSheet({ product, onClose, onRestocked }: Props) {
               {/* Stock preview */}
               {delta > 0 && (
                 <div className="flex items-center justify-between rounded-xl bg-success-50 border border-success-200 px-4 py-3">
-                  <span className="text-[13px] font-semibold text-success-700">ស្ដុកបន្ទាប់ពីបន្ថែម</span>
+                  <span className="text-[13px] font-semibold text-success-700">ស្តុកបន្ទាប់ពីបន្ថែម</span>
                   <div className="flex items-center gap-2 tabular-nums">
                     <span className={[
                       'text-[14px] font-semibold line-through',

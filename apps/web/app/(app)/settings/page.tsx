@@ -211,11 +211,11 @@ export default function SettingsPage() {
 
           {/* ══ Low stock threshold ══════════════════════════ */}
           <section>
-            <SectionHeader icon={<Package size={14} />} label="ស្ដុក" />
+            <SectionHeader icon={<Package size={14} />} label="ស្តុក" />
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="flex items-center gap-3 px-4 py-3">
                 <span className="text-[12px] text-slate-400 shrink-0 w-36 leading-snug">
-                  ជូនដំណឹងស្ដុកតិចនៅ
+                  ជូនដំណឹងស្តុកតិចនៅ
                 </span>
                 <div className="flex items-center gap-2 flex-1 justify-end">
                   <input
@@ -232,7 +232,7 @@ export default function SettingsPage() {
               </div>
               <div className="px-4 pb-3">
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  ⚠️ នៅពេលស្ដុកធ្លាក់ចុះទៅ {threshold || '5'} ឯកតា — ប្រព័ន្ធនឹងជូនដំណឹង
+                  ⚠️ នៅពេលស្តុកធ្លាក់ចុះទៅ {threshold || '5'} ឯកតា — ប្រព័ន្ធនឹងជូនដំណឹង
                 </p>
               </div>
             </div>

@@ -51,7 +51,7 @@ export default function InventoryPage() {
   const TABS = useMemo(
     () => [
       { id: 'all', label: 'ទាំងអស់' },
-      { id: 'low', label: '⚠️ ស្ដុកតិច' },
+      { id: 'low', label: '⚠️ ស្តុកតិច' },
       ...categories
         .filter((c) => (categoryCounts[c.id] ?? 0) > 0)
         .map((c) => ({ id: c.id, label: c.label })),
@@ -236,7 +236,7 @@ export default function InventoryPage() {
                         'inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full mt-0.5',
                         isOut ? 'bg-danger-100 text-danger-700' : 'bg-warning-100 text-warning-700',
                       ].join(' ')}>
-                        {isOut ? '🔴 អស់ស្ដុក' : '⚠️ ស្ទើរអស់'}
+                        {isOut ? '🔴 អស់ស្តុក' : '⚠️ ស្ទើរអស់'}
                       </span>
                     )}
                   </div>
@@ -253,7 +253,7 @@ export default function InventoryPage() {
                         ? 'bg-danger-600 text-white active:bg-danger-700'
                         : 'bg-warning-500 text-white active:bg-warning-600',
                     ].join(' ')}
-                    aria-label="បន្ថែមស្ដុក"
+                    aria-label="បន្ថែមស្តុក"
                   >
                     <PackagePlus size={18} strokeWidth={2.25} />
                   </button>
