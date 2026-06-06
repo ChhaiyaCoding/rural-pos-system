@@ -223,6 +223,7 @@ export function POSScreen() {
         paymentType:  type === 'partial' ? 'debt' : type,  // receipt shows debt for partial
         cashReceived,
         changeGiven:  type === 'cash' ? result.change : null,
+        debtRemaining: type === 'partial' ? partialDebtAmt : type === 'debt' ? amount : null,
         customerName: result.customerName,
         createdAt:    now,
       },

@@ -23,8 +23,9 @@ export interface ReceiptData {
   discount?: KHR              // ០ if no discount
   totalAmount: KHR            // final amount after discount
   paymentType: 'cash' | 'debt'
-  cashReceived?: KHR | null   // amount customer handed over (cash only)
+  cashReceived?: KHR | null   // amount customer handed over (cash) / paid now (partial)
   changeGiven?: KHR | null    // change returned (cash only)
+  debtRemaining?: KHR | null  // amount still owed (debt / partial)
   customerName?: string | null // who owes (debt only)
   createdAt: string
 }
@@ -105,6 +106,12 @@ function buildShareText(data: ReceiptData, storeName = 'ហាងលក់ទំ
       : '',
     isCash && data.changeGiven && data.changeGiven > 0
       ? line('ប្រាក់អាប់', formatKHR(data.changeGiven))
+      : '',
+    !isCash && data.cashReceived && data.cashReceived > 0
+      ? line('បានទូទាត់', formatKHR(data.cashReceived))
+      : '',
+    !isCash && data.debtRemaining && data.debtRemaining > 0
+      ? line('នៅខ្វះ (ជំពាក់)', formatKHR(data.debtRemaining))
       : '',
     !isCash && data.customerName ? `អ្នកជំពាក់: ${data.customerName}` : '',
     '══════════════════════════════',
@@ -398,6 +405,31 @@ export function SaleReceiptSheet({ data, onClose }: Props) {
                   <span className="text-[17px] font-extrabold text-success-700 tabular-nums">
                     {formatKHR(data.changeGiven)}
                   </span>
+                </div>
+              )}
+
+              {/* Partial: amount paid now */}
+              {!isCash && data.cashReceived != null && data.cashReceived > 0 && (
+                <MetaRow
+                  label="បានទូទាត់"
+                  value={formatKHR(data.cashReceived)}
+                />
+              )}
+
+              {/* Debt still owed */}
+              {!isCash && data.debtRemaining != null && data.debtRemaining > 0 && (
+                <div className="flex items-center justify-between rounded-xl bg-danger-50 border border-danger-100 px-3.5 py-2.5">
+                  <span className="text-[12px] font-semibold text-danger-700">
+                    នៅខ្វះ (ជំពាក់)
+                  </span>
+                  <div className="text-right">
+                    <span className="block text-[17px] font-extrabold text-danger-700 tabular-nums leading-tight">
+                      {formatKHR(data.debtRemaining)}
+                    </span>
+                    <span className="block text-[11px] font-bold text-primary-600 tabular-nums">
+                      {formatUSD(data.debtRemaining)}
+                    </span>
+                  </div>
                 </div>
               )}
 
