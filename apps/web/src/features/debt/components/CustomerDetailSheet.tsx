@@ -5,7 +5,7 @@ import { X, Phone, MapPin, ArrowDownLeft, ArrowUpRight, Banknote, Pencil, CheckC
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { debtService } from '@/services/debt.service'
-import { formatKHR, formatUSD, toKHR } from '@/lib/money'
+import { formatKHR, formatUSD, toKHR, getExchangeRate } from '@/lib/money'
 import { formatDateTimeKm, nowISO } from '@/lib/date'
 import { useStoreProfile } from '@/store/storeProfile.store'
 import { CustomerEditSheet } from './CustomerEditSheet'
@@ -21,9 +21,11 @@ interface Props {
 
 /* ── Quick-amount presets ────────────────────────────────── */
 const QUICK_AMTS = [1_000, 2_000, 5_000, 10_000, 20_000, 50_000]
+const USD_AMTS   = [1, 2, 5, 10, 20, 50, 100]
 
 export function CustomerDetailSheet({ customer, onClose }: Props) {
   const [payAmount,   setPayAmount]   = useState('')
+  const [payCurrency, setPayCurrency] = useState<'KHR' | 'USD'>('KHR')
   const [paying,      setPaying]      = useState(false)
   const [showPay,     setShowPay]     = useState(false)
   const [editing,     setEditing]     = useState(false)
@@ -60,10 +62,13 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
   const hasDebt = live.debtBalance > 0
   const initial = live.nameKm.charAt(0) || '?'
 
-  /* Parsed + clamped input */
+  /* Parsed input → normalized to ៛ (the debt is always stored in ៛).
+     When paying in $, convert at the configured exchange rate. */
+  const rate       = getExchangeRate()
   const parsedAmt  = Number(payAmount) || 0
-  const clampedAmt = Math.min(parsedAmt, live.debtBalance)
-  const isOverpay  = parsedAmt > live.debtBalance && parsedAmt > 0
+  const khrInput   = payCurrency === 'USD' ? Math.round(parsedAmt * rate) : Math.round(parsedAmt)
+  const clampedAmt = Math.min(khrInput, live.debtBalance)
+  const isOverpay  = khrInput > live.debtBalance && khrInput > 0
   const canPay     = clampedAmt > 0 && !paying
 
   /* ── Handle payment ──────────────────────────────────── */
@@ -284,13 +289,30 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
           {showPay && (
             <div className="mx-4 mt-4 rounded-2xl border border-success-200 bg-success-50 px-4 py-4">
 
-              {/* Label + max */}
+              {/* Label + currency toggle */}
               <div className="flex items-center justify-between mb-2">
-                <p className="text-[12px] font-bold text-success-700">ចំនួនប្រាក់ទទួល (រៀល)</p>
-                <p className="text-[11px] text-slate-500 tabular-nums">
-                  ជំពាក់ {formatKHR(live.debtBalance)}
-                </p>
+                <p className="text-[12px] font-bold text-success-700">ចំនួនប្រាក់ទទួល</p>
+                <div className="flex items-center rounded-lg border border-success-300 bg-white overflow-hidden">
+                  {(['KHR', 'USD'] as const).map((cur) => (
+                    <button
+                      key={cur}
+                      type="button"
+                      onClick={() => { setPayCurrency(cur); setPayAmount('') }}
+                      className={[
+                        'min-h-0 min-w-0 h-7 px-3.5 text-[13px] font-bold tabular-nums transition-colors',
+                        payCurrency === cur ? 'bg-success-600 text-white' : 'text-success-700 active:bg-success-50',
+                      ].join(' ')}
+                    >
+                      {cur === 'KHR' ? '៛' : '$'}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {/* Owed (both currencies) */}
+              <p className="text-[11px] text-slate-500 tabular-nums mb-2">
+                ជំពាក់ {formatKHR(live.debtBalance)} · {formatUSD(live.debtBalance)}
+              </p>
 
               {/* Amount input */}
               <div className="flex gap-2">
@@ -298,22 +320,24 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
                   'flex-1 flex items-center border rounded-xl bg-white overflow-hidden transition-colors',
                   isOverpay ? 'border-warning-400' : 'border-success-300',
                 ].join(' ')}>
+                  <span className="pl-4 text-[15px] font-bold text-slate-400 shrink-0">
+                    {payCurrency === 'USD' ? '$' : '៛'}
+                  </span>
                   <input
                     type="number"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     value={payAmount}
                     onChange={(e) => setPayAmount(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handlePay()}
                     placeholder="0"
                     autoFocus
-                    className="flex-1 h-12 px-4 text-[18px] font-bold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none"
+                    className="flex-1 h-12 px-3 text-[18px] font-bold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none min-w-0"
                   />
-                  <span className="pr-3 text-[14px] text-slate-400">៛</span>
                 </div>
                 <button
                   type="button"
                   disabled={!canPay}
-                  onClick={handlePay}
+                  onClick={() => handlePay()}
                   className="h-12 px-4 rounded-xl bg-success-600 text-white font-bold text-[14px] disabled:opacity-40 active:bg-success-700 transition-colors whitespace-nowrap"
                 >
                   {paying ? '…' : 'បញ្ជាក់'}
@@ -327,37 +351,63 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
                 </button>
               </div>
 
+              {/* Equivalent in the other currency */}
+              {clampedAmt > 0 && (
+                <p className="mt-1.5 text-right text-[12px] font-bold text-primary-600 tabular-nums">
+                  {payCurrency === 'USD'
+                    ? `= ${formatKHR(toKHR(clampedAmt))}`
+                    : `≈ ${formatUSD(toKHR(clampedAmt))}`}
+                </p>
+              )}
+
               {/* Overpay warning */}
               {isOverpay && (
-                <p className="mt-1.5 text-[11px] text-warning-700 font-semibold">
+                <p className="mt-1 text-[11px] text-warning-700 font-semibold">
                   ⚠ ចំនួនលើសបំណុល — នឹងទទួល {formatKHR(toKHR(clampedAmt))} ជំនួស
                 </p>
               )}
 
-              {/* Quick amount chips */}
+              {/* Quick amount chips — currency-aware */}
               <div className="flex gap-2 mt-3 flex-wrap">
-                {QUICK_AMTS.filter(a => a <= live.debtBalance).map((amt) => (
-                  <button
-                    key={amt}
-                    type="button"
-                    onClick={() => setPayAmount(String(amt))}
-                    className={[
-                      'h-8 px-3 rounded-lg border text-[12px] font-semibold transition-colors',
-                      payAmount === String(amt)
-                        ? 'bg-success-600 border-success-600 text-white'
-                        : 'bg-white border-success-200 text-success-700 active:bg-success-100',
-                    ].join(' ')}
-                  >
-                    {formatKHR(toKHR(amt))}
-                  </button>
-                ))}
-                {/* Full payment button */}
+                {payCurrency === 'KHR'
+                  ? QUICK_AMTS.filter((a) => a <= live.debtBalance).map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => setPayAmount(String(amt))}
+                        className={[
+                          'h-8 px-3 rounded-lg border text-[12px] font-semibold tabular-nums transition-colors',
+                          payAmount === String(amt)
+                            ? 'bg-success-600 border-success-600 text-white'
+                            : 'bg-white border-success-200 text-success-700 active:bg-success-100',
+                        ].join(' ')}
+                      >
+                        {formatKHR(toKHR(amt))}
+                      </button>
+                    ))
+                  : USD_AMTS.filter((u) => u * rate <= live.debtBalance).map((u) => (
+                      <button
+                        key={u}
+                        type="button"
+                        onClick={() => setPayAmount(String(u))}
+                        className={[
+                          'h-8 px-3 rounded-lg border text-[12px] font-semibold tabular-nums transition-colors',
+                          payAmount === String(u)
+                            ? 'bg-success-600 border-success-600 text-white'
+                            : 'bg-white border-success-200 text-success-700 active:bg-success-100',
+                        ].join(' ')}
+                      >
+                        ${u}
+                      </button>
+                    ))
+                }
+                {/* Full payment — settles the exact ៛ balance */}
                 <button
                   type="button"
-                  onClick={() => setPayAmount(String(live.debtBalance))}
+                  onClick={() => { setPayCurrency('KHR'); setPayAmount(String(live.debtBalance)) }}
                   className={[
-                    'h-8 px-3 rounded-lg border text-[12px] font-bold transition-colors',
-                    payAmount === String(live.debtBalance)
+                    'h-8 px-3 rounded-lg border text-[12px] font-bold tabular-nums transition-colors',
+                    payCurrency === 'KHR' && payAmount === String(live.debtBalance)
                       ? 'bg-success-600 border-success-600 text-white'
                       : 'bg-success-100 border-success-300 text-success-800 active:bg-success-200',
                   ].join(' ')}
