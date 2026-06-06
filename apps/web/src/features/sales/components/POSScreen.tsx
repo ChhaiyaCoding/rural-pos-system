@@ -50,7 +50,8 @@ export function POSScreen() {
   const [openShift,   setOpenShift]   = useState(false)
   const [closeShift,  setCloseShift]  = useState(false)
   const [flyItems,    setFlyItems]    = useState<FlyItem[]>([])
-  const cartBtnRef = useRef<HTMLButtonElement>(null)
+  const cartBtnRef   = useRef<HTMLButtonElement>(null)   // mobile checkout bar (only when count>0)
+  const cartPanelRef = useRef<HTMLElement>(null)         // desktop cart sidebar (always rendered)
 
   const { cashierName } = useStoreProfile()
 
@@ -141,15 +142,31 @@ export function POSScreen() {
 
   /* ── Fly-to-cart animation ───────────────────────────────────── */
   const handleFly = (startX: number, startY: number, emoji: string, imageUri: string | null) => {
-    // Target: cart button (mobile) or cart panel header (tablet)
-    let endX = 40, endY = window.innerHeight - 40   // fallback bottom-left
-    if (cartBtnRef.current) {
-      const r = cartBtnRef.current.getBoundingClientRect()
-      endX = r.left + r.width  / 2
-      endY = r.top  + r.height / 2
-    }
     const id = `fly-${Date.now()}-${Math.random()}`
-    setFlyItems(prev => [...prev, { id, emoji, imageUri, startX, startY, endX, endY }])
+    // Defer one frame: the first tap renders the mobile cart bar (count 0→1),
+    // so we must read the target *after* that DOM update. We pick whichever
+    // cart target is actually visible at this breakpoint (rect width > 0):
+    // the mobile bar (md) or the desktop sidebar (md+). A display:none element
+    // returns a zero rect, which is why we must check width before using it.
+    requestAnimationFrame(() => {
+      let endX = window.innerWidth / 2
+      let endY = window.innerHeight - 90   // fallback: bottom-center, near where the bar sits
+
+      const barRect   = cartBtnRef.current?.getBoundingClientRect()
+      const panelRect = cartPanelRef.current?.getBoundingClientRect()
+
+      if (barRect && barRect.width > 0) {
+        // Mobile checkout bar
+        endX = barRect.left + barRect.width  / 2
+        endY = barRect.top  + barRect.height / 2
+      } else if (panelRect && panelRect.width > 0) {
+        // Desktop / tablet cart sidebar — aim near the top where items land
+        endX = panelRect.left + panelRect.width / 2
+        endY = panelRect.top + 72
+      }
+
+      setFlyItems(prev => [...prev, { id, emoji, imageUri, startX, startY, endX, endY }])
+    })
   }
 
   /* Step 1 — open the checkout/confirmation sheet for the chosen method */
@@ -420,7 +437,7 @@ export function POSScreen() {
       {/* ════════════════════════════════════════════════════
           RIGHT — Cart sidebar (tablet / desktop)
       ════════════════════════════════════════════════════ */}
-      <aside className="hidden md:flex flex-col w-80 lg:w-[22rem] bg-white border-l border-slate-200 shadow-[-4px_0_24px_-16px_rgba(15,23,42,0.25)] shrink-0">
+      <aside ref={cartPanelRef} className="hidden md:flex flex-col w-80 lg:w-[22rem] bg-white border-l border-slate-200 shadow-[-4px_0_24px_-16px_rgba(15,23,42,0.25)] shrink-0">
         <CartPanel onPay={handlePay} />
       </aside>
 
