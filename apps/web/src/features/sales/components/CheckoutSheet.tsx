@@ -375,18 +375,6 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
                 </div>
               </div>
 
-              {/* Change due */}
-              <div className="flex items-center justify-between rounded-xl bg-success-50 px-4 py-3">
-                <span className="text-[13px] font-medium text-success-700">ប្រាក់អាប់</span>
-                <div className="text-right">
-                  <span className="block text-[20px] font-extrabold text-success-700 tabular-nums leading-tight">
-                    {formatKHR(change > 0 ? change : toKHR(0))}
-                  </span>
-                  <span className="block text-[12px] font-bold text-success-600 tabular-nums">
-                    {formatUSD(change > 0 ? change : toKHR(0))}
-                  </span>
-                </div>
-              </div>
             </div>
           ) : isPartial ? (
             /* ── PARTIAL PAYMENT ─────────────────────────────── */
@@ -687,6 +675,20 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
 
         {/* ── Confirm footer ─────────────────────────────────── */}
         <div className="shrink-0 border-t border-slate-200 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {/* Change due — always visible above the action (no scrolling needed) */}
+          {isCash && (
+            <div className="flex items-center justify-between rounded-xl bg-success-50 px-4 py-2.5 mb-2.5">
+              <span className="text-[13px] font-medium text-success-700">ប្រាក់អាប់</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-[20px] font-extrabold text-success-700 tabular-nums leading-none">
+                  {formatKHR(change > 0 ? change : toKHR(0))}
+                </span>
+                <span className="text-[12px] font-bold text-success-600 tabular-nums">
+                  {formatUSD(change > 0 ? change : toKHR(0))}
+                </span>
+              </div>
+            </div>
+          )}
           <button
             type="button"
             disabled={(isCash && !enough) || (isPartial && !partialValid)}
