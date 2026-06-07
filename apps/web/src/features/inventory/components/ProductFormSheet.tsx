@@ -81,7 +81,6 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
   const [showEmoji,     setShowEmoji]     = useState(!product?.imageUri)
   const [emoji,         setEmoji]         = useState(product?.emoji      ?? '📦')
   const [name,          setName]          = useState(product?.nameKm     ?? '')
-  const [nameEn,        setNameEn]        = useState(product?.nameEn     ?? '')
   /* Categories — managed & persisted in a dedicated store */
   const categories      = useCategoryStore((s) => s.categories)
   const addCategory     = useCategoryStore((s) => s.addCategory)
@@ -250,7 +249,6 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
       if (isEdit && product) {
         await productService.update(product.id as ProductId, {
           nameKm:            name.trim(),
-          nameEn:            nameEn.trim(),
           emoji,
           imageUri:          imageUri || null,
           barcode:           effectiveBarcode,
@@ -265,7 +263,6 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
         await productService.create({
           tenantId:          DEMO_TENANT,
           nameKm:            name.trim(),
-          nameEn:            nameEn.trim(),
           emoji,
           imageUri:          imageUri || null,
           barcode:           effectiveBarcode,
@@ -438,30 +435,17 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
             )}
           </div>
 
-          {/* Name */}
+          {/* Name — Khmer and/or English in one box */}
           <div>
             <p className="text-[12px] font-semibold text-slate-500 mb-1.5">ឈ្មោះទំនិញ *</p>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="ឧ. អង្ករ ២គីឡូ"
+              placeholder="ឧ. អង្ករ ២គីឡូ / Rice 2kg"
               className="w-full h-12 rounded-xl border border-slate-200 px-4 text-[15px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
             />
-          </div>
-
-          {/* English name (optional) */}
-          <div>
-            <p className="text-[12px] font-semibold text-slate-500 mb-1.5">
-              ឈ្មោះ English <span className="text-slate-300 font-normal">(ស្រេចចិត្ត — ងាយស្វែងរក)</span>
-            </p>
-            <input
-              type="text"
-              value={nameEn}
-              onChange={(e) => setNameEn(e.target.value)}
-              placeholder="e.g. Rice 2kg"
-              className="w-full h-12 rounded-xl border border-slate-200 px-4 text-[15px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
-            />
+            <p className="text-[10px] text-slate-400 mt-1">អាចសរសេរខ្មែរ និង English ជាមួយគ្នាបាន</p>
           </div>
 
           {/* Barcode */}
