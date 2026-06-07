@@ -2,13 +2,15 @@
 
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { TrendingUp, BarChart2, List, Share2 } from 'lucide-react'
+import { TrendingUp, BarChart2, List, Share2, Wallet, Plus } from 'lucide-react'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
 import { SaleDetailSheet } from '@/features/sales/components/SaleDetailSheet'
 import { ReportExportSheet } from '@/features/reports/components/ReportExportSheet'
+import { ExpenseFormSheet } from '@/features/expense/components/ExpenseFormSheet'
+import { expenseCategoryLabel, expenseCategoryEmoji } from '@/services/expense.service'
 import { useStoreProfile } from '@/store/storeProfile.store'
-import type { Sale } from '@/types'
+import type { Sale, Expense } from '@/types'
 import type { KHR, TenantId } from '@/types/branded'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
@@ -21,7 +23,7 @@ const PERIODS = [
 ] as const
 
 type PeriodKey = (typeof PERIODS)[number]['key']
-type ViewKey   = 'charts' | 'history'
+type ViewKey   = 'charts' | 'history' | 'expense'
 
 const DAY_SHORT = ['អា', 'ច', 'អ', 'ព', 'ព្រ', 'សុ', 'ស']
 
@@ -53,10 +55,12 @@ function dateLabel(iso: string): string {
 
 /* ── Page ─────────────────────────────────────────────────── */
 export default function ReportsPage() {
-  const [period,     setPeriod]     = useState<PeriodKey>('7d')
-  const [view,       setView]       = useState<ViewKey>('charts')
-  const [detail,     setDetail]     = useState<Sale | null>(null)
-  const [showExport, setShowExport] = useState(false)
+  const [period,        setPeriod]        = useState<PeriodKey>('7d')
+  const [view,          setView]          = useState<ViewKey>('charts')
+  const [detail,        setDetail]        = useState<Sale | null>(null)
+  const [showExport,    setShowExport]    = useState(false)
+  const [showAddExpense, setShowAddExpense] = useState(false)
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
 
   const { storeName } = useStoreProfile()
 
@@ -91,6 +95,30 @@ export default function ReportsPage() {
   const debtSales    = sales.filter(s => s.paymentType !== 'cash')
   const totalDebt    = customers.reduce((s, c) => s + (c.debtBalance as number), 0) as KHR
   const debtorCount  = customers.filter(c => (c.debtBalance as number) > 0).length
+
+  /* Expenses for the selected period (spentAt date-only ≥ period start) */
+  const startDate = startISO.slice(0, 10)
+  const expenses = useLiveQuery(
+    () => db.expenses
+      .where('tenantId').equals(DEMO_TENANT)
+      .filter(e => !e.deletedAt && e.spentAt >= startDate)
+      .toArray(),
+    [startDate]
+  ) ?? []
+  const totalExpenses = expenses.reduce((s, e) => s + (e.amount as number), 0) as KHR
+  const netProfit     = (totalRevenue - totalExpenses) as KHR
+
+  const groupedExpenses = useMemo(() => {
+    const sorted = [...expenses].sort(
+      (a, b) => b.spentAt.localeCompare(a.spentAt) || b.createdAt.localeCompare(a.createdAt)
+    )
+    const map = new Map<string, Expense[]>()
+    for (const e of sorted) {
+      if (!map.has(e.spentAt)) map.set(e.spentAt, [])
+      map.get(e.spentAt)!.push(e)
+    }
+    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]))
+  }, [expenses])
 
   /* Daily revenue for bar chart */
   const dailyRevenue = useMemo(() => {
@@ -183,6 +211,19 @@ export default function ReportsPage() {
           >
             <List size={14} strokeWidth={2.5} />
             ប្រវត្តិ
+          </button>
+          <button
+            type="button"
+            onClick={() => setView('expense')}
+            className={[
+              'flex-1 h-9 rounded-xl text-[13px] font-bold transition-colors flex items-center justify-center gap-1.5',
+              view === 'expense'
+                ? 'bg-primary-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-500 active:bg-slate-200',
+            ].join(' ')}
+          >
+            <Wallet size={14} strokeWidth={2.5} />
+            ចំណាយ
           </button>
         </div>
 
@@ -505,7 +546,117 @@ export default function ReportsPage() {
           </div>
         )}
 
+        {/* ══════════════════════════════════════════════════════
+            EXPENSE VIEW
+        ══════════════════════════════════════════════════════ */}
+        {view === 'expense' && (
+          <div className="px-4 pt-4 pb-24 space-y-4">
+
+            {/* Net profit summary */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-success-50 border border-success-100 px-3 py-2.5">
+                  <p className="text-[10px] font-semibold text-success-600 mb-0.5">ចំណូល</p>
+                  <p className="text-[15px] font-extrabold text-success-800 tabular-nums leading-tight">{formatKHR(totalRevenue)}</p>
+                  <p className="text-[11px] font-bold text-primary-600 tabular-nums">{formatUSD(totalRevenue)}</p>
+                </div>
+                <div className="rounded-xl bg-danger-50 border border-danger-100 px-3 py-2.5">
+                  <p className="text-[10px] font-semibold text-danger-600 mb-0.5">ចំណាយ</p>
+                  <p className="text-[15px] font-extrabold text-danger-700 tabular-nums leading-tight">{formatKHR(totalExpenses)}</p>
+                  <p className="text-[11px] font-bold text-primary-600 tabular-nums">{formatUSD(totalExpenses)}</p>
+                </div>
+              </div>
+              <div className="mt-3 flex items-baseline justify-between border-t border-slate-100 pt-3">
+                <span className="text-[13px] font-bold text-slate-500">ចំណេញ​សុទ្ធ</span>
+                <div className="text-right">
+                  <span className={[
+                    'block text-[20px] font-extrabold tabular-nums leading-tight',
+                    netProfit >= 0 ? 'text-success-700' : 'text-danger-700',
+                  ].join(' ')}>
+                    {formatKHR(netProfit)}
+                  </span>
+                  <span className="block text-[12px] font-bold text-primary-600 tabular-nums">{formatUSD(netProfit)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Expense list */}
+            {expenses.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
+                  <Wallet size={30} strokeWidth={1.5} className="text-slate-300" />
+                </div>
+                <p className="text-[14px] font-semibold text-slate-700">មិន​ទាន់​មាន​ការ​ចំណាយ</p>
+                <p className="text-[12px] text-slate-400">ចុច + ដើម្បី​បន្ថែម​ការ​ចំណាយ</p>
+              </div>
+            ) : (
+              groupedExpenses.map(([dateISO, dayExpenses]) => {
+                const dayTotal = dayExpenses.reduce((s, e) => s + (e.amount as number), 0) as KHR
+                return (
+                  <div key={dateISO} className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-100">
+                      <span className="text-[12px] font-bold text-slate-600">{dateLabel(dateISO)}</span>
+                      <span className="text-[11px] font-semibold text-danger-600 tabular-nums">−{formatKHR(dayTotal)}</span>
+                    </div>
+                    <div className="divide-y divide-slate-50">
+                      {dayExpenses.map((e) => (
+                        <button
+                          key={e.id}
+                          type="button"
+                          onClick={() => setEditingExpense(e)}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-slate-50 transition-colors"
+                        >
+                          <div className="shrink-0 w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-[20px]">
+                            {expenseCategoryEmoji(e.categoryId)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-semibold text-slate-800">{expenseCategoryLabel(e.categoryId)}</p>
+                            {e.note && <p className="text-[11px] text-slate-400 truncate">{e.note}</p>}
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p className="text-[14px] font-bold text-danger-600 tabular-nums">−{formatKHR(e.amount)}</p>
+                            <p className="text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(e.amount)}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
+
       </div>
+
+      {/* Expense FAB */}
+      {view === 'expense' && (
+        <button
+          type="button"
+          onClick={() => setShowAddExpense(true)}
+          className="fixed bottom-20 right-4 w-14 h-14 rounded-full bg-primary-600 text-white shadow-lg shadow-primary-600/30 flex items-center justify-center active:bg-primary-700 active:scale-95 transition-all z-30"
+          aria-label="បន្ថែម​ការ​ចំណាយ"
+        >
+          <Plus size={26} strokeWidth={2.5} />
+        </button>
+      )}
+
+      {/* Add expense sheet */}
+      {showAddExpense && (
+        <ExpenseFormSheet
+          onClose={() => setShowAddExpense(false)}
+          onSaved={() => setShowAddExpense(false)}
+        />
+      )}
+
+      {/* Edit expense sheet */}
+      {editingExpense && (
+        <ExpenseFormSheet
+          expense={editingExpense}
+          onClose={() => setEditingExpense(null)}
+          onSaved={() => setEditingExpense(null)}
+        />
+      )}
 
       {/* Sale detail sheet */}
       {detail && (

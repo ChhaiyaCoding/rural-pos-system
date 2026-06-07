@@ -8,6 +8,7 @@ export type AppError =
   | { code: 'INSUFFICIENT_STOCK';     available: number; requested: number }
   | { code: 'INVALID_PAYMENT';        reason: string }
   | { code: 'DEBT_NOT_FOUND';         debtId: string }
+  | { code: 'EXPENSE_NOT_FOUND';      expenseId: string }
   | { code: 'SYNC_FAILED';            reason: string }
   | { code: 'AUTH_REQUIRED' }
   | { code: 'UNKNOWN';                message: string }

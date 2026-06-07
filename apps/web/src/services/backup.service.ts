@@ -16,6 +16,7 @@ export interface BackupFile {
     debtTransactions: unknown[]
     cashDrawers:      unknown[]
     stockMovements:   unknown[]
+    expenses:         unknown[]
   }
 }
 
@@ -32,7 +33,7 @@ export const backupService = {
   async exportAll(): Promise<BackupFile> {
     const [
       products, customers, sales, saleItems,
-      debtTransactions, cashDrawers, stockMovements,
+      debtTransactions, cashDrawers, stockMovements, expenses,
     ] = await Promise.all([
       db.products.toArray(),
       db.customers.toArray(),
@@ -41,6 +42,7 @@ export const backupService = {
       db.debtTransactions.toArray(),
       db.cashDrawers.toArray(),
       db.stockMovements.toArray(),
+      db.expenses.toArray(),
     ])
 
     let profile: unknown = null
@@ -56,7 +58,7 @@ export const backupService = {
       profile,
       tables: {
         products, customers, sales, saleItems,
-        debtTransactions, cashDrawers, stockMovements,
+        debtTransactions, cashDrawers, stockMovements, expenses,
       },
     }
   },
@@ -105,7 +107,7 @@ export const backupService = {
     await db.transaction(
       'rw',
       [db.products, db.customers, db.sales, db.saleItems,
-       db.debtTransactions, db.cashDrawers, db.stockMovements],
+       db.debtTransactions, db.cashDrawers, db.stockMovements, db.expenses],
       async () => {
         // Clear current data
         await Promise.all([
@@ -116,6 +118,7 @@ export const backupService = {
           db.debtTransactions.clear(),
           db.cashDrawers.clear(),
           db.stockMovements.clear(),
+          db.expenses.clear(),
         ])
         // Bulk-insert from backup
         await db.products.bulkAdd(t.products as never[])
@@ -125,6 +128,7 @@ export const backupService = {
         await db.debtTransactions.bulkAdd(t.debtTransactions as never[])
         await db.cashDrawers.bulkAdd((t.cashDrawers ?? []) as never[])
         await db.stockMovements.bulkAdd((t.stockMovements ?? []) as never[])
+        await db.expenses.bulkAdd((t.expenses ?? []) as never[])
       }
     )
 
@@ -148,7 +152,7 @@ export const backupService = {
     await db.transaction(
       'rw',
       [db.products, db.customers, db.sales, db.saleItems,
-       db.debtTransactions, db.cashDrawers, db.stockMovements, db.syncQueue],
+       db.debtTransactions, db.cashDrawers, db.stockMovements, db.expenses, db.syncQueue],
       async () => {
         await Promise.all([
           db.products.clear(),
@@ -158,6 +162,7 @@ export const backupService = {
           db.debtTransactions.clear(),
           db.cashDrawers.clear(),
           db.stockMovements.clear(),
+          db.expenses.clear(),
           db.syncQueue.clear(),
         ])
       }

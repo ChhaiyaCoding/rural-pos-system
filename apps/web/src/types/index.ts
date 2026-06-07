@@ -1,9 +1,9 @@
-export type { UUID, KHR, TenantId, ProductId, CustomerId, SaleId, UserId } from './branded'
+export type { UUID, KHR, TenantId, ProductId, CustomerId, SaleId, UserId, ExpenseId } from './branded'
 export type { AppError, Result } from './errors'
 
 // ─── Domain models ────────────────────────────────────────────────────────────
 
-import type { UUID, KHR, TenantId, ProductId, CustomerId, SaleId, UserId } from './branded'
+import type { UUID, KHR, TenantId, ProductId, CustomerId, SaleId, UserId, ExpenseId } from './branded'
 
 export interface Product {
   id: ProductId
@@ -102,6 +102,19 @@ export interface StockMovement {
   note:        string | null
   saleId:      SaleId | null
   createdAt:   string
+}
+
+export interface Expense {
+  id:         ExpenseId
+  tenantId:   TenantId
+  amount:     KHR
+  categoryId: string        // e.g. 'stock' | 'utilities' | 'rent' | 'salary' | 'transport' | 'other'
+  note:       string | null
+  spentAt:    string        // 'YYYY-MM-DD' — the day the money was spent
+  createdAt:  string
+  updatedAt:  string
+  deletedAt:  string | null
+  syncedAt:   string | null
 }
 
 export interface CashDrawer {

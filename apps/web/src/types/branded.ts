@@ -7,3 +7,4 @@ export type ProductId  = Brand<UUID,   'ProductId'>
 export type CustomerId = Brand<UUID,   'CustomerId'>
 export type SaleId     = Brand<UUID,   'SaleId'>
 export type UserId     = Brand<UUID,   'UserId'>
+export type ExpenseId  = Brand<UUID,   'ExpenseId'>

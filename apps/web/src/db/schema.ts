@@ -7,6 +7,7 @@ import type {
   DebtTransaction,
   CashDrawer,
   StockMovement,
+  Expense,
 } from '@/types'
 
 export interface SyncQueueItem {
@@ -30,6 +31,7 @@ export class PosDatabase extends Dexie {
   debtTransactions!: Table<DebtTransaction>
   cashDrawers!:      Table<CashDrawer>
   stockMovements!:   Table<StockMovement>
+  expenses!:         Table<Expense>
   syncQueue!:        Table<SyncQueueItem>
 
   constructor() {
@@ -54,6 +56,10 @@ export class PosDatabase extends Dexie {
 
     this.version(4).stores({
       stockMovements: 'id, tenantId, productId, createdAt, type',
+    })
+
+    this.version(5).stores({
+      expenses: 'id, tenantId, spentAt, categoryId, deletedAt',
     })
   }
 }
