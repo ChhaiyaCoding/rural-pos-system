@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Receipt, User, Trash2, AlertTriangle } from 'lucide-react'
+import { X, Receipt, User, Trash2, AlertTriangle, Printer } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { saleService } from '@/services/sale.service'
 import { formatKHR } from '@/lib/money'
+import { ReprintReceipt } from './ReprintReceipt'
 import type { Sale } from '@/types'
 import type { KHR, TenantId, SaleId } from '@/types/branded'
 
@@ -30,6 +31,7 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
   const [confirmVoid, setConfirmVoid] = useState(false)
   const [voiding,     setVoiding]     = useState(false)
   const [voidDone,    setVoidDone]    = useState(false)
+  const [showReprint, setShowReprint] = useState(false)
 
   const items = useLiveQuery(
     () => db.saleItems.where('saleId').equals(sale.id).toArray(),
@@ -97,13 +99,22 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 active:bg-slate-200"
-          >
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowReprint(true)}
+              className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-primary-50 text-primary-700 text-[12px] font-bold active:bg-primary-100"
+            >
+              <Printer size={14} strokeWidth={2.25} /> បោះពុម្ព
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 active:bg-slate-200"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* ── Scrollable body ─────────────────────── */}
@@ -258,6 +269,11 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
           )}
         </div>
       </div>
+
+      {/* Reprint receipt */}
+      {showReprint && (
+        <ReprintReceipt sale={liveSale} onClose={() => setShowReprint(false)} />
+      )}
     </div>
   )
 }

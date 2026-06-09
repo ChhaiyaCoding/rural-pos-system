@@ -15,6 +15,14 @@ export interface CreateSaleInput {
   discount?: KHR
   customerId?: CustomerId
   note?: string
+  receiptNumber?: string
+}
+
+/** Build a receipt number: YYYYMMDD + 4 random chars */
+export function makeReceiptNumber(iso: string): string {
+  const shortDate = iso.slice(0, 10).replace(/-/g, '')
+  const shortRef  = Math.random().toString(36).slice(2, 6).toUpperCase()
+  return `${shortDate}-${shortRef}`
 }
 
 export const saleService = {
@@ -38,6 +46,7 @@ export const saleService = {
       id: saleId,
       tenantId: input.tenantId,
       cashierId: input.cashierId,
+      receiptNumber: input.receiptNumber ?? makeReceiptNumber(now),
       totalAmount,
       paidAmount: input.paidAmount,
       paymentType: input.paymentType,

@@ -47,6 +47,7 @@ export interface Sale {
   id: SaleId
   tenantId: TenantId
   cashierId: UserId
+  receiptNumber: string      // e.g. "20260607-AB12" — printed on the receipt, searchable
   totalAmount: KHR
   paidAmount: KHR
   paymentType: 'cash' | 'debt' | 'partial'
@@ -115,6 +116,16 @@ export interface Expense {
   updatedAt:  string
   deletedAt:  string | null
   syncedAt:   string | null
+}
+
+export interface HeldInvoice {
+  id:        UUID
+  tenantId:  TenantId
+  label:     string | null   // optional name/note e.g. customer or "តុ ៣"
+  items:     CartItem[]       // full cart snapshot (restored on resume)
+  total:     KHR
+  count:     number
+  createdAt: string
 }
 
 export interface CashDrawer {

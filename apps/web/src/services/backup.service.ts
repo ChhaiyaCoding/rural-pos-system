@@ -152,7 +152,7 @@ export const backupService = {
     await db.transaction(
       'rw',
       [db.products, db.customers, db.sales, db.saleItems,
-       db.debtTransactions, db.cashDrawers, db.stockMovements, db.expenses, db.syncQueue],
+       db.debtTransactions, db.cashDrawers, db.stockMovements, db.expenses, db.heldInvoices, db.syncQueue],
       async () => {
         await Promise.all([
           db.products.clear(),
@@ -163,6 +163,7 @@ export const backupService = {
           db.cashDrawers.clear(),
           db.stockMovements.clear(),
           db.expenses.clear(),
+          db.heldInvoices.clear(),
           db.syncQueue.clear(),
         ])
       }

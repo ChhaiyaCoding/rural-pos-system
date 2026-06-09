@@ -137,12 +137,12 @@ export default function SettingsPage() {
 
       {/* ── Scrollable body ────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto">
-        <div className="px-4 pt-5 pb-8 space-y-5 max-w-xl mx-auto">
+        <div className="px-4 pt-4 pb-8 space-y-4 max-w-xl mx-auto">
 
           {/* ══ Store identity ═══════════════════════════════ */}
           <section>
             <SectionHeader icon={<Store size={14} />} label="ព័ត៌មានហាង" />
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
 
               {/* Logo row */}
               <div className="px-4 pt-4 pb-4 flex items-center gap-4 border-b border-slate-100">
@@ -151,10 +151,10 @@ export default function SettingsPage() {
                     <img
                       src={storeLogo}
                       alt="logo"
-                      className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-sm"
+                      className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-card"
                     />
                   ) : (
-                    <div className="w-16 h-16 rounded-2xl bg-primary-600 text-white text-[22px] font-bold flex items-center justify-center shadow-sm">
+                    <div className="w-16 h-16 rounded-2xl bg-primary-600 text-white text-[22px] font-bold flex items-center justify-center shadow-card">
                       {displayName.charAt(0) || 'ហ'}
                     </div>
                   )}
@@ -199,7 +199,7 @@ export default function SettingsPage() {
           {/* ══ Cashier ══════════════════════════════════════ */}
           <section>
             <SectionHeader icon={<User size={14} />} label="អ្នកគិតលុយ" />
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
               <Field label="ឈ្មោះ" value={cashier} onChange={setCashier} placeholder="សុខា" />
             </div>
           </section>
@@ -207,7 +207,7 @@ export default function SettingsPage() {
           {/* ══ Currency / exchange rate ═════════════════════ */}
           <section>
             <SectionHeader icon={<span className="text-[13px] leading-none">💵</span>} label="រូបិយប័ណ្ណ" />
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
               <div className="flex items-center gap-3 px-4 py-3">
                 <span className="text-[12px] text-slate-400 shrink-0 leading-snug">
                   អត្រាប្ដូរ · $1 =
@@ -235,7 +235,7 @@ export default function SettingsPage() {
           {/* ══ Low stock threshold ══════════════════════════ */}
           <section>
             <SectionHeader icon={<Package size={14} />} label="ស្តុក" />
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
               <div className="flex items-center gap-3 px-4 py-3">
                 <span className="text-[12px] text-slate-400 shrink-0 w-36 leading-snug">
                   ជូនដំណឹងស្តុកតិចនៅ
@@ -264,7 +264,7 @@ export default function SettingsPage() {
           {/* ══ Receipt Footer + Preview ══════════════════════ */}
           <section>
             <SectionHeader icon={<FileText size={14} />} label="វិក្កយបត្រ" />
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
               {/* Header note */}
               <div className="px-4 py-3 border-b border-slate-100">
                 <span className="text-[12px] text-slate-400 block mb-1.5">ចំណងជើងបន្ថែម (ក្រោមឈ្មោះហាង)</span>
@@ -391,7 +391,7 @@ export default function SettingsPage() {
           {/* ══ Data / Backup ════════════════════════════════ */}
           <section>
             <SectionHeader icon={<Database size={14} />} label="ទិន្នន័យ" />
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-card divide-y divide-slate-100 overflow-hidden">
               <SettingRow
                 label="Backup / Restore"
                 sub="Export ឬ ផ្ទុកទិន្នន័យត្រឡប់ (.json)"
@@ -403,7 +403,7 @@ export default function SettingsPage() {
           {/* ══ Other / System ═══════════════════════════════ */}
           <section>
             <SectionHeader icon={<Info size={14} />} label="ប្រព័ន្ធ" />
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-card divide-y divide-slate-100 overflow-hidden">
               <SettingRow label="គ្រប់គ្រងអ្នកប្រើ"  sub="បន្ថែម ឬដកអ្នកប្រើប្រាស់" />
               <SettingRow label="ការជាវ SaaS"         sub="គ្រប់គ្រងផែនការ"           />
             </div>
@@ -412,7 +412,7 @@ export default function SettingsPage() {
           {/* ══ Danger zone ══════════════════════════════════ */}
           <section>
             <SectionHeader icon={<ShieldAlert size={14} />} label="ផ្នែកគ្រោះថ្នាក់" danger />
-            <div className="bg-white rounded-2xl border border-danger-100 shadow-sm divide-y divide-slate-100 overflow-hidden">
+            <div className="bg-white rounded-2xl border border-danger-100 shadow-card divide-y divide-slate-100 overflow-hidden">
               <SettingRow
                 label="លុបទិន្នន័យទាំងអស់"
                 sub="Reset ទំនិញ · ការលក់ · បំណុល"

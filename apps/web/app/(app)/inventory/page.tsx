@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Plus, Package, Search, PackagePlus } from 'lucide-react'
+import Link from 'next/link'
+import { Plus, Package, Search, PackagePlus, Truck } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
@@ -91,10 +92,15 @@ export default function InventoryPage() {
     <div className="flex flex-col h-full">
 
       {/* Header */}
-      <header className="shrink-0 px-4 pt-5 pb-3 bg-white border-b border-slate-200">
+      <header className="shrink-0 px-4 pt-5 pb-4 bg-white border-b border-slate-200">
         <div className="flex items-center justify-between">
           <h1 className="text-[19px] font-bold text-slate-900">ស្តុកទំនិញ</h1>
-          <span className="text-[12px] text-slate-400 font-medium">{products.length} ទំនិញ</span>
+          <div className="flex items-center gap-3">
+            <Link href="/suppliers" className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary-600 active:text-primary-700">
+              <Truck size={14} strokeWidth={2.25} /> អ្នកផ្គត់ផ្គង់
+            </Link>
+            <span className="text-[12px] text-slate-400 font-medium">{products.length} ទំនិញ</span>
+          </div>
         </div>
 
         {/* Summary chips */}
@@ -171,14 +177,14 @@ export default function InventoryPage() {
       {products.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6">
           <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
-            <Package size={32} strokeWidth={1.5} className="text-slate-300" />
+            <Package size={30} strokeWidth={1.5} className="text-slate-300" />
           </div>
-          <p className="text-[15px] font-semibold text-slate-700">មិនទាន់មានទំនិញ</p>
-          <p className="text-[13px] text-slate-400">ចុច + ដើម្បីបន្ថែមទំនិញដំបូង</p>
+          <p className="text-[14px] font-semibold text-slate-700">មិនទាន់មានទំនិញ</p>
+          <p className="text-[12px] text-slate-400">ចុច + ដើម្បីបន្ថែមទំនិញដំបូង</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-[13px] text-slate-400">រកមិនឃើញ «{search}»</p>
+          <p className="text-[12px] text-slate-400">រកមិនឃើញ «{search}»</p>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
@@ -187,7 +193,7 @@ export default function InventoryPage() {
             const isLow   = !isOut && product.stockQty <= product.lowStockThreshold
             const isAlert = isOut || isLow
             return (
-              <div key={product.id} className="flex items-center gap-2 px-4 py-3">
+              <div key={product.id} className="flex items-center gap-2 px-4 py-3.5">
                 {/* Tap row → edit */}
                 <button
                   type="button"

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Search, ScanLine, X, CheckCircle2, ShoppingCart, ChevronUp, Receipt } from 'lucide-react'
+import { Search, ScanLine, X, CheckCircle2, ShoppingCart, ChevronUp, Receipt, PauseCircle } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useSaleStore } from '@/store/sale.store'
 import { formatKHR, addKHR, toKHR, multiplyKHR, subtractKHR } from '@/lib/money'
@@ -21,6 +21,8 @@ import { FlyToCartOverlay, type FlyItem } from '@/components/shared/FlyToCartOve
 import { CartPanel } from './CartPanel'
 import { CheckoutSheet } from './CheckoutSheet'
 import { SaleReceiptSheet, type ReceiptData } from './SaleReceiptSheet'
+import { HeldInvoicesSheet } from './HeldInvoicesSheet'
+import { heldInvoiceService } from '@/services/heldInvoice.service'
 import { BarcodeScannerSheet } from './BarcodeScannerSheet'
 import { OpenShiftSheet } from './OpenShiftSheet'
 import { CloseShiftSheet } from './CloseShiftSheet'
@@ -47,6 +49,7 @@ export function POSScreen() {
   const [success,    setSuccess]    = useState<Success>(null)
   const [receipt,    setReceipt]    = useState<{ data: ReceiptData; open: boolean } | null>(null)
   const [scanning,    setScanning]    = useState(false)
+  const [showHeld,    setShowHeld]    = useState(false)
   const [openShift,   setOpenShift]   = useState(false)
   const [closeShift,  setCloseShift]  = useState(false)
   const [flyItems,    setFlyItems]    = useState<FlyItem[]>([])
@@ -85,9 +88,29 @@ export function POSScreen() {
   const cartTotal   = useSaleStore((s) => s.cartTotal)
   const cartCount   = useSaleStore((s) => s.cartCount)
   const clearCart   = useSaleStore((s) => s.clearCart)
+  const setCart     = useSaleStore((s) => s.setCart)
 
   const count = cartCount()
   const total = cartTotal()
+
+  /* Held (parked) invoices — count for the header button */
+  const heldCount = useLiveQuery(
+    () => db.heldInvoices.where('tenantId').equals(DEMO_TENANT).count(),
+    []
+  ) ?? 0
+
+  /* Hold the current cart as a draft, then clear for the next customer */
+  const handleHold = async () => {
+    if (count === 0) return
+    await heldInvoiceService.hold({
+      tenantId: DEMO_TENANT,
+      items:    [...cart],
+      total,
+      count,
+    })
+    clearCart()
+    setCartOpen(false)
+  }
 
   /* Filter products by category + smart search (Khmer/English/barcode/price) */
   const filteredProducts = useMemo(
@@ -241,6 +264,7 @@ export function POSScreen() {
       tenantId:    DEMO_TENANT,
       cashierId:   DEMO_CASHIER,
       cart:        cartSnap,
+      receiptNumber,
       paymentType: type === 'partial' ? 'debt' : type,
       paidAmount:  type === 'cash' ? paidNow : type === 'partial' ? paidNow : toKHR(0),
       ...(discount ? { discount } : {}),
@@ -329,6 +353,21 @@ export function POSScreen() {
                   💰 បើកវេន
                 </button>
               )}
+
+              {/* Held invoices (resume) */}
+              <button
+                type="button"
+                onClick={() => setShowHeld(true)}
+                aria-label="វិក្កយបត្រផ្អាក"
+                className="relative min-w-0 w-10 h-10 flex items-center justify-center rounded-lg border border-slate-300 text-slate-700 active:bg-slate-50 transition-colors shrink-0"
+              >
+                <PauseCircle size={19} strokeWidth={2.25} />
+                {heldCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-0.5 rounded-full bg-warning-500 text-white text-[9px] font-black flex items-center justify-center leading-none">
+                    {heldCount > 9 ? '9+' : heldCount}
+                  </span>
+                )}
+              </button>
 
               {/* Barcode scan */}
               <button
@@ -439,7 +478,7 @@ export function POSScreen() {
           RIGHT — Cart sidebar (tablet / desktop)
       ════════════════════════════════════════════════════ */}
       <aside ref={cartPanelRef} className="hidden md:flex flex-col w-80 lg:w-[22rem] bg-white border-l border-slate-200 shadow-[-4px_0_24px_-16px_rgba(15,23,42,0.25)] shrink-0">
-        <CartPanel onPay={handlePay} />
+        <CartPanel onPay={handlePay} onHold={handleHold} />
       </aside>
 
       {/* ════════════════════════════════════════════════════
@@ -460,7 +499,7 @@ export function POSScreen() {
               <div className="w-10 h-1 bg-slate-300 rounded-full" />
             </div>
 
-            <CartPanel onPay={handlePay} />
+            <CartPanel onPay={handlePay} onHold={handleHold} />
           </div>
         </div>
       )}
@@ -581,6 +620,16 @@ export function POSScreen() {
       ════════════════════════════════════════════════════ */}
       {scanning && (
         <BarcodeScannerSheet onClose={() => setScanning(false)} />
+      )}
+
+      {/* ════════════════════════════════════════════════════
+          HELD INVOICES (resume)
+      ════════════════════════════════════════════════════ */}
+      {showHeld && (
+        <HeldInvoicesSheet
+          onClose={() => setShowHeld(false)}
+          onResume={(items) => { setCart(items); setCartOpen(false) }}
+        />
       )}
 
       {/* ════════════════════════════════════════════════════

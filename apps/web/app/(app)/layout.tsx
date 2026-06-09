@@ -4,11 +4,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 import {
+  Home,
   ShoppingCart,
   Package,
-  Users,
   BarChart2,
-  Settings,
+  LayoutGrid,
 } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
@@ -38,12 +38,25 @@ function showNotif(title: string, body: string, tag = 'pos', icon = '/icons/icon
 }
 
 const NAV = [
-  { href: '/',          icon: ShoppingCart, label: 'លក់'       },
+  { href: '/',          icon: Home,         label: 'ទំព័រដើម'  },
+  { href: '/sell',      icon: ShoppingCart, label: 'លក់'       },
   { href: '/inventory', icon: Package,      label: 'ស្តុក'      },
-  { href: '/debt',      icon: Users,        label: 'បំណុល'     },
   { href: '/reports',   icon: BarChart2,    label: 'របាយការណ៍' },
-  { href: '/settings',  icon: Settings,     label: 'ការកំណត់'  },
+  { href: '/more',      icon: LayoutGrid,   label: 'ច្រើនទៀត'  },
 ]
+
+/* Routes that live under the "More" hub — keep the More tab highlighted there */
+const MORE_ROUTES = ['/more', '/debt', '/customers', '/expenses', '/settings', '/staff']
+
+function isTabActive(href: string, pathname: string): boolean {
+  if (href === '/')     return pathname === '/'
+  if (href === '/more') return MORE_ROUTES.some((p) => pathname.startsWith(p))
+  if (href === '/inventory')
+    return pathname.startsWith('/inventory') || pathname.startsWith('/suppliers')
+  if (href === '/reports')
+    return pathname.startsWith('/reports') || pathname.startsWith('/receipts')
+  return pathname.startsWith(href)
+}
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -159,11 +172,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Constrain nav items to reasonable width on very wide screens */}
         <div className="flex h-[64px] max-w-screen-md mx-auto">
           {NAV.map(({ href, icon: Icon, label }) => {
-            const active = pathname === href
+            const active = isTabActive(href, pathname)
 
-            /* Badge value + color per tab */
+            /* Badge value + color per tab — debt now lives under "More" */
             const badge      = href === '/inventory' ? stockAlertCount
-                             : href === '/debt'      ? debtorCount
+                             : href === '/more'      ? debtorCount
                              : 0
             const badgeClass = href === '/inventory'
               ? 'bg-warning-500'

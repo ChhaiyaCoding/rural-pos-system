@@ -1,6 +1,6 @@
 'use client'
 
-import { ShoppingCart, Banknote, NotebookPen, Plus, SplitSquareHorizontal } from 'lucide-react'
+import { ShoppingCart, Banknote, NotebookPen, Plus, SplitSquareHorizontal, PauseCircle } from 'lucide-react'
 import { useSaleStore } from '@/store/sale.store'
 import { formatKHR, formatUSD } from '@/lib/money'
 import { CartLineItem } from './CartLineItem'
@@ -8,9 +8,11 @@ import { CartLineItem } from './CartLineItem'
 interface CartPanelProps {
   /** Called when user taps Cash, Debt, or Partial */
   onPay: (type: 'cash' | 'debt' | 'partial') => void
+  /** Called when user holds (parks) the current cart as a draft */
+  onHold: () => void
 }
 
-export function CartPanel({ onPay }: CartPanelProps) {
+export function CartPanel({ onPay, onHold }: CartPanelProps) {
   const cart              = useSaleStore((s) => s.cart)
   const cartTotal         = useSaleStore((s) => s.cartTotal)
   const cartSubtotal      = useSaleStore((s) => s.cartSubtotal)
@@ -53,13 +55,23 @@ export function CartPanel({ onPay }: CartPanelProps) {
           <span className="text-[15px] font-bold text-slate-900">រទេះទំនិញ</span>
           <span className="text-[13px] font-medium text-slate-400 tabular-nums">({count})</span>
         </div>
-        <button
-          type="button"
-          onClick={clearCart}
-          className="min-h-0 min-w-0 text-[12px] font-semibold text-slate-500 active:text-danger-600 px-2 py-1.5"
-        >
-          សម្អាត
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onHold}
+            className="min-h-0 min-w-0 flex items-center gap-1 text-[12px] font-semibold text-warning-700 active:text-warning-800 px-2 py-1.5"
+          >
+            <PauseCircle size={14} strokeWidth={2.25} />
+            ផ្អាក
+          </button>
+          <button
+            type="button"
+            onClick={clearCart}
+            className="min-h-0 min-w-0 text-[12px] font-semibold text-slate-500 active:text-danger-600 px-2 py-1.5"
+          >
+            សម្អាត
+          </button>
+        </div>
       </div>
 
       {/* ── Line items (scrollable) ──────────────────────────── */}

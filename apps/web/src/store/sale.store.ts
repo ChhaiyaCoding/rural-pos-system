@@ -11,6 +11,7 @@ interface SaleState {
 
 interface SaleActions {
   addToCart: (product: Product, qty?: number) => void
+  setCart: (items: CartItem[]) => void
   removeFromCart: (productId: ProductId) => void
   updateQty: (productId: ProductId, qty: number) => void
   setLineDiscount: (productId: ProductId, discount: KHR) => void
@@ -59,6 +60,9 @@ export const useSaleStore = create<SaleState & SaleActions & SaleSelectors>()(
           ],
         }
       }),
+
+    /** Replace the whole cart — used to resume a held invoice */
+    setCart: (items) => set({ cart: items, isCheckingOut: false, error: null }),
 
     removeFromCart: (productId) =>
       set((state) => ({

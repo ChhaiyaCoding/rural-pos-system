@@ -58,7 +58,7 @@ export default function DebtPage() {
     <div className="flex flex-col h-full">
 
       {/* Header */}
-      <header className="shrink-0 px-4 pt-5 pb-3 bg-white border-b border-slate-200">
+      <header className="shrink-0 px-4 pt-5 pb-4 bg-white border-b border-slate-200">
         <div className="flex items-center justify-between">
           <h1 className="text-[19px] font-bold text-slate-900">បំណុលអតិថិជន</h1>
           <span className="text-[12px] text-slate-400 font-medium">{customers.length} នាក់</span>
@@ -134,14 +134,14 @@ export default function DebtPage() {
       {customers.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6">
           <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
-            <Users size={32} strokeWidth={1.5} className="text-slate-300" />
+            <Users size={30} strokeWidth={1.5} className="text-slate-300" />
           </div>
-          <p className="text-[15px] font-semibold text-slate-700">មិនទាន់មានអតិថិជន</p>
-          <p className="text-[13px] text-slate-400">ចុច + ដើម្បីបន្ថែមអតិថិជនដំបូង</p>
+          <p className="text-[14px] font-semibold text-slate-700">មិនទាន់មានអតិថិជន</p>
+          <p className="text-[12px] text-slate-400">ចុច + ដើម្បីបន្ថែមអតិថិជនដំបូង</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex-1 flex items-center justify-center px-6 text-center">
-          <p className="text-[13px] text-slate-400">
+          <p className="text-[12px] text-slate-400">
             {search !== ''   ? `រកមិនឃើញ «${search}»`
             : tab === 'owing' ? 'គ្មានអ្នកជំពាក់ទេ 🎉'
             : tab === 'paid'  ? 'មិនទាន់មានអ្នកសងអស់'
