@@ -14,7 +14,7 @@ const GROUPS: { title: string; items: MoreItem[] }[] = [
   {
     title: 'អតិថិជន & បំណុល',
     items: [
-      { href: '/debt',     icon: <Users size={18} />,        label: 'អតិថិជន',     sub: 'បញ្ជី​អតិថិជន​ទាំងអស់' },
+      { href: '/customers', icon: <Users size={18} />,       label: 'អតិថិជន',     sub: 'បញ្ជី​អតិថិជន​ទាំងអស់' },
       { href: '/debt',     icon: <NotebookText size={18} />, label: 'សៀវភៅបំណុល', sub: 'អ្នកជំពាក់ · ថ្ងៃកំណត់សង' },
     ],
   },

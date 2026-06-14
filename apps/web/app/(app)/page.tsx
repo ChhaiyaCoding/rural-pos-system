@@ -8,22 +8,16 @@ import {
 } from 'lucide-react'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
-import { todayISODate } from '@/lib/date'
+import { todayISODate, startOfTodayISO } from '@/lib/date'
 import { useStoreProfile } from '@/store/storeProfile.store'
 import type { KHR, TenantId } from '@/types/branded'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
-function todayStartISO(): string {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  return d.toISOString()
-}
-
 export default function HomePage() {
   const { storeName, cashierName } = useStoreProfile()
   const today    = todayISODate()
-  const startISO = todayStartISO()
+  const startISO = startOfTodayISO()
 
   /* Today's sales (non-void) */
   const todaySales = useLiveQuery(
@@ -98,9 +92,12 @@ export default function HomePage() {
               </div>
               <p className={[
                 'text-[20px] font-extrabold tabular-nums leading-tight',
-                todayProfit >= 0 ? 'text-success-700' : 'text-danger-700',
+                todayProfit >= 0 ? 'text-success-700' : 'text-slate-900',
               ].join(' ')}>{formatKHR(todayProfit)}</p>
-              <p className="text-[12px] font-bold text-primary-600 tabular-nums">{formatUSD(todayProfit)}</p>
+              <p className={[
+                'text-[12px] font-bold tabular-nums',
+                todayProfit >= 0 ? 'text-primary-600' : 'text-danger-600',
+              ].join(' ')}>{formatUSD(todayProfit)}</p>
               <p className="text-[11px] text-slate-400 mt-0.5">ចំណូល − ចំណាយ</p>
             </div>
           </div>

@@ -67,9 +67,13 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
   const change = subtractKHR(tendered, discountedTotal)
   const enough = tendered >= discountedTotal
 
-  /* Partial: cash portion paid now ───────────────────────────── */
-  const [partialCash, setPartialCash] = useState<string>('')
-  const partialCashAmt  = Math.max(0, Math.min(Number(partialCash) || 0, discountedTotal)) as KHR
+  /* Partial: cash portion paid now — typeable in ៛ or $ ───────── */
+  const [partialCash,     setPartialCash]     = useState<string>('')
+  const [partialCurrency, setPartialCurrency] = useState<'KHR' | 'USD'>('KHR')
+  const partialCashKhr  = partialCurrency === 'USD'
+    ? Math.round((Number(partialCash) || 0) * exchangeRate)
+    : Math.round(Number(partialCash) || 0)
+  const partialCashAmt  = Math.max(0, Math.min(partialCashKhr, discountedTotal)) as KHR
   const partialDebtAmt  = Math.max(0, discountedTotal - partialCashAmt) as KHR
   const partialValid    = partialCashAmt > 0 && partialCashAmt < discountedTotal
 
@@ -403,40 +407,79 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
             /* ── PARTIAL PAYMENT ─────────────────────────────── */
             <div className="px-4 pb-3 space-y-3 border-t border-slate-100 pt-3">
 
-              {/* Cash portion input */}
+              {/* Cash portion input — payable in ៛ or $ */}
               <div>
-                <p className="text-[12px] font-semibold text-slate-500 mb-1.5">
-                  💵 ប្រាក់ទូទាត់ឥឡូវ (រៀល)
-                </p>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-[12px] font-semibold text-slate-500">💵 ប្រាក់ទូទាត់ឥឡូវ</p>
+                  <div className="flex items-center rounded-lg border border-warning-300 bg-white overflow-hidden">
+                    {(['KHR', 'USD'] as const).map((cur) => (
+                      <button
+                        key={cur}
+                        type="button"
+                        onClick={() => { setPartialCurrency(cur); setPartialCash('') }}
+                        className={[
+                          'min-h-0 min-w-0 h-7 px-3 text-[13px] font-bold tabular-nums transition-colors',
+                          partialCurrency === cur ? 'bg-warning-500 text-white' : 'text-warning-700 active:bg-warning-50',
+                        ].join(' ')}
+                      >
+                        {cur === 'KHR' ? '៛' : '$'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="flex items-center border border-warning-300 rounded-xl overflow-hidden bg-white focus-within:border-warning-500 focus-within:ring-2 focus-within:ring-warning-400/20">
+                  <span className="pl-4 text-[15px] font-bold text-slate-400 shrink-0">
+                    {partialCurrency === 'USD' ? '$' : '៛'}
+                  </span>
                   <input
                     type="number"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     value={partialCash}
                     onChange={(e) => setPartialCash(e.target.value)}
                     placeholder="0"
                     autoFocus
-                    className="flex-1 h-12 px-4 text-[18px] font-bold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none"
+                    className="flex-1 h-12 px-3 text-[18px] font-bold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none min-w-0"
                   />
-                  <span className="pr-3 text-[14px] text-slate-400">៛</span>
                 </div>
-                {/* Quick partial chips */}
+                {partialCurrency === 'USD' && partialCashAmt > 0 && (
+                  <p className="text-right text-[12px] font-bold text-primary-600 tabular-nums mt-1">
+                    = {formatKHR(partialCashAmt)}
+                  </p>
+                )}
+                {/* Quick partial chips — currency-aware */}
                 <div className="flex gap-2 mt-2 flex-wrap">
-                  {DENOMS.filter(d => d < discountedTotal).slice(0, 5).map(amt => (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => setPartialCash(String(amt))}
-                      className={[
-                        'h-8 px-2.5 rounded-lg border text-[11px] font-semibold tabular-nums transition-colors',
-                        partialCashAmt === amt
-                          ? 'border-warning-400 bg-warning-50 text-warning-700'
-                          : 'border-slate-200 text-slate-600 active:bg-slate-50',
-                      ].join(' ')}
-                    >
-                      {formatKHR(toKHR(amt))}
-                    </button>
-                  ))}
+                  {partialCurrency === 'KHR'
+                    ? DENOMS.filter(d => d < discountedTotal).slice(0, 5).map(amt => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setPartialCash(String(amt))}
+                          className={[
+                            'h-8 px-2.5 rounded-lg border text-[11px] font-semibold tabular-nums transition-colors',
+                            Number(partialCash) === amt
+                              ? 'border-warning-400 bg-warning-50 text-warning-700'
+                              : 'border-slate-200 text-slate-600 active:bg-slate-50',
+                          ].join(' ')}
+                        >
+                          {formatKHR(toKHR(amt))}
+                        </button>
+                      ))
+                    : USD_NOTES.filter(u => u * exchangeRate < discountedTotal).map(u => (
+                        <button
+                          key={u}
+                          type="button"
+                          onClick={() => setPartialCash(String(u))}
+                          className={[
+                            'h-8 px-2.5 rounded-lg border text-[11px] font-semibold tabular-nums transition-colors',
+                            Number(partialCash) === u
+                              ? 'border-warning-400 bg-warning-50 text-warning-700'
+                              : 'border-slate-200 text-slate-600 active:bg-slate-50',
+                          ].join(' ')}
+                        >
+                          ${u}
+                        </button>
+                      ))
+                  }
                 </div>
               </div>
 

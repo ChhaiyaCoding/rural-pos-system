@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { X, User, Camera, MapPin } from 'lucide-react'
+import { X, User, Camera, MapPin, FileText } from 'lucide-react'
 import { customerService } from '@/services/customer.service'
 import type { TenantId } from '@/types/branded'
 
@@ -16,6 +16,7 @@ export function CustomerFormSheet({ onClose, onSaved }: Props) {
   const [name,     setName]     = useState('')
   const [phone,    setPhone]    = useState('')
   const [address,  setAddress]  = useState('')
+  const [note,     setNote]     = useState('')
   const [imageUri, setImageUri] = useState<string | null>(null)
   const [saving,   setSaving]   = useState(false)
 
@@ -48,6 +49,7 @@ export function CustomerFormSheet({ onClose, onSaved }: Props) {
         nameKm:   name.trim(),
         ...(phone.trim()   ? { phone:    phone.trim()   } : {}),
         ...(address.trim() ? { address:  address.trim() } : {}),
+        ...(note.trim()    ? { note:     note.trim()    } : {}),
         ...(imageUri       ? { imageUri               } : {}),
       })
       onSaved()
@@ -163,6 +165,21 @@ export function CustomerFormSheet({ onClose, onSaved }: Props) {
               onChange={(e) => setAddress(e.target.value)}
               placeholder="ភូមិ, ឃុំ, ស្រុក, ខេត្ត…"
               rows={3}
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-[15px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 resize-none leading-relaxed"
+            />
+          </div>
+
+          {/* ── Note ──────────────────────────────────── */}
+          <div>
+            <p className="text-[12px] font-semibold text-slate-500 mb-1.5 flex items-center gap-1">
+              <FileText size={12} strokeWidth={2.5} />
+              កំណត់ចំណាំ (ស្រេចចិត្ត)
+            </p>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="ឧ. អតិថិជនជិតខាង, ទិញញឹកញាប់…"
+              rows={2}
               className="w-full rounded-xl border border-slate-200 px-4 py-3 text-[15px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 resize-none leading-relaxed"
             />
           </div>

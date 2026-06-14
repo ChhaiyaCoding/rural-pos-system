@@ -22,14 +22,49 @@ export function formatDateTimeKm(iso: string): string {
   })
 }
 
-/* ── Date-only helpers (for due dates: 'YYYY-MM-DD', local) ──────── */
+/* ── Cambodia time (fixed UTC+7, no DST) ─────────────────────────
+   All "today"/day-bucketing anchors to the Cambodian calendar day so totals
+   agree across modules regardless of the device timezone. */
+export const CAMBODIA_UTC_OFFSET_MIN = 7 * 60
 
-/** Local today as 'YYYY-MM-DD' */
+/** An instant shifted into Cambodia wall-clock time — read it with UTC getters. */
+function khShift(ms: number): Date {
+  return new Date(ms + CAMBODIA_UTC_OFFSET_MIN * 60_000)
+}
+
+/** Cambodia calendar date ('YYYY-MM-DD') for a given instant (ms since epoch). */
+function khDateString(ms: number): string {
+  const s = khShift(ms)
+  const m = String(s.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(s.getUTCDate()).padStart(2, '0')
+  return `${s.getUTCFullYear()}-${m}-${d}`
+}
+
+/** Start of the Cambodia day `n` days ago, returned as a UTC ISO string.
+ *  Use to bucket same-day/period activity by the Cambodian calendar day. */
+export function startOfDaysAgoISO(n: number): string {
+  const s = khShift(Date.now())
+  // Cambodia midnight = that date 00:00 (+7) = UTC midnight − 7h
+  return new Date(
+    Date.UTC(s.getUTCFullYear(), s.getUTCMonth(), s.getUTCDate() - n) - CAMBODIA_UTC_OFFSET_MIN * 60_000,
+  ).toISOString()
+}
+
+/** Start of "today" in Cambodia time, as a UTC ISO string. */
+export function startOfTodayISO(): string {
+  return startOfDaysAgoISO(0)
+}
+
+/** Cambodia calendar date ('YYYY-MM-DD') for a UTC ISO timestamp. */
+export function dateKHFromISO(iso: string): string {
+  return khDateString(new Date(iso).getTime())
+}
+
+/* ── Date-only helpers ('YYYY-MM-DD') ────────────────────────────── */
+
+/** Cambodia today as 'YYYY-MM-DD'. */
 export function todayISODate(): string {
-  const d = new Date()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${m}-${day}`
+  return khDateString(Date.now())
 }
 
 /** Parse a 'YYYY-MM-DD' string as a local-midnight Date */

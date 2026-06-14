@@ -29,11 +29,13 @@ export function formatKHR(amount: KHR): string {
  *  Whole-dollar amounts drop the cents: 8000 → "$2".                       */
 export function formatUSD(amount: KHR, rate = exchangeRate): string {
   const usd = amount / rate
-  const rounded = Math.round(usd * 100) / 100
+  const neg = usd < 0
+  const rounded = Math.round(Math.abs(usd) * 100) / 100
   const text = Number.isInteger(rounded)
     ? rounded.toLocaleString('en-US')
     : rounded.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  return `$${text}`
+  // Negative shows a normal leading minus: -$87.50 (not $-87.50)
+  return `${neg ? '-' : ''}$${text}`
 }
 
 /** Dual currency on one line: 5000 → "5,000 ៛ · $1.25" */

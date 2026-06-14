@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { TrendingUp, BarChart2, List, Share2, Wallet, Receipt } from 'lucide-react'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
+import { startOfTodayISO, startOfDaysAgoISO, dateKHFromISO, todayISODate, addDaysISODate } from '@/lib/date'
 import { SaleDetailSheet } from '@/features/sales/components/SaleDetailSheet'
 import { ReportExportSheet } from '@/features/reports/components/ReportExportSheet'
 import { expenseCategoryLabel, expenseCategoryEmoji } from '@/services/expense.service'
@@ -37,16 +38,14 @@ const PAYMENT_CONFIG: Record<
 }
 
 function getStartISO(key: PeriodKey): string {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  if (key === '7d')  d.setDate(d.getDate() - 6)
-  if (key === '30d') d.setDate(d.getDate() - 29)
-  return d.toISOString()
+  if (key === '7d')  return startOfDaysAgoISO(6)
+  if (key === '30d') return startOfDaysAgoISO(29)
+  return startOfTodayISO()
 }
 
 function dateLabel(iso: string): string {
-  const today     = new Date().toISOString().slice(0, 10)
-  const yesterday = new Date(Date.now() - 86400_000).toISOString().slice(0, 10)
+  const today     = todayISODate()
+  const yesterday = addDaysISODate(today, -1)
   if (iso === today)     return 'ថ្ងៃនេះ'
   if (iso === yesterday) return 'ម្សិលមិញ'
   const d = new Date(iso + 'T12:00:00')
@@ -94,8 +93,8 @@ export default function ReportsPage() {
   const totalDebt    = customers.reduce((s, c) => s + (c.debtBalance as number), 0) as KHR
   const debtorCount  = customers.filter(c => (c.debtBalance as number) > 0).length
 
-  /* Expenses for the selected period (spentAt date-only ≥ period start) */
-  const startDate = startISO.slice(0, 10)
+  /* Expenses for the selected period (spentAt date-only ≥ period start, Cambodia) */
+  const startDate = addDaysISODate(todayISODate(), -(days - 1))
   const expenses = useLiveQuery(
     () => db.expenses
       .where('tenantId').equals(DEMO_TENANT)
@@ -114,16 +113,13 @@ export default function ReportsPage() {
   }, [expenses])
   const maxCatExpense = Math.max(...expenseByCat.map(([, v]) => v), 1)
 
-  /* Daily revenue for bar chart */
+  /* Daily revenue for bar chart (keyed by Cambodia calendar day) */
   const dailyRevenue = useMemo(() => {
+    const today = todayISODate()
     const map = new Map<string, number>()
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      map.set(d.toISOString().slice(0, 10), 0)
-    }
+    for (let i = days - 1; i >= 0; i--) map.set(addDaysISODate(today, -i), 0)
     for (const sale of sales) {
-      const key = sale.createdAt.slice(0, 10)
+      const key = dateKHFromISO(sale.createdAt)
       if (map.has(key)) map.set(key, (map.get(key) ?? 0) + sale.totalAmount)
     }
     return [...map.entries()].map(([date, amount]) => ({ date, amount }))
@@ -146,14 +142,14 @@ export default function ReportsPage() {
   }, [items])
 
   const maxProductRevenue = Math.max(...topProducts.map(p => p.revenue), 1)
-  const todayISO          = new Date().toISOString().slice(0, 10)
+  const todayISO          = todayISODate()
 
   /* History: group ALL sales (incl. voided) by date, sorted desc */
   const groupedSales = useMemo(() => {
     const sorted = [...allSales].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     const map    = new Map<string, Sale[]>()
     for (const sale of sorted) {
-      const key = sale.createdAt.slice(0, 10)
+      const key = dateKHFromISO(sale.createdAt)
       if (!map.has(key)) map.set(key, [])
       map.get(key)!.push(sale)
     }
@@ -162,7 +158,7 @@ export default function ReportsPage() {
 
   /* ─────────────────────────────────────────────────────── */
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-slate-50">
 
       {/* ── Header ──────────────────────────────────────────── */}
       <header className="shrink-0 px-4 pt-5 pb-4 bg-white border-b border-slate-200">
@@ -171,7 +167,7 @@ export default function ReportsPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/receipts"
-              className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-slate-100 text-slate-600 text-[12px] font-bold active:bg-slate-200 transition-colors"
+              className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-slate-100 text-slate-600 text-[12px] font-bold active:bg-slate-200 transition-colors"
             >
               <Receipt size={14} strokeWidth={2.5} />
               វិក្កយបត្រ
@@ -179,10 +175,10 @@ export default function ReportsPage() {
             <button
               type="button"
               onClick={() => setShowExport(true)}
-              className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-primary-50 border border-primary-200 text-primary-700 text-[12px] font-bold active:bg-primary-100 transition-colors"
+              className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-primary-50 text-primary-700 text-[12px] font-bold active:bg-primary-100 transition-colors"
             >
               <Share2 size={14} strokeWidth={2.5} />
-              Export
+              នាំចេញ
             </button>
           </div>
         </div>
@@ -193,7 +189,7 @@ export default function ReportsPage() {
             type="button"
             onClick={() => setView('charts')}
             className={[
-              'flex-1 h-9 rounded-xl text-[13px] font-bold transition-colors flex items-center justify-center gap-1.5',
+              'flex-1 h-9 rounded-lg text-[13px] font-bold transition-colors flex items-center justify-center gap-1.5',
               view === 'charts'
                 ? 'bg-primary-600 text-white shadow-sm'
                 : 'bg-slate-100 text-slate-500 active:bg-slate-200',
@@ -206,7 +202,7 @@ export default function ReportsPage() {
             type="button"
             onClick={() => setView('history')}
             className={[
-              'flex-1 h-9 rounded-xl text-[13px] font-bold transition-colors flex items-center justify-center gap-1.5',
+              'flex-1 h-9 rounded-lg text-[13px] font-bold transition-colors flex items-center justify-center gap-1.5',
               view === 'history'
                 ? 'bg-primary-600 text-white shadow-sm'
                 : 'bg-slate-100 text-slate-500 active:bg-slate-200',
@@ -219,7 +215,7 @@ export default function ReportsPage() {
             type="button"
             onClick={() => setView('profit')}
             className={[
-              'flex-1 h-9 rounded-xl text-[13px] font-bold transition-colors flex items-center justify-center gap-1.5',
+              'flex-1 h-9 rounded-lg text-[13px] font-bold transition-colors flex items-center justify-center gap-1.5',
               view === 'profit'
                 ? 'bg-primary-600 text-white shadow-sm'
                 : 'bg-slate-100 text-slate-500 active:bg-slate-200',
@@ -238,9 +234,9 @@ export default function ReportsPage() {
               type="button"
               onClick={() => setPeriod(p.key)}
               className={[
-                'flex-1 h-8 rounded-lg text-[12px] font-semibold transition-colors',
+                'flex-1 h-9 rounded-lg text-[12px] font-semibold transition-colors',
                 period === p.key
-                  ? 'bg-slate-800 text-white'
+                  ? 'bg-slate-800 text-white shadow-sm'
                   : 'bg-slate-100 text-slate-500 active:bg-slate-200',
               ].join(' ')}
             >
@@ -252,6 +248,7 @@ export default function ReportsPage() {
 
       {/* ── Body ─────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto">
+       <div className="max-w-xl mx-auto">
 
         {/* ══════════════════════════════════════════════════════
             CHARTS VIEW
@@ -616,6 +613,7 @@ export default function ReportsPage() {
           </div>
         )}
 
+       </div>
       </div>
 
       {/* Sale detail sheet */}

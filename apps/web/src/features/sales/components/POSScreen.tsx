@@ -56,7 +56,7 @@ export function POSScreen() {
   const cartBtnRef   = useRef<HTMLButtonElement>(null)   // mobile checkout bar (only when count>0)
   const cartPanelRef = useRef<HTMLElement>(null)         // desktop cart sidebar (always rendered)
 
-  const { cashierName } = useStoreProfile()
+  const { storeName, cashierName } = useStoreProfile()
 
   /* Live current cash drawer */
   const currentDrawer = useLiveQuery(
@@ -302,7 +302,7 @@ export function POSScreen() {
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
         {/* ── Operational header ───────────────────────────── */}
-        <header className="bg-white border-b border-slate-200 shadow-sm px-4 pt-3 pb-3 space-y-3 shrink-0 z-10">
+        <header className="bg-white border-b border-slate-200 px-4 pt-5 pb-4 space-y-3 shrink-0 z-10">
           <div className="flex items-center justify-between gap-3">
 
             {/* Store / cashier identity */}
@@ -311,18 +311,20 @@ export function POSScreen() {
                 ហ
               </div>
               <div className="min-w-0">
-                <h1 className="text-[15px] font-bold text-slate-900 leading-tight truncate">
-                  ហាងលក់ទំនិញ
+                <h1 className="text-[19px] font-bold text-slate-900 leading-tight truncate">
+                  {storeName || 'ហាងលក់ទំនិញ'}
                 </h1>
                 <div className="flex items-center gap-1.5 text-[11px] leading-tight mt-0.5">
                   <span className="flex items-center gap-1 font-medium text-success-700">
                     <span className="w-1.5 h-1.5 rounded-full bg-success-500" />
                     អនឡាញ
                   </span>
-                  <span className="text-slate-300">·</span>
-                  <span className="text-slate-500 tabular-nums">វេន ៧:៣០</span>
-                  <span className="hidden sm:inline text-slate-300">·</span>
-                  <span className="hidden sm:inline text-slate-500">សុខា</span>
+                  {cashierName && (
+                    <>
+                      <span className="text-slate-300">·</span>
+                      <span className="text-slate-500 truncate">{cashierName}</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

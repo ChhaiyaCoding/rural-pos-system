@@ -5,6 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Plus, Wallet } from 'lucide-react'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
+import { todayISODate, addDaysISODate } from '@/lib/date'
 import { ExpenseFormSheet } from '@/features/expense/components/ExpenseFormSheet'
 import { expenseCategoryLabel, expenseCategoryEmoji } from '@/services/expense.service'
 import type { Expense } from '@/types'
@@ -20,18 +21,14 @@ const PERIODS = [
 type PeriodKey = (typeof PERIODS)[number]['key']
 
 function startDate(key: PeriodKey): string {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  if (key === '7d')  d.setDate(d.getDate() - 6)
-  if (key === '30d') d.setDate(d.getDate() - 29)
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${m}-${day}`
+  if (key === '7d')  return addDaysISODate(todayISODate(), -6)
+  if (key === '30d') return addDaysISODate(todayISODate(), -29)
+  return todayISODate()
 }
 
 function dateLabel(iso: string): string {
-  const today     = new Date().toISOString().slice(0, 10)
-  const yesterday = new Date(Date.now() - 86400_000).toISOString().slice(0, 10)
+  const today     = todayISODate()
+  const yesterday = addDaysISODate(today, -1)
   if (iso === today)     return 'ថ្ងៃនេះ'
   if (iso === yesterday) return 'ម្សិលមិញ'
   return new Date(iso + 'T12:00:00').toLocaleDateString('km-KH', { day: 'numeric', month: 'short' })
@@ -70,7 +67,10 @@ export default function ExpensesPage() {
 
       {/* Header */}
       <header className="shrink-0 px-4 pt-5 pb-4 bg-white border-b border-slate-200">
-        <h1 className="text-[19px] font-bold text-slate-900">ការចំណាយ</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-[19px] font-bold text-slate-900">ការចំណាយ</h1>
+          <span className="text-[12px] text-slate-400 font-medium">{expenses.length} ដង</span>
+        </div>
 
         {/* Period tabs */}
         <div className="flex gap-1.5 mt-3">
@@ -80,8 +80,8 @@ export default function ExpensesPage() {
               type="button"
               onClick={() => setPeriod(p.key)}
               className={[
-                'flex-1 h-8 rounded-lg text-[12px] font-semibold transition-colors',
-                period === p.key ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500 active:bg-slate-200',
+                'flex-1 h-9 rounded-lg text-[12px] font-semibold transition-colors',
+                period === p.key ? 'bg-slate-800 text-white shadow-sm' : 'bg-slate-100 text-slate-500 active:bg-slate-200',
               ].join(' ')}
             >
               {p.label}
@@ -105,7 +105,7 @@ export default function ExpensesPage() {
 
           {/* List */}
           {expenses.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
               <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
                 <Wallet size={30} strokeWidth={1.5} className="text-slate-300" />
               </div>

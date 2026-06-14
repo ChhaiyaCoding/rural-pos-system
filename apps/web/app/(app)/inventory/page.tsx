@@ -89,14 +89,14 @@ export default function InventoryPage() {
   }, [products, tab, search])
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-slate-50">
 
       {/* Header */}
       <header className="shrink-0 px-4 pt-5 pb-4 bg-white border-b border-slate-200">
         <div className="flex items-center justify-between">
           <h1 className="text-[19px] font-bold text-slate-900">ស្តុកទំនិញ</h1>
           <div className="flex items-center gap-3">
-            <Link href="/suppliers" className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary-600 active:text-primary-700">
+            <Link href="/suppliers" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-slate-100 text-slate-600 text-[12px] font-bold active:bg-slate-200 transition-colors">
               <Truck size={14} strokeWidth={2.25} /> អ្នកផ្គត់ផ្គង់
             </Link>
             <span className="text-[12px] text-slate-400 font-medium">{products.length} ទំនិញ</span>
@@ -147,7 +147,7 @@ export default function InventoryPage() {
                 type="button"
                 onClick={() => setTab(t.id)}
                 className={[
-                  'min-h-0 shrink-0 h-10 px-4 rounded-full whitespace-nowrap',
+                  'min-h-0 shrink-0 h-9 px-4 rounded-full whitespace-nowrap',
                   'text-[13px] font-semibold transition-colors flex items-center gap-1.5',
                   isActive
                     ? isAlert ? 'bg-warning-500 text-white shadow-sm' : 'bg-primary-600 text-white shadow-sm'
@@ -187,7 +187,9 @@ export default function InventoryPage() {
           <p className="text-[12px] text-slate-400">រកមិនឃើញ «{search}»</p>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-4 pt-4 pb-24 max-w-xl mx-auto">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-card divide-y divide-slate-100 overflow-hidden">
           {filtered.map((product) => {
             const isOut   = product.stockQty === 0
             const isLow   = !isOut && product.stockQty <= product.lowStockThreshold
@@ -267,6 +269,8 @@ export default function InventoryPage() {
               </div>
             )
           })}
+            </div>
+          </div>
         </div>
       )}
 

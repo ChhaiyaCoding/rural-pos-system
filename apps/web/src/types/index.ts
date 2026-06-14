@@ -31,6 +31,7 @@ export interface Customer {
   nameKm: string
   phone: string | null
   address: string | null
+  note: string | null
   imageUri: string | null
   debtBalance: KHR
   /** Date the customer should repay by — 'YYYY-MM-DD', null if none set */
@@ -69,6 +70,8 @@ export interface SaleItem {
   subtotal: KHR
 }
 
+export type DebtPaymentMethod = 'cash' | 'aba' | 'bank'
+
 export interface DebtTransaction {
   id: UUID
   tenantId: TenantId
@@ -76,6 +79,11 @@ export interface DebtTransaction {
   saleId: SaleId | null
   amount: KHR
   type: 'charge' | 'payment'
+  /** How a payment was received (payment txns only) — null for charges / legacy */
+  method: DebtPaymentMethod | null
+  /** For manual charges (saleId=null): 'opening' = pre-existing/old debt,
+   *  'manual' = new debt added by hand. Absent for sale-linked charges / legacy. */
+  chargeKind?: 'opening' | 'manual'
   note: string | null
   isVoid: boolean
   createdAt: string

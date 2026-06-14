@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { X, Camera, MapPin, Trash2 } from 'lucide-react'
+import { X, Camera, MapPin, Trash2, FileText, Lock } from 'lucide-react'
 import { customerService } from '@/services/customer.service'
+import { formatKHR, formatUSD } from '@/lib/money'
 import type { Customer } from '@/types'
 import type { CustomerId } from '@/types/branded'
 
@@ -16,6 +17,7 @@ export function CustomerEditSheet({ customer, onClose, onSaved }: Props) {
   const [name,     setName]     = useState(customer.nameKm)
   const [phone,    setPhone]    = useState(customer.phone ?? '')
   const [address,  setAddress]  = useState(customer.address ?? '')
+  const [note,     setNote]     = useState(customer.note ?? '')
   const [imageUri, setImageUri] = useState<string | null>(customer.imageUri)
   const [saving,   setSaving]   = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -28,6 +30,7 @@ export function CustomerEditSheet({ customer, onClose, onSaved }: Props) {
     name.trim()    !== customer.nameKm          ||
     phone.trim()   !== (customer.phone ?? '')   ||
     address.trim() !== (customer.address ?? '') ||
+    note.trim()    !== (customer.note ?? '')    ||
     imageUri       !== customer.imageUri
 
   /* ── Photo picker ─────────────────────────────────── */
@@ -51,6 +54,7 @@ export function CustomerEditSheet({ customer, onClose, onSaved }: Props) {
         nameKm:   name.trim(),
         phone:    phone.trim() || null,
         address:  address.trim() || null,
+        note:     note.trim() || null,
         imageUri: imageUri,
       })
       onSaved()
@@ -60,12 +64,16 @@ export function CustomerEditSheet({ customer, onClose, onSaved }: Props) {
   }
 
   /* ── Delete ───────────────────────────────────────── */
+  // Guard: a customer who still owes money may never be deleted — the debt
+  // would silently disappear from the books. Cleared (=0) only.
+  const hasDebt = customer.debtBalance > 0
+
   const handleDelete = async () => {
-    if (deleting) return
+    if (deleting || hasDebt) return
     setDeleting(true)
     try {
-      await customerService.softDelete(customer.id as CustomerId)
-      onSaved()
+      const ok = await customerService.softDelete(customer.id as CustomerId)
+      if (ok) onSaved()
     } finally {
       setDeleting(false)
     }
@@ -182,9 +190,37 @@ export function CustomerEditSheet({ customer, onClose, onSaved }: Props) {
             />
           </div>
 
+          {/* Note */}
+          <div>
+            <p className="text-[12px] font-semibold text-slate-500 mb-1.5 flex items-center gap-1">
+              <FileText size={12} strokeWidth={2.5} />
+              កំណត់ចំណាំ (ស្រេចចិត្ត)
+            </p>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="ឧ. អតិថិជនជិតខាង, ទិញញឹកញាប់…"
+              rows={2}
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-[15px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15 resize-none leading-relaxed"
+            />
+          </div>
+
           {/* Danger zone — Delete */}
           <div className="pt-2 border-t border-slate-100">
-            {!confirmDel ? (
+            {hasDebt ? (
+              <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 flex items-start gap-2.5">
+                <Lock size={16} strokeWidth={2.25} className="text-slate-400 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-slate-700">មិន​អាច​លុប​បាន</p>
+                  <p className="text-[12px] text-slate-500 leading-snug mt-0.5">
+                    អតិថិជន​នេះ​នៅ​ជំពាក់{' '}
+                    <span className="font-bold text-danger-600 tabular-nums">{formatKHR(customer.debtBalance)}</span>
+                    {' '}<span className="font-bold text-primary-600 tabular-nums">({formatUSD(customer.debtBalance)})</span>។
+                    សូម​ទទួល​បំណុល​ឲ្យ​អស់​សិន មុន​ពេល​លុប។
+                  </p>
+                </div>
+              </div>
+            ) : !confirmDel ? (
               <button
                 type="button"
                 onClick={() => setConfirmDel(true)}

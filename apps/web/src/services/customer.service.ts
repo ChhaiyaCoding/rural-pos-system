@@ -11,6 +11,7 @@ export interface CreateCustomerInput {
   nameKm: string
   phone?: string
   address?: string
+  note?: string
   imageUri?: string
 }
 
@@ -23,6 +24,7 @@ export const customerService = {
       nameKm: input.nameKm,
       phone: input.phone ?? null,
       address: input.address ?? null,
+      note: input.note ?? null,
       imageUri: input.imageUri ?? null,
       debtBalance: toKHR(0),
       dueDate: null,
@@ -75,6 +77,7 @@ export const customerService = {
       nameKm?: string
       phone?: string | null
       address?: string | null
+      note?: string | null
       imageUri?: string | null
     }
   ): Promise<Result<Customer>> {
@@ -97,9 +100,15 @@ export const customerService = {
     return { ok: true, data: result }
   },
 
-  async softDelete(id: CustomerId): Promise<void> {
+  /** Soft-delete a customer. Refuses if they still owe money (debtBalance > 0)
+   *  so outstanding debt can never silently vanish from the books.
+   *  Returns true if deleted, false if blocked by an outstanding balance. */
+  async softDelete(id: CustomerId): Promise<boolean> {
+    const customer = await db.customers.get(id)
+    if (customer && customer.debtBalance > 0) return false
     const now = nowISO()
     await db.customers.update(id, { deletedAt: now, updatedAt: now })
+    return true
   },
 
   /** Set / change / clear the repayment due date ('YYYY-MM-DD' or null).
@@ -156,6 +165,7 @@ export const customerService = {
       nameKm: d.nameKm,
       phone: d.phone ?? null,
       address: null,
+      note: null,
       imageUri: null,
       debtBalance: toKHR(0),
       dueDate: null,
