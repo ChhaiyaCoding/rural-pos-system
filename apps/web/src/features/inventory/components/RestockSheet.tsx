@@ -18,6 +18,7 @@ interface Props {
 
 export function RestockSheet({ product, onClose, onRestocked }: Props) {
   const [input,   setInput]   = useState('')
+  const [note,    setNote]    = useState('')
   const [saving,  setSaving]  = useState(false)
   const [success, setSuccess] = useState<number | null>(null)   // stores delta
 
@@ -42,7 +43,7 @@ export function RestockSheet({ product, onClose, onRestocked }: Props) {
     if (!canSave) return
     setSaving(true)
     try {
-      const res = await inventoryService.adjustStock(DEMO_TENANT, product.id, delta)
+      const res = await inventoryService.adjustStock(DEMO_TENANT, product.id, delta, note)
       if (res.ok) {
         setSuccess(delta)
       }
@@ -161,6 +162,18 @@ export function RestockSheet({ product, onClose, onRestocked }: Props) {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Note — where the stock came from, supplier, etc. */}
+              <div>
+                <p className="text-[12px] font-semibold text-slate-500 mb-2">កំណត់ចំណាំ (ស្រេចចិត្ត)</p>
+                <input
+                  type="text"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="ឧ. ទិញពី ផ្សារដើមថ្កូវ · 250,000៛"
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-[13px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
+                />
               </div>
 
               {/* Stock preview */}

@@ -75,7 +75,8 @@ export const inventoryService = {
   async adjustStock(
     tenantId: TenantId,
     productId: ProductId,
-    delta: number
+    delta: number,
+    note?: string
   ): Promise<Result<Product>> {
     const product = await db.products.get(productId)
     if (!product || product.tenantId !== tenantId) {
@@ -104,7 +105,7 @@ export const inventoryService = {
         delta:       qtyAfter - qtyBefore,
         qtyBefore,
         qtyAfter,
-        note:        null,
+        note:        note?.trim() || null,
         saleId:      null,
         createdAt:   now,
       })

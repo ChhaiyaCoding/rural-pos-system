@@ -142,6 +142,9 @@ export function StockHistorySheet({ product, onClose }: Props) {
                           <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums">
                             {t} · {m.qtyBefore} → {m.qtyAfter} {product.unit}
                           </p>
+                          {m.note && (
+                            <p className="text-[11px] text-slate-500 mt-0.5 truncate">📝 {m.note}</p>
+                          )}
                         </div>
                         <p className={[
                           'text-[15px] font-extrabold tabular-nums shrink-0',
