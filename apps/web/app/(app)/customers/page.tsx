@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Plus, Search, Users, Phone } from 'lucide-react'
+import { Plus, Users, Phone } from 'lucide-react'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
 import { formatDateKm } from '@/lib/date'
@@ -11,6 +11,8 @@ import { CustomerEditSheet } from '@/features/debt/components/CustomerEditSheet'
 import { CustomerProfileSheet } from '@/features/debt/components/CustomerProfileSheet'
 import { CustomerDetailSheet } from '@/features/debt/components/CustomerDetailSheet'
 import { ReprintReceipt } from '@/features/sales/components/ReprintReceipt'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { SearchInput } from '@/components/ui/SearchInput'
 import type { Customer, Sale } from '@/types'
 import type { TenantId, KHR } from '@/types/branded'
 
@@ -65,34 +67,31 @@ export default function CustomersPage() {
         </div>
 
         {/* Search */}
-        <div className="relative mt-3">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="ស្វែង​ឈ្មោះ ឬ លេខ​ទូរស័ព្ទ…"
-            className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 text-[13px] placeholder:text-slate-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
-          />
-        </div>
+        <SearchInput
+          className="mt-3"
+          value={search}
+          onChange={setSearch}
+          placeholder="ស្វែង​ឈ្មោះ ឬ លេខ​ទូរស័ព្ទ…"
+        />
       </header>
 
       {/* List */}
       {customers.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6">
-          <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
-            <Users size={30} strokeWidth={1.5} className="text-slate-300" />
-          </div>
-          <p className="text-[14px] font-semibold text-slate-700">មិន​ទាន់​មាន​អតិថិជន</p>
-          <p className="text-[12px] text-slate-400">បន្ថែម​អតិថិជន​ដំបូង ដើម្បី​តាមដាន​ការ​ទិញ និង​បំណុល</p>
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="mt-1 inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-primary-600 text-white font-bold text-[14px] active:bg-primary-700 transition-colors"
-          >
-            <Plus size={18} strokeWidth={2.5} /> បន្ថែម​អតិថិជន
-          </button>
-        </div>
+        <EmptyState
+          fullHeight
+          icon={<Users size={30} strokeWidth={1.5} />}
+          title="មិន​ទាន់​មាន​អតិថិជន"
+          description="បន្ថែម​អតិថិជន​ដំបូង ដើម្បី​តាមដាន​ការ​ទិញ និង​បំណុល"
+          action={
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-primary-600 text-white font-bold text-[14px] active:bg-primary-700 transition-colors"
+            >
+              <Plus size={18} strokeWidth={2.5} /> បន្ថែម​អតិថិជន
+            </button>
+          }
+        />
       ) : filtered.length === 0 ? (
         <div className="flex-1 flex items-center justify-center px-6 text-center">
           <p className="text-[13px] text-slate-400">រក​មិន​ឃើញ «{search}»</p>

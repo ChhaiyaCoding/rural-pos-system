@@ -11,9 +11,8 @@ export default function StaffPage() {
         <p className="text-[12px] text-slate-400 mt-0.5">អ្នកប្រើ & សិទ្ធិ</p>
       </header>
       <EmptyState
-        icon={<div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
-          <UserCog size={30} strokeWidth={1.5} className="text-slate-300" />
-        </div>}
+        fullHeight
+        icon={<UserCog size={30} strokeWidth={1.5} />}
         title="កំពុង​អភិវឌ្ឍ"
         description="មុខងារ​គ្រប់គ្រង​បុគ្គលិក (ម្ចាស់ · អ្នកគិតលុយ · សិទ្ធិ) នឹង​មក​ដល់​ឆាប់ៗ។"
       />

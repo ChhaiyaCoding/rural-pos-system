@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Search, Receipt, X } from 'lucide-react'
+import { Receipt, X } from 'lucide-react'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
 import { ReprintReceipt } from '@/features/sales/components/ReprintReceipt'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { SearchInput } from '@/components/ui/SearchInput'
 import type { Sale } from '@/types'
 import type { TenantId } from '@/types/branded'
 
@@ -50,16 +52,12 @@ export default function ReceiptsPage() {
         <h1 className="text-[19px] font-bold text-slate-900">ប្រវត្តិ​វិក្កយបត្រ</h1>
 
         {/* Search by receipt number */}
-        <div className="relative mt-3">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="ស្វែង​លេខ​វិក្កយបត្រ…"
-            className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 text-[13px] placeholder:text-slate-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
-          />
-        </div>
+        <SearchInput
+          className="mt-3"
+          value={search}
+          onChange={setSearch}
+          placeholder="ស្វែង​លេខ​វិក្កយបត្រ…"
+        />
 
         {/* Filter by date */}
         <div className="flex items-center gap-2 mt-2">
@@ -84,15 +82,12 @@ export default function ReceiptsPage() {
 
       {/* List */}
       {filtered.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6">
-          <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
-            <Receipt size={30} strokeWidth={1.5} className="text-slate-300" />
-          </div>
-          <p className="text-[14px] font-semibold text-slate-700">
-            {search || date ? 'រក​មិន​ឃើញ​វិក្កយបត្រ' : 'មិន​ទាន់​មាន​វិក្កយបត្រ'}
-          </p>
-          {(search || date) && <p className="text-[12px] text-slate-400">សាក​ប្ដូរ​លេខ ឬ ថ្ងៃ​ស្វែងរក</p>}
-        </div>
+        <EmptyState
+          fullHeight
+          icon={<Receipt size={30} strokeWidth={1.5} />}
+          title={search || date ? 'រក​មិន​ឃើញ​វិក្កយបត្រ' : 'មិន​ទាន់​មាន​វិក្កយបត្រ'}
+          description={search || date ? 'សាក​ប្ដូរ​លេខ ឬ ថ្ងៃ​ស្វែងរក' : undefined}
+        />
       ) : (
         <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
           {filtered.map((sale) => {

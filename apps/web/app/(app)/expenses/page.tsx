@@ -7,6 +7,7 @@ import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
 import { todayISODate, addDaysISODate } from '@/lib/date'
 import { ExpenseFormSheet } from '@/features/expense/components/ExpenseFormSheet'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { expenseCategoryLabel, expenseCategoryEmoji } from '@/services/expense.service'
 import type { Expense } from '@/types'
 import type { KHR, TenantId } from '@/types/branded'
@@ -105,13 +106,11 @@ export default function ExpensesPage() {
 
           {/* List */}
           {expenses.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
-                <Wallet size={30} strokeWidth={1.5} className="text-slate-300" />
-              </div>
-              <p className="text-[14px] font-semibold text-slate-700">មិន​ទាន់​មាន​ការ​ចំណាយ</p>
-              <p className="text-[12px] text-slate-400">ចុច + ដើម្បី​បន្ថែម​ការ​ចំណាយ</p>
-            </div>
+            <EmptyState
+              icon={<Wallet size={30} strokeWidth={1.5} />}
+              title="មិន​ទាន់​មាន​ការ​ចំណាយ"
+              description="ចុច + ដើម្បី​បន្ថែម​ការ​ចំណាយ"
+            />
           ) : (
             grouped.map(([dateISO, dayExpenses]) => {
               const dayTotal = dayExpenses.reduce((s, e) => s + (e.amount as number), 0) as KHR

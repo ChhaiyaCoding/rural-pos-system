@@ -6,6 +6,7 @@ import { db } from '@/db'
 import { heldInvoiceService } from '@/services/heldInvoice.service'
 import { formatKHR, formatUSD } from '@/lib/money'
 import { formatDateTimeKm } from '@/lib/date'
+import { EmptyState } from '@/components/ui/EmptyState'
 import type { CartItem, HeldInvoice } from '@/types'
 import type { TenantId, UUID } from '@/types/branded'
 
@@ -56,13 +57,11 @@ export function HeldInvoicesSheet({ onClose, onResume }: Props) {
         {/* Body */}
         <div className="flex-1 overflow-y-auto min-h-0 p-4">
           {held.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
-                <PauseCircle size={30} strokeWidth={1.5} className="text-slate-300" />
-              </div>
-              <p className="text-[14px] font-semibold text-slate-700">គ្មាន​វិក្កយបត្រ​ផ្អាក</p>
-              <p className="text-[12px] text-slate-400">ផ្អាក​កន្ត្រក​ពេល​មាន​អតិថិជន​ផ្សេង​ចូល​មុន</p>
-            </div>
+            <EmptyState
+              icon={<PauseCircle size={30} strokeWidth={1.5} />}
+              title="គ្មាន​វិក្កយបត្រ​ផ្អាក"
+              description="ផ្អាក​កន្ត្រក​ពេល​មាន​អតិថិជន​ផ្សេង​ចូល​មុន"
+            />
           ) : (
             <div className="space-y-2.5">
               {held.map((h) => (

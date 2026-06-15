@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Package, Search, PackagePlus, Truck } from 'lucide-react'
+import { Plus, Package, PackagePlus, Truck } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
@@ -10,6 +10,8 @@ import { productMatchesQuery } from '@/lib/search'
 import { ProductFormSheet } from '@/features/inventory/components/ProductFormSheet'
 import { RestockSheet } from '@/features/inventory/components/RestockSheet'
 import { useCategoryStore } from '@/store/category.store'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { SearchInput } from '@/components/ui/SearchInput'
 import type { Product } from '@/types'
 import type { TenantId } from '@/types/branded'
 
@@ -122,16 +124,12 @@ export default function InventoryPage() {
         )}
 
         {/* Search */}
-        <div className="relative mt-3">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="ស្វែង ឈ្មោះ · EN · barcode · តម្លៃ…"
-            className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 text-[13px] placeholder:text-slate-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
-          />
-        </div>
+        <SearchInput
+          className="mt-3"
+          value={search}
+          onChange={setSearch}
+          placeholder="ស្វែង ឈ្មោះ · EN · barcode · តម្លៃ…"
+        />
 
         {/* Category tabs */}
         <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar py-0.5">
@@ -175,13 +173,12 @@ export default function InventoryPage() {
 
       {/* Product list */}
       {products.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6">
-          <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
-            <Package size={30} strokeWidth={1.5} className="text-slate-300" />
-          </div>
-          <p className="text-[14px] font-semibold text-slate-700">មិនទាន់មានទំនិញ</p>
-          <p className="text-[12px] text-slate-400">ចុច + ដើម្បីបន្ថែមទំនិញដំបូង</p>
-        </div>
+        <EmptyState
+          fullHeight
+          icon={<Package size={30} strokeWidth={1.5} />}
+          title="មិនទាន់មានទំនិញ"
+          description="ចុច + ដើម្បីបន្ថែមទំនិញដំបូង"
+        />
       ) : filtered.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <p className="text-[12px] text-slate-400">រកមិនឃើញ «{search}»</p>

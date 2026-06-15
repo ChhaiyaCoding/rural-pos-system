@@ -18,6 +18,7 @@ import { useCategoryStore } from '@/store/category.store'
 import { ProductCard } from './ProductCard'
 import { CategoryTabs, type TabCategory } from './CategoryTabs'
 import { FlyToCartOverlay, type FlyItem } from '@/components/shared/FlyToCartOverlay'
+import { SearchInput } from '@/components/ui/SearchInput'
 import { CartPanel } from './CartPanel'
 import { CheckoutSheet } from './CheckoutSheet'
 import { SaleReceiptSheet, type ReceiptData } from './SaleReceiptSheet'
@@ -384,34 +385,11 @@ export function POSScreen() {
           </div>
 
           {/* Search */}
-          <div className="relative">
-            <Search
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-              size={18}
-            />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="ស្វែង ឈ្មោះ · EN · barcode · តម្លៃ…"
-              className={[
-                'w-full h-12 pl-11 pr-11 rounded-xl text-sm',
-                'bg-white border border-slate-200 shadow-xs',
-                'placeholder:text-slate-400',
-                'focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15',
-                'transition-colors',
-              ].join(' ')}
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="min-h-0 min-w-0 absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 active:bg-slate-200"
-              >
-                <X size={15} />
-              </button>
-            )}
-          </div>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="ស្វែង ឈ្មោះ · EN · barcode · តម្លៃ…"
+          />
 
           {/* Category tabs */}
           <CategoryTabs categories={tabCategories} active={category} onChange={setCategory} counts={categoryCounts} />

@@ -11,9 +11,8 @@ export default function SuppliersPage() {
         <p className="text-[12px] text-slate-400 mt-0.5">Suppliers · ការ​ទិញ​ចូល</p>
       </header>
       <EmptyState
-        icon={<div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
-          <Truck size={30} strokeWidth={1.5} className="text-slate-300" />
-        </div>}
+        fullHeight
+        icon={<Truck size={30} strokeWidth={1.5} />}
         title="កំពុង​អភិវឌ្ឍ"
         description="មុខងារ​គ្រប់គ្រង​អ្នកផ្គត់ផ្គង់ និង​ការ​ទិញ​ចូល​ស្តុក នឹង​មក​ដល់​ឆាប់ៗ។"
       />

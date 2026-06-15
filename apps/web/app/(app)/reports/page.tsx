@@ -9,6 +9,7 @@ import { formatKHR, formatUSD } from '@/lib/money'
 import { startOfTodayISO, startOfDaysAgoISO, dateKHFromISO, todayISODate, addDaysISODate } from '@/lib/date'
 import { SaleDetailSheet } from '@/features/sales/components/SaleDetailSheet'
 import { ReportExportSheet } from '@/features/reports/components/ReportExportSheet'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { expenseCategoryLabel, expenseCategoryEmoji } from '@/services/expense.service'
 import { useStoreProfile } from '@/store/storeProfile.store'
 import type { Sale } from '@/types'
@@ -407,13 +408,11 @@ export default function ReportsPage() {
 
             {/* Empty */}
             {!isLoading && sales.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
-                  <TrendingUp size={30} strokeWidth={1.5} className="text-slate-300" />
-                </div>
-                <p className="text-[14px] font-semibold text-slate-700">មិនទាន់មានទិន្នន័យ</p>
-                <p className="text-[12px] text-slate-400 leading-relaxed">ចាប់ផ្តើមលក់ ដើម្បីមើលរបាយការណ៍</p>
-              </div>
+              <EmptyState
+                icon={<TrendingUp size={30} strokeWidth={1.5} />}
+                title="មិនទាន់មានទិន្នន័យ"
+                description="ចាប់ផ្តើមលក់ ដើម្បីមើលរបាយការណ៍"
+              />
             )}
           </div>
         )}
@@ -447,15 +446,11 @@ export default function ReportsPage() {
                 <p className="text-[12px] text-slate-400">កំពុងផ្ទុក…</p>
               </div>
             ) : groupedSales.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-3 text-center px-6">
-                <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
-                  <List size={30} strokeWidth={1.5} className="text-slate-300" />
-                </div>
-                <p className="text-[14px] font-semibold text-slate-700">គ្មានការលក់</p>
-                <p className="text-[12px] text-slate-400">
-                  ក្នុងអំឡុងពេល{PERIODS.find(p => p.key === period)!.label}នេះ
-                </p>
-              </div>
+              <EmptyState
+                icon={<List size={30} strokeWidth={1.5} />}
+                title="គ្មានការលក់"
+                description={`ក្នុងអំឡុងពេល${PERIODS.find(p => p.key === period)!.label}នេះ`}
+              />
             ) : (
               groupedSales.map(([dateISO, daySales]) => {
                 const dayTotal = daySales.reduce((s, x) => s + x.totalAmount, 0) as KHR

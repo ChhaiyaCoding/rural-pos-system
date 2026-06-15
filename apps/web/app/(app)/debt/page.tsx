@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Plus, Search, Users, HandCoins, Clock, Wallet } from 'lucide-react'
+import { Plus, Users, HandCoins, Clock, Wallet } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { formatKHR, formatUSD, toKHR } from '@/lib/money'
@@ -9,6 +9,8 @@ import { formatDateKm, startOfTodayISO } from '@/lib/date'
 import { getDueInfo } from '@/lib/dueDate'
 import { CustomerFormSheet } from '@/features/debt/components/CustomerFormSheet'
 import { CustomerDetailSheet } from '@/features/debt/components/CustomerDetailSheet'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { SearchInput } from '@/components/ui/SearchInput'
 import type { Customer } from '@/types'
 import type { KHR, TenantId } from '@/types/branded'
 
@@ -114,16 +116,12 @@ export default function DebtPage() {
         </div>
 
         {/* Search */}
-        <div className="relative mt-3">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="ស្វែងរកឈ្មោះ ឬ លេខទូរស័ព្ទ…"
-            className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 text-[13px] placeholder:text-slate-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
-          />
-        </div>
+        <SearchInput
+          className="mt-3"
+          value={search}
+          onChange={setSearch}
+          placeholder="ស្វែង​ឈ្មោះ ឬ លេខ​ទូរស័ព្ទ…"
+        />
 
         {/* Filter tabs */}
         <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar py-0.5">
@@ -201,13 +199,11 @@ export default function DebtPage() {
 
           {/* ── Customer list ───────────────────────────────── */}
           {customers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center">
-                <Users size={30} strokeWidth={1.5} className="text-slate-300" />
-              </div>
-              <p className="text-[14px] font-semibold text-slate-700">មិន​ទាន់​មាន​អតិថិជន</p>
-              <p className="text-[12px] text-slate-400">ចុច + ដើម្បី​បន្ថែម​អតិថិជន​ដំបូង</p>
-            </div>
+            <EmptyState
+              icon={<Users size={30} strokeWidth={1.5} />}
+              title="មិន​ទាន់​មាន​អតិថិជន"
+              description="ចុច + ដើម្បី​បន្ថែម​អតិថិជន​ដំបូង"
+            />
           ) : filtered.length === 0 ? (
             <div className="py-16 text-center">
               <p className="text-[12px] text-slate-400">
