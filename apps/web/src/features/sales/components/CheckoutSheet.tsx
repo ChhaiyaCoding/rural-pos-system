@@ -502,7 +502,7 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
               {/* Customer selector (same as debt mode) */}
               <div>
                 <p className="text-[12px] font-semibold text-slate-500 mb-1.5">
-                  អតិថិជន (ស្រេចចិត្ត)
+                  អតិថិជន​ដែល​ជំពាក់ <span className="text-danger-500">*</span>
                 </p>
                 {selectedCustomer ? (
                   <div className="flex items-center justify-between rounded-xl border border-primary-300 bg-primary-50 px-3 py-2.5">
@@ -519,33 +519,113 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
                   </div>
                 ) : (
                   <div>
-                    <div className="relative mb-1.5">
-                      <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                      <input type="text" value={customerSearch}
-                        onChange={(e) => setCustomerSearch(e.target.value)}
-                        placeholder="ស្វែងរកឈ្មោះ..."
-                        className="w-full h-10 pl-8 pr-3 rounded-xl border border-slate-200 text-[13px] placeholder:text-slate-400 focus:outline-none focus:border-primary-400" />
+                    {/* Search bar + quick-add button */}
+                    <div className="flex gap-2 mb-1.5">
+                      <div className="relative flex-1">
+                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={customerSearch}
+                          onChange={(e) => { setCustomerSearch(e.target.value); setShowAddCustomer(false) }}
+                          placeholder="ស្វែងរកឈ្មោះ..."
+                          className="w-full h-10 pl-8 pr-3 rounded-xl border border-slate-200 text-[13px] placeholder:text-slate-400 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400/20"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setShowAddCustomer(v => !v); setCustomerSearch('') }}
+                        className={[
+                          'shrink-0 w-10 h-10 rounded-xl border flex items-center justify-center transition-colors',
+                          showAddCustomer
+                            ? 'border-primary-500 bg-primary-50 text-primary-700'
+                            : 'border-slate-200 bg-white text-slate-500 active:bg-slate-50',
+                        ].join(' ')}
+                        aria-label="បន្ថែមអតិថិជនថ្មី"
+                      >
+                        <UserPlus size={16} strokeWidth={2.25} />
+                      </button>
                     </div>
-                    <div className="max-h-28 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100 bg-white">
+
+                    {/* Quick-add form */}
+                    {showAddCustomer && (
+                      <div className="mb-2 p-3 rounded-xl border border-primary-200 bg-primary-50 space-y-2">
+                        <p className="text-[11px] font-bold text-primary-700 flex items-center gap-1">
+                          <UserPlus size={11} /> អតិថិជនថ្មី
+                        </p>
+                        <input
+                          type="text"
+                          value={newName}
+                          onChange={e => setNewName(e.target.value)}
+                          placeholder="ឈ្មោះ *"
+                          autoFocus
+                          className="w-full h-9 px-3 rounded-lg border border-primary-200 bg-white text-[13px] placeholder:text-slate-300 focus:outline-none focus:border-primary-400"
+                        />
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          value={newPhone}
+                          onChange={e => setNewPhone(e.target.value)}
+                          placeholder="លេខទូរស័ព្ទ (ស្រេចចិត្ត)"
+                          className="w-full h-9 px-3 rounded-lg border border-primary-200 bg-white text-[13px] placeholder:text-slate-300 focus:outline-none focus:border-primary-400"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleQuickAdd}
+                            disabled={!newName.trim() || addingCustomer}
+                            className="flex-1 h-9 rounded-lg bg-primary-600 text-white font-bold text-[12px] disabled:opacity-50 active:bg-primary-700 transition-colors"
+                          >
+                            {addingCustomer ? '…' : '+ បន្ថែម'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setShowAddCustomer(false); setNewName(''); setNewPhone('') }}
+                            className="px-3 h-9 rounded-lg border border-slate-200 text-slate-500 text-[12px] active:bg-slate-50"
+                          >
+                            បោះបង់
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="max-h-36 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100 bg-white">
                       {allCustomers.length === 0 ? (
-                        <p className="px-3 py-3 text-center text-[12px] text-slate-400">ចូល Tab «បំណុល» ដើម្បីបន្ថែម</p>
-                      ) : filteredCustomers.map((c) => (
-                        <button key={c.id} type="button"
-                          onClick={() => { setSelectedCustomer(c); setCustomerSearch('') }}
-                          className="w-full flex items-center justify-between px-3 py-2 active:bg-primary-50 text-left">
-                          <div className="flex items-center gap-2">
-                            <div className="shrink-0 w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[11px] font-bold">
-                              {c.nameKm.charAt(0)}
+                        <p className="px-3 py-4 text-center text-[12px] text-slate-400">
+                          ចុច <span className="text-primary-600 font-bold">+</span> ដើម្បីបន្ថែមអតិថិជន
+                        </p>
+                      ) : filteredCustomers.length === 0 ? (
+                        <p className="px-3 py-3 text-center text-[12px] text-slate-400">
+                          រកមិនឃើញ «{customerSearch}»
+                        </p>
+                      ) : (
+                        filteredCustomers.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => { setSelectedCustomer(c); setCustomerSearch('') }}
+                            className="w-full flex items-center justify-between px-3 py-2.5 active:bg-primary-50 transition-colors text-left"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className={[
+                                'shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold',
+                                (c.debtBalance as number) > 0
+                                  ? 'bg-danger-100 text-danger-700'
+                                  : 'bg-slate-100 text-slate-500',
+                              ].join(' ')}>
+                                {c.nameKm.charAt(0)}
+                              </div>
+                              <span className="text-[13px] font-semibold text-slate-800 truncate">{c.nameKm}</span>
                             </div>
-                            <span className="text-[13px] font-semibold text-slate-800">{c.nameKm}</span>
-                          </div>
-                          {(c.debtBalance as number) > 0 ? (
-                            <span className="text-[11px] text-danger-600 tabular-nums">{formatKHR(c.debtBalance)}</span>
-                          ) : (
-                            <span className="text-[10px] text-success-600">✓</span>
-                          )}
-                        </button>
-                      ))}
+                            {(c.debtBalance as number) > 0 ? (
+                              <span className="text-[11px] font-semibold text-danger-600 tabular-nums shrink-0 ml-2">
+                                {formatKHR(c.debtBalance)}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-success-600 shrink-0 ml-2">✓</span>
+                            )}
+                          </button>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
@@ -576,7 +656,7 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
               {/* Customer picker */}
               <div>
                 <p className="text-[12px] font-semibold text-slate-500 mb-1.5">
-                  អតិថិជន (ស្រេចចិត្ត)
+                  អតិថិជន​ដែល​ជំពាក់ <span className="text-danger-500">*</span>
                 </p>
 
                 {selectedCustomer ? (
@@ -757,7 +837,7 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
           )}
           <button
             type="button"
-            disabled={(isCash && !enough) || (isPartial && !partialValid)}
+            disabled={(isCash && !enough) || (isPartial && !partialValid) || ((isDebt || isPartial) && !selectedCustomer)}
             onClick={() =>
               onConfirm({
                 change:       isCash ? (change > 0 ? change : toKHR(0)) : null,
@@ -789,6 +869,11 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
           {isPartial && !partialValid && partialCash !== '' && (
             <p className="text-center text-[11px] text-warning-600 mt-2">
               វាយចំនួនប្រាក់ (ច្រើនជា 0 និងតិចជាសរុប)
+            </p>
+          )}
+          {(isDebt || isPartial) && !selectedCustomer && (
+            <p className="text-center text-[11px] text-danger-600 mt-2">
+              សូម​ជ្រើស​អតិថិជន​សិន (ឬ​បង្កើត​ថ្មី) ទើប​កត់​បំណុល​បាន
             </p>
           )}
         </div>
