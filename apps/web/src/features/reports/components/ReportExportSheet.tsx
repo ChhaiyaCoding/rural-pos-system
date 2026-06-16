@@ -16,6 +16,8 @@ interface Props {
   periodLabel:  string
   storeName:    string
   totalRevenue: KHR
+  totalExpenses: KHR
+  netProfit:    KHR
   salesCount:   number
   cashCount:    number
   cashAmount:   KHR
@@ -32,6 +34,8 @@ export function ReportExportSheet({
   periodLabel,
   storeName,
   totalRevenue,
+  totalExpenses,
+  netProfit,
   salesCount,
   cashCount,
   cashAmount,
@@ -98,6 +102,13 @@ export function ReportExportSheet({
           </div>
 
           <div class="section">
+            <div class="section-title">ចំណេញសុទ្ធ</div>
+            <div class="row"><span class="label">ចំណូល</span><span class="value">${formatKHR(totalRevenue)}</span></div>
+            <div class="row"><span class="label">ចំណាយ</span><span class="value" style="color:#dc2626">−${formatKHR(totalExpenses)}</span></div>
+            <div class="row" style="border-top:1px solid #e2e8f0;padding-top:6px;margin-top:2px"><span class="label" style="font-weight:700">ចំណេញ</span><span class="value" style="color:${(netProfit as number) >= 0 ? '#047857' : '#dc2626'};font-weight:800">${formatKHR(netProfit)} · ${formatUSD(netProfit)}</span></div>
+          </div>
+
+          <div class="section">
             <div class="section-title">របៀបទូទាត់</div>
             <div class="row">
               <span class="label">💵 សាច់ប្រាក់</span>
@@ -160,6 +171,9 @@ export function ReportExportSheet({
       `💰 ចំណូលសរុប: ${formatKHR(totalRevenue)} · ${formatUSD(totalRevenue)}`,
       `🛒 ការលក់: ${salesCount} ដង`,
       ``,
+      `💸 ចំណាយ: ${formatKHR(totalExpenses)} · ${formatUSD(totalExpenses)}`,
+      `📈 ចំណេញ: ${formatKHR(netProfit)} · ${formatUSD(netProfit)}`,
+      ``,
       `💵 សាច់ប្រាក់: ${cashCount} ដង · ${formatKHR(cashAmount)} · ${formatUSD(cashAmount)}`,
       `📒 ជំពាក់: ${debtCount} ដង · ${formatKHR(debtAmount)} · ${formatUSD(debtAmount)}`,
       top5 ? `\n🏆 ទំនិញលក់ច្រើន:\n${top5}` : '',
@@ -220,6 +234,26 @@ export function ReportExportSheet({
               <p className="text-[32px] font-extrabold text-slate-900 tabular-nums">{formatKHR(totalRevenue)}</p>
               <p className="text-[14px] font-bold text-primary-600 tabular-nums">{formatUSD(totalRevenue)}</p>
               <p className="text-[12px] text-slate-400 mt-0.5">{salesCount} ការលក់</p>
+            </div>
+
+            {/* Profit summary: revenue − expenses = profit */}
+            <div className="px-5 py-3 border-b border-slate-100 space-y-2">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ចំណេញ​សុទ្ធ</p>
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-semibold text-slate-600">ចំណូល</span>
+                <span className="text-[13px] font-bold text-slate-700 tabular-nums">{formatKHR(totalRevenue)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-semibold text-slate-600">ចំណាយ</span>
+                <span className="text-[13px] font-bold text-danger-600 tabular-nums">−{formatKHR(totalExpenses)}</span>
+              </div>
+              <div className="flex items-center justify-between border-t border-slate-100 pt-2">
+                <span className="text-[13px] font-bold text-slate-800">ចំណេញ</span>
+                <span className="text-right">
+                  <span className={['block text-[15px] font-extrabold tabular-nums', (netProfit as number) >= 0 ? 'text-success-700' : 'text-danger-600'].join(' ')}>{formatKHR(netProfit)}</span>
+                  <span className="block text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(netProfit)}</span>
+                </span>
+              </div>
             </div>
 
             {/* Payment breakdown */}

@@ -598,6 +598,8 @@ export default function ReportsPage() {
           periodLabel={PERIODS.find(p => p.key === period)!.label}
           storeName={storeName}
           totalRevenue={totalRevenue}
+          totalExpenses={totalExpenses}
+          netProfit={netProfit}
           salesCount={sales.length}
           cashCount={cashSales.length}
           cashAmount={cashSales.reduce((s, x) => (s + x.totalAmount) as KHR, 0 as KHR)}
