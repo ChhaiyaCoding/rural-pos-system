@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import { X, Printer, Share2, CheckCircle2 } from 'lucide-react'
 import { formatKHR, formatUSD } from '@/lib/money'
+import { expenseCategoryLabel, expenseCategoryEmoji } from '@/services/expense.service'
 import type { KHR } from '@/types/branded'
 
 interface TopProduct {
@@ -26,6 +27,7 @@ interface Props {
   debtorCount:  number
   totalDebt:    KHR
   topProducts:  TopProduct[]
+  expenseByCat: [string, number][]
   dateRange:    string
 }
 
@@ -44,6 +46,7 @@ export function ReportExportSheet({
   debtorCount,
   totalDebt,
   topProducts,
+  expenseByCat,
   dateRange,
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null)
@@ -103,10 +106,32 @@ export function ReportExportSheet({
 
           <div class="section">
             <div class="section-title">ចំណេញសុទ្ធ</div>
-            <div class="row"><span class="label">ចំណូល</span><span class="value">${formatKHR(totalRevenue)}</span></div>
-            <div class="row"><span class="label">ចំណាយ</span><span class="value" style="color:#dc2626">−${formatKHR(totalExpenses)}</span></div>
-            <div class="row" style="border-top:1px solid #e2e8f0;padding-top:6px;margin-top:2px"><span class="label" style="font-weight:700">ចំណេញ</span><span class="value" style="color:${(netProfit as number) >= 0 ? '#047857' : '#dc2626'};font-weight:800">${formatKHR(netProfit)} · ${formatUSD(netProfit)}</span></div>
+            <div style="display:flex;gap:10px;margin-bottom:8px">
+              <div style="flex:1;background:#ecfdf5;border:1px solid #d1fae5;border-radius:10px;padding:8px 10px">
+                <div style="font-size:11px;color:#059669;font-weight:600">ចំណូល</div>
+                <div style="font-size:15px;color:#065f46;font-weight:800">${formatKHR(totalRevenue)}</div>
+                <div style="font-size:11px;color:#2563eb;font-weight:700">${formatUSD(totalRevenue)}</div>
+              </div>
+              <div style="flex:1;background:#fef2f2;border:1px solid #fee2e2;border-radius:10px;padding:8px 10px">
+                <div style="font-size:11px;color:#dc2626;font-weight:600">ចំណាយ</div>
+                <div style="font-size:15px;color:#b91c1c;font-weight:800">${formatKHR(totalExpenses)}</div>
+                <div style="font-size:11px;color:#2563eb;font-weight:700">${formatUSD(totalExpenses)}</div>
+              </div>
+            </div>
+            <div class="row" style="border-top:1px solid #e2e8f0;padding-top:6px"><span class="label" style="font-weight:700">ចំណេញសុទ្ធ</span><span class="value" style="color:${(netProfit as number) >= 0 ? '#047857' : '#b91c1c'};font-weight:800;font-size:16px">${formatKHR(netProfit)} · ${formatUSD(netProfit)}</span></div>
           </div>
+
+          ${expenseByCat.length > 0 ? `
+          <div class="section">
+            <div class="section-title">ចំណាយតាមប្រភេទ</div>
+            ${expenseByCat.map(([cat, amt]) => `
+              <div class="row">
+                <span class="label">${expenseCategoryEmoji(cat)} ${expenseCategoryLabel(cat)}</span>
+                <span class="value" style="color:#dc2626">${formatKHR(amt as KHR)}</span>
+              </div>
+            `).join('')}
+          </div>
+          ` : ''}
 
           <div class="section">
             <div class="section-title">របៀបទូទាត់</div>
@@ -163,6 +188,9 @@ export function ReportExportSheet({
     const top5 = topProducts.slice(0, 5)
       .map((p, i) => `  ${i + 1}. ${p.name} — ${formatKHR(p.revenue as KHR)} · ${formatUSD(p.revenue as KHR)}`)
       .join('\n')
+    const catLines = expenseByCat
+      .map(([cat, amt]) => `  ${expenseCategoryEmoji(cat)} ${expenseCategoryLabel(cat)} — ${formatKHR(amt as KHR)}`)
+      .join('\n')
 
     const text = [
       `📊 របាយការណ៍${periodLabel} — ${storeName}`,
@@ -173,6 +201,7 @@ export function ReportExportSheet({
       ``,
       `💸 ចំណាយ: ${formatKHR(totalExpenses)} · ${formatUSD(totalExpenses)}`,
       `📈 ចំណេញ: ${formatKHR(netProfit)} · ${formatUSD(netProfit)}`,
+      catLines ? `\n💸 ចំណាយតាមប្រភេទ:\n${catLines}` : '',
       ``,
       `💵 សាច់ប្រាក់: ${cashCount} ដង · ${formatKHR(cashAmount)} · ${formatUSD(cashAmount)}`,
       `📒 ជំពាក់: ${debtCount} ដង · ${formatKHR(debtAmount)} · ${formatUSD(debtAmount)}`,
@@ -236,25 +265,42 @@ export function ReportExportSheet({
               <p className="text-[12px] text-slate-400 mt-0.5">{salesCount} ការលក់</p>
             </div>
 
-            {/* Profit summary: revenue − expenses = profit */}
-            <div className="px-5 py-3 border-b border-slate-100 space-y-2">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ចំណេញ​សុទ្ធ</p>
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] font-semibold text-slate-600">ចំណូល</span>
-                <span className="text-[13px] font-bold text-slate-700 tabular-nums">{formatKHR(totalRevenue)}</span>
+            {/* Profit summary: revenue / expenses cards + net profit */}
+            <div className="px-5 py-4 border-b border-slate-100">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">ចំណេញ​សុទ្ធ</p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="rounded-xl bg-success-50 border border-success-100 px-3 py-2.5">
+                  <p className="text-[10px] font-semibold text-success-600 mb-0.5">ចំណូល</p>
+                  <p className="text-[15px] font-extrabold text-success-800 tabular-nums leading-tight">{formatKHR(totalRevenue)}</p>
+                  <p className="text-[11px] font-bold text-primary-600 tabular-nums">{formatUSD(totalRevenue)}</p>
+                </div>
+                <div className="rounded-xl bg-danger-50 border border-danger-100 px-3 py-2.5">
+                  <p className="text-[10px] font-semibold text-danger-600 mb-0.5">ចំណាយ</p>
+                  <p className="text-[15px] font-extrabold text-danger-700 tabular-nums leading-tight">{formatKHR(totalExpenses)}</p>
+                  <p className="text-[11px] font-bold text-primary-600 tabular-nums">{formatUSD(totalExpenses)}</p>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] font-semibold text-slate-600">ចំណាយ</span>
-                <span className="text-[13px] font-bold text-danger-600 tabular-nums">−{formatKHR(totalExpenses)}</span>
-              </div>
-              <div className="flex items-center justify-between border-t border-slate-100 pt-2">
-                <span className="text-[13px] font-bold text-slate-800">ចំណេញ</span>
-                <span className="text-right">
-                  <span className={['block text-[15px] font-extrabold tabular-nums', (netProfit as number) >= 0 ? 'text-success-700' : 'text-danger-600'].join(' ')}>{formatKHR(netProfit)}</span>
-                  <span className="block text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(netProfit)}</span>
-                </span>
+              <div className="mt-3 flex items-baseline justify-between border-t border-slate-100 pt-3">
+                <span className="text-[13px] font-bold text-slate-500">ចំណេញ​សុទ្ធ</span>
+                <div className="text-right">
+                  <span className={['block text-[20px] font-extrabold tabular-nums leading-tight', (netProfit as number) >= 0 ? 'text-success-700' : 'text-danger-700'].join(' ')}>{formatKHR(netProfit)}</span>
+                  <span className="block text-[12px] font-bold text-primary-600 tabular-nums">{formatUSD(netProfit)}</span>
+                </div>
               </div>
             </div>
+
+            {/* Expense breakdown by category */}
+            {expenseByCat.length > 0 && (
+              <div className="px-5 py-3 border-b border-slate-100 space-y-2">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ចំណាយ​តាម​ប្រភេទ</p>
+                {expenseByCat.map(([cat, amt]) => (
+                  <div key={cat} className="flex items-center justify-between">
+                    <span className="text-[12px] font-semibold text-slate-700">{expenseCategoryEmoji(cat)} {expenseCategoryLabel(cat)}</span>
+                    <span className="text-[12px] font-bold text-danger-600 tabular-nums">{formatKHR(amt as KHR)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Payment breakdown */}
             <div className="px-5 py-3 border-b border-slate-100 space-y-2">

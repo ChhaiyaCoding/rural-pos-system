@@ -608,6 +608,7 @@ export default function ReportsPage() {
           debtorCount={debtorCount}
           totalDebt={totalDebt}
           topProducts={topProducts}
+          expenseByCat={expenseByCat}
           dateRange={(() => {
             const d = new Date()
             const end = d.toLocaleDateString('km-KH', { day: 'numeric', month: 'short' })
