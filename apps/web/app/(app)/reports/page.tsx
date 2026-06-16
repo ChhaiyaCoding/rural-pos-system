@@ -139,10 +139,10 @@ export default function ReportsPage() {
         revenue: prev.revenue + item.subtotal,
       })
     }
-    return [...map.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 5)
+    return [...map.values()].sort((a, b) => b.qty - a.qty).slice(0, 5)
   }, [items])
 
-  const maxProductRevenue = Math.max(...topProducts.map(p => p.revenue), 1)
+  const maxProductQty = Math.max(...topProducts.map(p => p.qty), 1)
   const todayISO          = todayISODate()
 
   /* History: group ALL sales (incl. voided) by date, sorted desc */
@@ -371,21 +371,18 @@ export default function ReportsPage() {
                           <span className="text-[13px] font-semibold text-slate-800 truncate">{p.name}</span>
                         </div>
                         <span className="text-right ml-2 shrink-0">
-                          <span className="block text-[12px] font-bold text-slate-700 tabular-nums">
-                            {formatKHR(p.revenue as KHR)}
-                          </span>
-                          <span className="block text-[10px] font-bold text-primary-600 tabular-nums">
-                            {formatUSD(p.revenue as KHR)}
+                          <span className="block text-[13px] font-bold text-slate-800 tabular-nums">
+                            {p.qty} <span className="text-[10px] font-semibold text-slate-400">ដង</span>
                           </span>
                         </span>
                       </div>
                       <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-primary-400 rounded-full transition-all duration-500"
-                          style={{ width: `${(p.revenue / maxProductRevenue) * 100}%` }}
+                          style={{ width: `${(p.qty / maxProductQty) * 100}%` }}
                         />
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-0.5">លក់ {p.qty} ដង</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">ចំណូល {formatKHR(p.revenue as KHR)}</p>
                     </div>
                   ))}
                 </div>
