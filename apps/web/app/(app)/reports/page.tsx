@@ -67,24 +67,26 @@ export default function ReportsPage() {
 
   /* Single reactive query — includes voided sales for history display */
   const report = useLiveQuery(async () => {
-    const [allSales, customers] = await Promise.all([
+    const [allSales, customers, products] = await Promise.all([
       db.sales
         .where('tenantId').equals(DEMO_TENANT)
         .filter(s => s.createdAt >= startISO)
         .toArray(),
       db.customers.where('tenantId').equals(DEMO_TENANT).filter(c => !c.deletedAt).toArray(),
+      db.products.where('tenantId').equals(DEMO_TENANT).filter(p => !p.deletedAt).toArray(),
     ])
     const sales = allSales.filter(s => !s.isVoid)   // charts only count non-void
     const items = sales.length
       ? await db.saleItems.where('saleId').anyOf(sales.map(s => s.id)).toArray()
       : []
-    return { sales, allSales, customers, items }
+    return { sales, allSales, customers, items, products }
   }, [startISO])
 
   const sales     = report?.sales     ?? []
   const allSales  = report?.allSales  ?? []
   const customers = report?.customers ?? []
   const items     = report?.items     ?? []
+  const products  = report?.products  ?? []
   const isLoading = report === undefined
 
   /* Aggregates */
@@ -129,20 +131,25 @@ export default function ReportsPage() {
   const maxDaily = Math.max(...dailyRevenue.map(d => d.amount), 1)
 
   /* Top 5 products by revenue */
-  const topProducts = useMemo(() => {
-    const map = new Map<string, { name: string; qty: number; revenue: number }>()
+  /* Quantity sold per product over the period (0 for never-sold) → rank all
+     products so we can show both best-sellers and slow-movers. */
+  const ranked = useMemo(() => {
+    const soldByProduct = new Map<string, { qty: number; revenue: number }>()
     for (const item of items) {
-      const prev = map.get(item.productId) ?? { name: item.nameKm, qty: 0, revenue: 0 }
-      map.set(item.productId, {
-        name:    item.nameKm,
-        qty:     prev.qty + item.qty,
-        revenue: prev.revenue + item.subtotal,
-      })
+      const prev = soldByProduct.get(item.productId) ?? { qty: 0, revenue: 0 }
+      soldByProduct.set(item.productId, { qty: prev.qty + item.qty, revenue: prev.revenue + item.subtotal })
     }
-    return [...map.values()].sort((a, b) => b.qty - a.qty).slice(0, 5)
-  }, [items])
+    return products
+      .map((p) => {
+        const s = soldByProduct.get(p.id) ?? { qty: 0, revenue: 0 }
+        return { name: p.nameKm, qty: s.qty, revenue: s.revenue }
+      })
+      .sort((a, b) => b.qty - a.qty)
+  }, [items, products])
 
-  const maxProductQty = Math.max(...topProducts.map(p => p.qty), 1)
+  const topProducts    = useMemo(() => ranked.filter((p) => p.qty > 0).slice(0, 5), [ranked])
+  const bottomProducts = useMemo(() => [...ranked].reverse().slice(0, 5), [ranked])
+  const maxProductQty  = Math.max(ranked[0]?.qty ?? 0, 1)
   const todayISO          = todayISODate()
 
   /* History: group ALL sales (incl. voided) by date, sorted desc */
@@ -348,44 +355,11 @@ export default function ReportsPage() {
               </div>
             )}
 
-            {/* Top products */}
-            {topProducts.length > 0 && (
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-card px-4 pt-4 pb-4">
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
-                  ទំនិញលក់ច្រើន
-                </p>
-                <div className="space-y-3.5">
-                  {topProducts.map((p, i) => (
-                    <div key={`${p.name}-${i}`}>
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                          <span className={[
-                            'shrink-0 w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-black',
-                            i === 0 ? 'bg-yellow-400 text-white'
-                            : i === 1 ? 'bg-slate-400 text-white'
-                            : i === 2 ? 'bg-amber-600 text-white'
-                            : 'bg-slate-100 text-slate-500',
-                          ].join(' ')}>
-                            {i + 1}
-                          </span>
-                          <span className="text-[13px] font-semibold text-slate-800 truncate">{p.name}</span>
-                        </div>
-                        <span className="text-right ml-2 shrink-0">
-                          <span className="block text-[13px] font-bold text-slate-800 tabular-nums">
-                            {p.qty} <span className="text-[10px] font-semibold text-slate-400">ដង</span>
-                          </span>
-                        </span>
-                      </div>
-                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary-400 rounded-full transition-all duration-500"
-                          style={{ width: `${(p.qty / maxProductQty) * 100}%` }}
-                        />
-                      </div>
-                      <p className="text-[10px] text-slate-400 mt-0.5">ចំណូល {formatKHR(p.revenue as KHR)}</p>
-                    </div>
-                  ))}
-                </div>
+            {/* Best sellers vs slow movers — side by side */}
+            {sales.length > 0 && ranked.length > 0 && (
+              <div className="grid grid-cols-2 gap-3">
+                <ProductRankCard title="🔥 លក់ដាច់" products={topProducts} max={maxProductQty} barCls="bg-success-500" />
+                <ProductRankCard title="🐢 លក់យឺត" products={bottomProducts} max={maxProductQty} barCls="bg-slate-300" />
               </div>
             )}
 
@@ -642,6 +616,44 @@ export default function ReportsPage() {
             return `${start.toLocaleDateString('km-KH', { day: 'numeric', month: 'short' })} – ${end}`
           })()}
         />
+      )}
+    </div>
+  )
+}
+
+/* ── Product ranking card (best sellers / slow movers) ────── */
+function ProductRankCard({
+  title, products, max, barCls,
+}: {
+  title: string
+  products: { name: string; qty: number }[]
+  max: number
+  barCls: string
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-card px-3 pt-3 pb-3">
+      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">{title}</p>
+      {products.length === 0 ? (
+        <p className="text-[11px] text-slate-400 py-2 text-center">—</p>
+      ) : (
+        <div className="space-y-2.5">
+          {products.map((p, i) => (
+            <div key={`${p.name}-${i}`}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="shrink-0 w-[16px] h-[16px] rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[9px] font-black">
+                  {i + 1}
+                </span>
+                <span className="text-[11px] font-semibold text-slate-700 truncate flex-1">{p.name}</span>
+                <span className="text-[11px] font-bold text-slate-800 tabular-nums shrink-0">
+                  {p.qty}<span className="text-[9px] font-semibold text-slate-400 ml-0.5">ដង</span>
+                </span>
+              </div>
+              <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div className={`h-full ${barCls} rounded-full transition-all duration-500`} style={{ width: `${(p.qty / max) * 100}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
