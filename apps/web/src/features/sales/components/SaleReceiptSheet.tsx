@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { X, Printer, Share2, RotateCcw, CheckCircle2, Check, ImageDown } from 'lucide-react'
-import { formatKHR, formatUSD, toKHR, addKHR } from '@/lib/money'
+import { formatKHR, formatUSD, toKHR, addKHR, multiplyKHR } from '@/lib/money'
 import { formatDateTimeKm } from '@/lib/date'
 import { useStoreProfile } from '@/store/storeProfile.store'
 import type { KHR } from '@/types'
@@ -68,11 +68,11 @@ function MetaRow({
 
 function buildShareText(data: ReceiptData, storeName = 'ហាងលក់ទំនិញ', storePhone = '', footer = '🙏 អរគុណដែលបានមកទិញ!', headerNote = ''): string {
   const isCash = data.paymentType === 'cash'
-  const discount = data.discount ?? toKHR(0)
   const itemsSubtotal = data.items.reduce(
-    (s, i) => addKHR(s, i.subtotal),
+    (s, i) => addKHR(s, multiplyKHR(i.unitPrice, i.qty)),
     toKHR(0)
   )
+  const discount = toKHR(Math.max(0, (itemsSubtotal as number) - (data.totalAmount as number)))
 
   const line = (l: string, r: string, width = 32) => {
     const gap = width - l.length - r.length
@@ -91,7 +91,7 @@ function buildShareText(data: ReceiptData, storeName = 'ហាងលក់ទំ
     data.cashierName ? `អ្នកគិតលុយ: ${data.cashierName}` : '',
     '──────────────────────────────',
     ...data.items.map((i) =>
-      `${i.nameKm}\n  ${formatKHR(i.unitPrice)} × ${i.qty}   ${formatKHR(i.subtotal)}`
+      `${i.nameKm}\n  ${formatKHR(i.unitPrice)} × ${i.qty}   ${formatKHR(multiplyKHR(i.unitPrice, i.qty))}`
     ),
     '──────────────────────────────',
     line('សរុបរង', formatKHR(itemsSubtotal)),
@@ -136,8 +136,10 @@ export function SaleReceiptSheet({ data, onClose }: Props) {
   } = useStoreProfile()
 
   const isCash        = data.paymentType === 'cash'
-  const discount      = data.discount ?? toKHR(0)
-  const itemsSubtotal = data.items.reduce((s, i) => addKHR(s, i.subtotal), toKHR(0))
+  // Original = list price (unitPrice × qty); discount = original − final, so it
+  // captures every reduction (per-line + order-level) consistently.
+  const itemsSubtotal = data.items.reduce((s, i) => addKHR(s, multiplyKHR(i.unitPrice, i.qty)), toKHR(0))
+  const discount      = toKHR(Math.max(0, (itemsSubtotal as number) - (data.totalAmount as number)))
   const displayName    = storeName     || 'ហាងលក់ទំនិញ'
   const displayAddr    = storeAddress  || 'ភ្នំពេញ · Cambodia'
   const displayPhone   = storePhone    || ''
@@ -327,7 +329,7 @@ export function SaleReceiptSheet({ data, onClose }: Props) {
                     </p>
                   </div>
                   <span className="text-[13px] font-bold text-slate-900 tabular-nums shrink-0 pt-0.5">
-                    {formatKHR(item.subtotal)}
+                    {formatKHR(multiplyKHR(item.unitPrice, item.qty))}
                   </span>
                 </div>
               ))}
