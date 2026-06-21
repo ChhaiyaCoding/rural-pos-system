@@ -168,7 +168,7 @@ export default function ExpensesPage() {
                     <p className="text-[16px] font-extrabold text-slate-900 tabular-nums leading-tight">
                       {formatKHR(stat.total as KHR)}
                     </p>
-                    <p className="text-[12px] font-bold text-primary-600 tabular-nums">≈ {formatUSD(stat.total as KHR)}</p>
+                    <p className="text-[12px] font-bold text-primary-600 tabular-nums">{formatUSD(stat.total as KHR)}</p>
                     <p className="text-[11px] text-slate-400 mt-1">{stat.count} ដង</p>
                   </button>
                 )

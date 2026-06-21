@@ -82,7 +82,7 @@ export function ExpenseCategorySheet({ categoryId, from, to, onClose }: Props) {
             </div>
             <div className="text-right">
               <p className="text-[20px] font-extrabold text-danger-700 tabular-nums leading-tight">{formatKHR(total)}</p>
-              <p className="text-[12px] font-bold text-primary-600 tabular-nums">≈ {formatUSD(total)}</p>
+              <p className="text-[12px] font-bold text-primary-600 tabular-nums">{formatUSD(total)}</p>
             </div>
           </div>
         </div>
@@ -102,7 +102,7 @@ export function ExpenseCategorySheet({ categoryId, from, to, onClose }: Props) {
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="text-[14px] font-bold text-danger-600 tabular-nums leading-tight">−{formatKHR(e.amount)}</p>
-                    <p className="text-[10px] font-bold text-primary-600 tabular-nums">≈ {formatUSD(e.amount)}</p>
+                    <p className="text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(e.amount)}</p>
                   </div>
                 </div>
               ))}
