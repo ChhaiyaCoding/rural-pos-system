@@ -136,7 +136,6 @@ export function CustomerFormSheet({ onClose, onSaved }: Props) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="ឧ. សុខា, ដារ៉ា"
-              autoFocus
               className="w-full h-12 rounded-xl border border-slate-200 px-4 text-[15px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
             />
           </div>

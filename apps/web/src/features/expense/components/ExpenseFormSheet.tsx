@@ -136,7 +136,6 @@ export function ExpenseFormSheet({ expense, onClose, onSaved }: Props) {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0"
-                autoFocus
                 className="flex-1 h-12 px-3 text-right text-[22px] font-extrabold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none tabular-nums min-w-0"
               />
             </div>
