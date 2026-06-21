@@ -7,25 +7,21 @@ import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
 import { todayISODate, addDaysISODate } from '@/lib/date'
 import { ExpenseFormSheet } from '@/features/expense/components/ExpenseFormSheet'
+import { ExpenseCategorySheet } from '@/features/expense/components/ExpenseCategorySheet'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { expenseCategoryLabel, expenseCategoryEmoji } from '@/services/expense.service'
+import { EXPENSE_CATEGORIES, expenseCategoryLabel, expenseCategoryEmoji } from '@/services/expense.service'
 import type { Expense } from '@/types'
 import type { KHR, TenantId } from '@/types/branded'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
 const PERIODS = [
-  { key: 'today', label: 'ថ្ងៃនេះ', days: 1  },
-  { key: '7d',    label: '៧ ថ្ងៃ',   days: 7  },
-  { key: '30d',   label: '៣០ ថ្ងៃ',  days: 30 },
+  { key: 'today',  label: 'ថ្ងៃនេះ' },
+  { key: '7d',     label: '៧ ថ្ងៃ'  },
+  { key: '30d',    label: '៣០ ថ្ងៃ' },
+  { key: 'custom', label: 'ផ្ទាល់'  },
 ] as const
 type PeriodKey = (typeof PERIODS)[number]['key']
-
-function startDate(key: PeriodKey): string {
-  if (key === '7d')  return addDaysISODate(todayISODate(), -6)
-  if (key === '30d') return addDaysISODate(todayISODate(), -29)
-  return todayISODate()
-}
 
 function dateLabel(iso: string): string {
   const today     = todayISODate()
@@ -36,20 +32,45 @@ function dateLabel(iso: string): string {
 }
 
 export default function ExpensesPage() {
-  const [period,  setPeriod]  = useState<PeriodKey>('30d')
-  const [adding,  setAdding]  = useState(false)
-  const [editing, setEditing] = useState<Expense | null>(null)
+  const [period,     setPeriod]     = useState<PeriodKey>('30d')
+  const [customFrom, setCustomFrom] = useState(todayISODate())
+  const [customTo,   setCustomTo]   = useState(todayISODate())
+  const [adding,     setAdding]     = useState(false)
+  const [editing,    setEditing]    = useState<Expense | null>(null)
+  const [catDetail,  setCatDetail]  = useState<string | null>(null)
 
-  const from = startDate(period)
+  /* Inclusive date range driving the whole page */
+  const { from, to } = useMemo(() => {
+    const today = todayISODate()
+    if (period === 'today') return { from: today, to: today }
+    if (period === '7d')    return { from: addDaysISODate(today, -6),  to: today }
+    if (period === '30d')   return { from: addDaysISODate(today, -29), to: today }
+    return customFrom <= customTo
+      ? { from: customFrom, to: customTo }
+      : { from: customTo,   to: customFrom }
+  }, [period, customFrom, customTo])
+
   const expenses = useLiveQuery(
     () => db.expenses
       .where('tenantId').equals(DEMO_TENANT)
-      .filter(e => !e.deletedAt && e.spentAt >= from)
+      .filter(e => !e.deletedAt && e.spentAt >= from && e.spentAt <= to)
       .toArray(),
-    [from]
+    [from, to]
   ) ?? []
 
   const total = expenses.reduce((s, e) => s + (e.amount as number), 0) as KHR
+
+  /* Per-category totals + counts */
+  const byCategory = useMemo(() => {
+    const m = new Map<string, { total: number; count: number }>()
+    for (const e of expenses) {
+      const c = m.get(e.categoryId) ?? { total: 0, count: 0 }
+      c.total += e.amount as number
+      c.count += 1
+      m.set(e.categoryId, c)
+    }
+    return m
+  }, [expenses])
 
   const grouped = useMemo(() => {
     const sorted = [...expenses].sort(
@@ -89,6 +110,27 @@ export default function ExpensesPage() {
             </button>
           ))}
         </div>
+
+        {/* Custom date range */}
+        {period === 'custom' && (
+          <div className="flex items-center gap-2 mt-2">
+            <input
+              type="date"
+              value={customFrom}
+              max={todayISODate()}
+              onChange={(e) => setCustomFrom(e.target.value || todayISODate())}
+              className="flex-1 h-9 px-2.5 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-700 focus:outline-none focus:border-primary-500"
+            />
+            <span className="text-[12px] text-slate-400 shrink-0">ដល់</span>
+            <input
+              type="date"
+              value={customTo}
+              max={todayISODate()}
+              onChange={(e) => setCustomTo(e.target.value || todayISODate())}
+              className="flex-1 h-9 px-2.5 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-700 focus:outline-none focus:border-primary-500"
+            />
+          </div>
+        )}
       </header>
 
       {/* Body */}
@@ -104,7 +146,37 @@ export default function ExpensesPage() {
             </div>
           </div>
 
-          {/* List */}
+          {/* Category cards */}
+          <div>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">តាមប្រភេទ</p>
+            <div className="grid grid-cols-2 gap-3">
+              {EXPENSE_CATEGORIES.map((cat) => {
+                const stat = byCategory.get(cat.id) ?? { total: 0, count: 0 }
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setCatDetail(cat.id)}
+                    className="rounded-2xl border border-slate-200 bg-white shadow-card p-3.5 text-left active:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="shrink-0 w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-[20px]">
+                        {cat.emoji}
+                      </div>
+                      <p className="text-[13px] font-bold text-slate-800 leading-tight min-w-0">{cat.label}</p>
+                    </div>
+                    <p className="text-[16px] font-extrabold text-slate-900 tabular-nums leading-tight">
+                      {formatKHR(stat.total as KHR)}
+                    </p>
+                    <p className="text-[12px] font-bold text-primary-600 tabular-nums">≈ {formatUSD(stat.total as KHR)}</p>
+                    <p className="text-[11px] text-slate-400 mt-1">{stat.count} ដង</p>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* All expenses history (unchanged) */}
           {expenses.length === 0 ? (
             <EmptyState
               icon={<Wallet size={30} strokeWidth={1.5} />}
@@ -164,6 +236,9 @@ export default function ExpensesPage() {
       )}
       {editing && (
         <ExpenseFormSheet expense={editing} onClose={() => setEditing(null)} onSaved={() => setEditing(null)} />
+      )}
+      {catDetail && (
+        <ExpenseCategorySheet categoryId={catDetail} from={from} to={to} onClose={() => setCatDetail(null)} />
       )}
     </div>
   )
