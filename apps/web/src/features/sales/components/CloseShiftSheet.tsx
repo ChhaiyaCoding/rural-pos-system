@@ -86,7 +86,7 @@ export function CloseShiftSheet({ drawer, onClosed, onClose }: Props) {
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={20} strokeWidth={2} />
-              <span className="text-[16px] font-bold">បិទវេន</span>
+              <span className="text-[16px] font-bold">បិទហាង</span>
             </div>
             {!done && (
               <button
@@ -113,7 +113,7 @@ export function CloseShiftSheet({ drawer, onClosed, onClose }: Props) {
                 <CheckCircle2 size={44} strokeWidth={1.75} />
               </div>
               <div className="text-center">
-                <p className="text-[18px] font-extrabold text-slate-900">បិទវេនជោគជ័យ!</p>
+                <p className="text-[18px] font-extrabold text-slate-900">បិទហាងជោគជ័យ!</p>
                 <p className="text-[13px] text-slate-500 mt-1">
                   ចំណូល {formatKHR(closedData.cashSalesTotal ?? 0 as KHR)} · {durationStr}
                 </p>
@@ -275,7 +275,7 @@ export function CloseShiftSheet({ drawer, onClosed, onClose }: Props) {
                 className="w-full h-14 rounded-2xl bg-slate-800 text-white font-bold text-[15px] disabled:opacity-40 active:bg-slate-900 transition-colors flex items-center justify-center gap-2"
               >
                 <CheckCircle2 size={20} />
-                {saving ? 'កំពុងបិទ…' : 'បិទវេន'}
+                {saving ? 'កំពុងបិទ…' : 'បិទហាង'}
               </button>
             </div>
           )}

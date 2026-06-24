@@ -143,7 +143,7 @@ export interface CashDrawer {
   cashierName: string
   openingBalance: KHR        // ប្រាក់ក្នុងហ្គូពេលបើក
   closingBalance: KHR | null // ប្រាក់ដែលបានរាប់ពេលបិទ
-  cashSalesTotal: KHR | null // ចំណូល cash ក្នុងវេននេះ
+  cashSalesTotal: KHR | null // ចំណូល cash ក្នុងហាងនេះ
   expectedBalance: KHR | null // opening + cashSales
   difference: KHR | null      // closing - expected
   openedAt: string

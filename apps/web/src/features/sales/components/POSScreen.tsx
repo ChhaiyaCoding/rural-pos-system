@@ -341,7 +341,7 @@ export function POSScreen() {
                 >
                   <span className="flex items-center gap-1 text-[9px] font-bold text-success-600 leading-none">
                     <span className="w-1.5 h-1.5 rounded-full bg-success-500" />
-                    វេនបើក
+                    ហាងបើក
                   </span>
                   <span className="text-[12px] font-bold text-success-800 tabular-nums leading-tight mt-0.5">
                     {formatKHR(currentDrawer!.openingBalance)}
@@ -353,7 +353,7 @@ export function POSScreen() {
                   onClick={() => setOpenShift(true)}
                   className="flex items-center gap-1.5 h-10 px-3 rounded-lg border border-slate-300 text-slate-600 text-[12px] font-bold active:bg-slate-50 transition-colors"
                 >
-                  💰 បើកវេន
+                  💰 បើកហាង
                 </button>
               )}
 

@@ -61,7 +61,7 @@ export function OpenShiftSheet({ cashierName, onOpened, onClose }: Props) {
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <Banknote size={20} strokeWidth={2} />
-              <span className="text-[16px] font-bold">បើកវេន</span>
+              <span className="text-[16px] font-bold">បើកហាង</span>
             </div>
             <button
               type="button"
@@ -134,7 +134,7 @@ export function OpenShiftSheet({ cashierName, onOpened, onClose }: Props) {
             className="w-full h-14 rounded-2xl bg-success-600 text-white font-bold text-[16px] disabled:opacity-50 active:bg-success-700 transition-colors flex items-center justify-center gap-2"
           >
             <Banknote size={20} />
-            {saving ? 'កំពុងបើក…' : 'បើកវេន'}
+            {saving ? 'កំពុងបើក…' : 'បើកហាង'}
           </button>
         </div>
       </div>
