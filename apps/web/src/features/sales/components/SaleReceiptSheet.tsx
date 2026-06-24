@@ -94,7 +94,7 @@ function buildShareText(data: ReceiptData, storeName = 'ហាងលក់ទំ
       `${i.nameKm}\n  ${formatKHR(i.unitPrice)} × ${i.qty}   ${formatKHR(multiplyKHR(i.unitPrice, i.qty))}`
     ),
     '──────────────────────────────',
-    line('សរុបរង', formatKHR(itemsSubtotal)),
+    line('សរុប', formatKHR(itemsSubtotal)),
     discount > 0 ? line('បញ្ចុះតម្លៃ', `-${formatKHR(discount)}`) : '',
     '══════════════════════════════',
     line('សរុបចុងក្រោយ', formatKHR(data.totalAmount)),
@@ -340,7 +340,7 @@ export function SaleReceiptSheet({ data, onClose }: Props) {
 
             {/* ── Subtotal + discount ─────────────────────────── */}
             <div className="px-5 py-3 space-y-1.5">
-              <MetaRow label="សរុបរង" value={formatKHR(itemsSubtotal)} />
+              <MetaRow label="សរុប" value={formatKHR(itemsSubtotal)} />
               {discount > 0 && (
                 <MetaRow
                   label="បញ្ចុះតម្លៃ"
