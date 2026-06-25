@@ -18,6 +18,19 @@ export interface CloseDrawerInput {
   note?:          string
 }
 
+/** Daily summary for a store-day, computed on-the-fly from sales/expenses. */
+export interface StoreDaySummary {
+  totalSales:    KHR   // all non-void sales in window
+  cashSales:     KHR   // paymentType 'cash'
+  debtSales:     KHR   // paymentType 'debt' | 'partial'
+  abaSales:      KHR   // debt payments received via method 'aba' in window
+  totalExpenses: KHR
+  netProfit:     KHR   // totalSales − totalExpenses
+  openingCash:   KHR
+  openedAt:      string
+  closedAt:      string | null
+}
+
 export const cashDrawerService = {
 
   /* ── Open new shift ──────────────────────────────── */
@@ -106,5 +119,71 @@ export const cashDrawerService = {
       )
       .toArray()
     return cashSales.reduce((sum, s) => (sum + s.totalAmount) as KHR, 0 as KHR)
+  },
+
+  /* ── Daily summary for a store-day ───────────────── */
+  // Computed on-the-fly over the window [openedAt, closedAt||now].
+  // Read-only — touches no Inventory / Customer / Debt logic.
+  async getStoreDaySummary(drawer: CashDrawer): Promise<StoreDaySummary> {
+    const until = drawer.closedAt ?? nowISO()
+
+    const sales = await db.sales
+      .where('tenantId').equals(drawer.tenantId)
+      .filter(s =>
+        !s.isVoid &&
+        s.createdAt >= drawer.openedAt &&
+        s.createdAt <= until
+      )
+      .toArray()
+
+    let cashSales = 0
+    let debtSales = 0
+    for (const s of sales) {
+      if (s.paymentType === 'cash') {
+        cashSales += s.totalAmount
+      } else {
+        // 'debt' | 'partial' — only the UNPAID remainder is credit/debt.
+        // The paid portion (full for cash, partial for 'partial', 0 for 'debt')
+        // is cash actually received at the point of sale.
+        cashSales += s.paidAmount
+        debtSales += s.totalAmount - s.paidAmount
+      }
+    }
+    const totalSales = cashSales + debtSales
+
+    // ABA money is only tracked on the debt ledger (payments via method 'aba').
+    const debtTxns = await db.debtTransactions
+      .where('tenantId').equals(drawer.tenantId)
+      .filter(t =>
+        !t.isVoid &&
+        t.type === 'payment' &&
+        t.method === 'aba' &&
+        t.createdAt >= drawer.openedAt &&
+        t.createdAt <= until
+      )
+      .toArray()
+    const abaSales = debtTxns.reduce((sum, t) => sum + t.amount, 0)
+
+    const expenses = await db.expenses
+      .where('tenantId').equals(drawer.tenantId)
+      .filter(e =>
+        !e.deletedAt &&
+        e.createdAt >= drawer.openedAt &&
+        e.createdAt <= until
+      )
+      .toArray()
+    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0)
+
+    return {
+      totalSales:    totalSales    as KHR,
+      cashSales:     cashSales     as KHR,
+      debtSales:     debtSales     as KHR,
+      abaSales:      abaSales      as KHR,
+      totalExpenses: totalExpenses as KHR,
+      netProfit:     (totalSales - totalExpenses) as KHR,
+      openingCash:   drawer.openingBalance,
+      openedAt:      drawer.openedAt,
+      closedAt:      drawer.closedAt,
+    }
   },
 }

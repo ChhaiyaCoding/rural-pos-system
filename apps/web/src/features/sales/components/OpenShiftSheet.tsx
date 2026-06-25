@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Banknote } from 'lucide-react'
+import { X, Banknote, History } from 'lucide-react'
 import { cashDrawerService } from '@/services/cashDrawer.service'
 import { formatKHR, toKHR } from '@/lib/money'
+import { StoreHistorySheet } from './StoreHistorySheet'
 import type { CashDrawer } from '@/types'
 import type { TenantId, UserId, KHR } from '@/types/branded'
 
@@ -21,6 +22,7 @@ interface Props {
 export function OpenShiftSheet({ cashierName, onOpened, onClose }: Props) {
   const [amount,  setAmount]  = useState('')
   const [saving,  setSaving]  = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
 
   const parsedAmt = Math.max(0, Number(amount) || 0)
 
@@ -63,13 +65,22 @@ export function OpenShiftSheet({ cashierName, onOpened, onClose }: Props) {
               <Banknote size={20} strokeWidth={2} />
               <span className="text-[16px] font-bold">បើកហាង</span>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 active:bg-white/30"
-            >
-              <X size={15} />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setShowHistory(true)}
+                className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-white/20 active:bg-white/30 text-[12px] font-semibold"
+              >
+                <History size={14} /> ប្រវត្តិ
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 active:bg-white/30"
+              >
+                <X size={15} />
+              </button>
+            </div>
           </div>
           <p className="text-[13px] opacity-80">{cashierName} · {dateStr} · {timeStr}</p>
         </div>
@@ -138,6 +149,8 @@ export function OpenShiftSheet({ cashierName, onOpened, onClose }: Props) {
           </button>
         </div>
       </div>
+
+      {showHistory && <StoreHistorySheet onClose={() => setShowHistory(false)} />}
     </div>
   )
 }
