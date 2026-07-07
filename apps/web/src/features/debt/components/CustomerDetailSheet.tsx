@@ -929,7 +929,7 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-bold text-slate-800 tabular-nums truncate">#{sale.receiptNumber || String(sale.id).slice(0, 8).toUpperCase()}</p>
                         <p className="text-[11px] text-slate-400">
-                          {formatDateKm(sale.createdAt)} · <span className={isPartial ? 'text-warning-600 font-semibold' : 'text-danger-600 font-semibold'}>{isPartial ? 'ផ្នែក' : 'ជំពាក់'}</span>
+                          {formatDateKm(sale.createdAt)} · <span className={settledOff ? 'text-slate-400 font-semibold line-through' : isPartial ? 'text-warning-600 font-semibold' : 'text-danger-600 font-semibold'}>{isPartial ? 'ផ្នែក' : 'ជំពាក់'}</span>
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
