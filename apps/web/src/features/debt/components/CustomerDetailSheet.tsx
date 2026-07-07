@@ -12,6 +12,7 @@ import { getDueInfo } from '@/lib/dueDate'
 import { useStoreProfile } from '@/store/storeProfile.store'
 import { CustomerEditSheet } from './CustomerEditSheet'
 import { ReprintReceipt } from '@/features/sales/components/ReprintReceipt'
+import { reconcileDebtItems, type DebtItem } from '../reconcile'
 import type { Customer, Sale, DebtPaymentMethod } from '@/types'
 import type { TenantId, CustomerId, KHR, UUID } from '@/types/branded'
 
@@ -21,10 +22,6 @@ interface Props {
   customer: Customer
   onClose: () => void
 }
-
-/* ── Quick-amount presets ────────────────────────────────── */
-const QUICK_AMTS = [1_000, 2_000, 5_000, 10_000, 20_000, 50_000]
-const USD_AMTS   = [1, 2, 5, 10, 20, 50, 100]
 
 /* ── Swipe-to-delete row (iOS style) ──────────────────────────
    Swipe a payment left to reveal a red "លុប" button; tap it to void. */
@@ -124,8 +121,6 @@ function SwipeRow({
 }
 
 export function CustomerDetailSheet({ customer, onClose }: Props) {
-  const [payAmount,   setPayAmount]   = useState('')
-  const [payCurrency, setPayCurrency] = useState<'KHR' | 'USD'>('KHR')
   const [payMethod,   setPayMethod]   = useState<DebtPaymentMethod>('cash')
   const [payNote,     setPayNote]     = useState('')
   const [paying,      setPaying]      = useState(false)
@@ -173,25 +168,12 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
   const totalPaid    = toKHR(txns.filter((t) => t.type === 'payment').reduce((s, t) => s + (t.amount as number), 0))
   const payments     = useMemo(() => txns.filter((t) => t.type === 'payment'), [txns])  // newest first
 
-  /* Debt items with FIFO-reconciled outstanding — unifies sale invoices AND
-     opening-balance charges (saleId=null). Payments are customer-level, so we
-     allocate the total paid oldest-first across every debt item to derive each
-     item's *current* remaining. Sum of currentRemaining === debtBalance. */
-  const debtItems = useMemo(() => {
-    const openings = txns
-      .filter((t) => t.type === 'charge' && t.saleId == null)
-      .map((t) => ({ kind: 'opening' as const, id: String(t.id), createdAt: t.createdAt, orig: t.amount as number, note: t.note, chargeKind: t.chargeKind ?? 'opening', sale: null as Sale | null }))
-    const saleItems = sales
-      .map((s) => ({ kind: 'sale' as const, id: String(s.id), createdAt: s.createdAt, orig: (s.totalAmount - s.paidAmount) as number, note: null as string | null, sale: s as Sale | null }))
-    const all = [...openings, ...saleItems].sort((a, b) => a.createdAt.localeCompare(b.createdAt))  // oldest first
-    let pool = totalPaid as number
-    const reconciled = all.map((it) => {
-      const settled = Math.min(pool, it.orig)
-      pool -= settled
-      return { ...it, currentRemaining: it.orig - settled }
-    })
-    return reconciled.reverse()  // newest first for display
-  }, [sales, txns, totalPaid])
+  /* Debt items with reconciled outstanding — unifies sale invoices AND
+     opening-balance charges. Each payment closes exactly one item (appliesToId);
+     legacy pooled payments fall back to FIFO. Σ(currentRemaining) === debtBalance. */
+  const debtItems = useMemo(() => reconcileDebtItems(sales, txns), [sales, txns])
+  /* Open (unsettled) items, for the per-invoice payment picker. */
+  const openItems = useMemo(() => debtItems.filter((it) => it.currentRemaining > 0), [debtItems])
 
   /* Running balance — compute from oldest → newest, then reverse for display */
   const txnsWithBalance = useMemo(() => {
@@ -227,33 +209,30 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
     : dueInfo.daysUntilDue === 0 ? 'ត្រូវសងថ្ងៃនេះ'
     : `នៅសល់ ${dueInfo.daysUntilDue} ថ្ងៃ`
 
-  /* Parsed input → normalized to ៛ (the debt is always stored in ៛).
-     When paying in $, convert at the configured exchange rate. */
-  const rate       = getExchangeRate()
-  const parsedAmt  = Number(payAmount) || 0
-  const khrInput   = payCurrency === 'USD' ? Math.round(parsedAmt * rate) : Math.round(parsedAmt)
-  const clampedAmt = Math.min(khrInput, live.debtBalance)
-  const isOverpay  = khrInput > live.debtBalance && khrInput > 0
-  const canPay     = clampedAmt > 0 && !paying
+  /* Exchange rate — used by the manual-debt form's $ input. */
+  const rate = getExchangeRate()
 
-  /* ── Handle payment ──────────────────────────────────── */
-  const handlePay = async () => {
-    if (!canPay) return
+  /* ── Handle payment — settles exactly one invoice in full ───── */
+  const handlePayInvoice = async (item: DebtItem) => {
+    if (paying) return
+    const amt = item.currentRemaining
+    if (amt <= 0) return
     setPaying(true)
     try {
       const result = await debtService.recordPayment({
-        tenantId:   DEMO_TENANT,
-        customerId: customer.id as CustomerId,
-        amount:     toKHR(clampedAmt) as KHR,
-        method:     payMethod,
+        tenantId:    DEMO_TENANT,
+        customerId:  customer.id as CustomerId,
+        amount:      toKHR(amt) as KHR,
+        method:      payMethod,
+        appliesToId: item.id,
         ...(payNote.trim() ? { note: payNote.trim() } : {}),
       })
       if (result.ok) {
-        const after = Math.max(0, live.debtBalance - clampedAmt) as KHR
-        setPaySuccess({ paid: toKHR(clampedAmt) as KHR, after })
-        setPayAmount('')
+        const after = Math.max(0, live.debtBalance - amt) as KHR
+        setPaySuccess({ paid: toKHR(amt) as KHR, after })
         setPayNote('')
-        setShowPay(false)
+        // Close the picker once nothing is left to settle; otherwise keep it open.
+        if (openItems.filter((it) => it.id !== item.id).length === 0) setShowPay(false)
       }
     } finally {
       setPaying(false)
@@ -673,139 +652,25 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
             </div>
           )}
 
-          {/* ─ Payment form ─────────────────────────── */}
+          {/* ─ Payment picker — pay one invoice in full ─────── */}
           {showPay && (
             <div className="mx-4 mt-4 rounded-2xl border border-success-200 bg-success-50 px-4 py-4">
 
-              {/* Label + currency toggle */}
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[12px] font-bold text-success-700">ចំនួនប្រាក់ទទួល</p>
-                <div className="flex items-center rounded-lg border border-success-300 bg-white overflow-hidden">
-                  {(['KHR', 'USD'] as const).map((cur) => (
-                    <button
-                      key={cur}
-                      type="button"
-                      onClick={() => { setPayCurrency(cur); setPayAmount('') }}
-                      className={[
-                        'min-h-0 min-w-0 h-7 px-3.5 text-[13px] font-bold tabular-nums transition-colors',
-                        payCurrency === cur ? 'bg-success-600 text-white' : 'text-success-700 active:bg-success-50',
-                      ].join(' ')}
-                    >
-                      {cur === 'KHR' ? '៛' : '$'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Owed (both currencies) */}
-              <p className="text-[11px] text-slate-500 tabular-nums mb-2">
-                ជំពាក់ {formatKHR(live.debtBalance)} · {formatUSD(live.debtBalance)}
-              </p>
-
-              {/* Amount input */}
-              <div className="flex gap-2">
-                <div className={[
-                  'flex-1 flex items-center border rounded-xl bg-white overflow-hidden transition-colors',
-                  isOverpay ? 'border-warning-400' : 'border-success-300',
-                ].join(' ')}>
-                  <span className="pl-4 text-[15px] font-bold text-slate-400 shrink-0">
-                    {payCurrency === 'USD' ? '$' : '៛'}
-                  </span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    value={payAmount}
-                    onChange={(e) => setPayAmount(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handlePay()}
-                    placeholder="0"
-                    autoFocus
-                    className="flex-1 h-12 px-3 text-[18px] font-bold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none min-w-0"
-                  />
-                </div>
+              {/* Header */}
+              <div className="flex items-center justify-between mb-0.5">
+                <p className="text-[12px] font-bold text-success-700">ទទួលប្រាក់បំណុល</p>
                 <button
                   type="button"
-                  disabled={!canPay}
-                  onClick={() => handlePay()}
-                  className="h-12 px-4 rounded-xl bg-success-600 text-white font-bold text-[14px] disabled:opacity-40 active:bg-success-700 transition-colors whitespace-nowrap"
-                >
-                  {paying ? '…' : 'បញ្ជាក់'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowPay(false); setPayAmount('') }}
-                  className="h-12 w-12 rounded-xl border border-slate-200 bg-white text-slate-500 flex items-center justify-center active:bg-slate-100"
+                  onClick={() => setShowPay(false)}
+                  className="w-8 h-8 -mr-1 rounded-lg text-slate-400 flex items-center justify-center active:bg-slate-100"
                 >
                   <X size={16} />
                 </button>
               </div>
-
-              {/* Equivalent in the other currency */}
-              {clampedAmt > 0 && (
-                <p className="mt-1.5 text-right text-[12px] font-bold text-primary-600 tabular-nums">
-                  {payCurrency === 'USD'
-                    ? `= ${formatKHR(toKHR(clampedAmt))}`
-                    : `≈ ${formatUSD(toKHR(clampedAmt))}`}
-                </p>
-              )}
-
-              {/* Overpay warning */}
-              {isOverpay && (
-                <p className="mt-1 text-[11px] text-warning-700 font-semibold">
-                  ⚠ ចំនួនលើសបំណុល — នឹងទទួល {formatKHR(toKHR(clampedAmt))} ជំនួស
-                </p>
-              )}
-
-              {/* Quick amount chips — currency-aware */}
-              <div className="flex gap-2 mt-3 flex-wrap">
-                {payCurrency === 'KHR'
-                  ? QUICK_AMTS.filter((a) => a <= live.debtBalance).map((amt) => (
-                      <button
-                        key={amt}
-                        type="button"
-                        onClick={() => setPayAmount(String(amt))}
-                        className={[
-                          'h-8 px-3 rounded-lg border text-[12px] font-semibold tabular-nums transition-colors',
-                          payAmount === String(amt)
-                            ? 'bg-success-600 border-success-600 text-white'
-                            : 'bg-white border-success-200 text-success-700 active:bg-success-100',
-                        ].join(' ')}
-                      >
-                        {formatKHR(toKHR(amt))}
-                      </button>
-                    ))
-                  : USD_AMTS.filter((u) => u * rate <= live.debtBalance).map((u) => (
-                      <button
-                        key={u}
-                        type="button"
-                        onClick={() => setPayAmount(String(u))}
-                        className={[
-                          'h-8 px-3 rounded-lg border text-[12px] font-semibold tabular-nums transition-colors',
-                          payAmount === String(u)
-                            ? 'bg-success-600 border-success-600 text-white'
-                            : 'bg-white border-success-200 text-success-700 active:bg-success-100',
-                        ].join(' ')}
-                      >
-                        ${u}
-                      </button>
-                    ))
-                }
-                {/* Full payment — settles the exact ៛ balance */}
-                <button
-                  type="button"
-                  onClick={() => { setPayCurrency('KHR'); setPayAmount(String(live.debtBalance)) }}
-                  className={[
-                    'h-8 px-3 rounded-lg border text-[12px] font-bold tabular-nums transition-colors',
-                    payCurrency === 'KHR' && payAmount === String(live.debtBalance)
-                      ? 'bg-success-600 border-success-600 text-white'
-                      : 'bg-success-100 border-success-300 text-success-800 active:bg-success-200',
-                  ].join(' ')}
-                >
-                  ✓ សងទាំងអស់ {formatKHR(live.debtBalance)}
-                </button>
-              </div>
+              <p className="text-[11px] text-slate-500 mb-3">ជ្រើស​វិក្កយបត្រ​ដើម្បី​សង — សង​ពេញ​ម្ដង​មួយ</p>
 
               {/* Payment method */}
-              <div className="mt-3">
+              <div className="mb-3">
                 <p className="text-[11px] font-bold text-success-700 mb-1.5">វិធីសាស្ត្រ​ទទួល</p>
                 <div className="grid grid-cols-3 gap-2">
                   {DEBT_METHODS.map((m) => (
@@ -830,8 +695,38 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
                 value={payNote}
                 onChange={(e) => setPayNote(e.target.value)}
                 placeholder="កំណត់​ចំណាំ (ស្រេចចិត្ត)"
-                className="w-full h-10 mt-3 rounded-lg border border-success-200 bg-white px-3 text-[13px] placeholder:text-slate-300 focus:outline-none focus:border-success-500"
+                className="w-full h-10 mb-3 rounded-lg border border-success-200 bg-white px-3 text-[13px] placeholder:text-slate-300 focus:outline-none focus:border-success-500"
               />
+
+              {/* Open invoices — each settled in full by one payment */}
+              <p className="text-[11px] font-bold text-success-700 mb-1.5">វិក្កយបត្រ​ដែល​ជំពាក់</p>
+              <div className="space-y-2">
+                {openItems.map((item) => {
+                  const label = item.kind === 'sale'
+                    ? `#${item.sale?.receiptNumber || item.id.slice(0, 8).toUpperCase()}`
+                    : 'បំណុល'
+                  return (
+                    <div key={item.id} className="flex items-center gap-3 rounded-xl border border-success-200 bg-white px-3 py-2.5">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-bold text-slate-800 truncate">{label}</p>
+                        <p className="text-[10px] text-slate-400">{formatDateKm(item.createdAt)}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-[13px] font-extrabold text-slate-900 tabular-nums leading-tight">{formatKHR(toKHR(item.currentRemaining))}</p>
+                        <p className="text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(toKHR(item.currentRemaining))}</p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={paying}
+                        onClick={() => handlePayInvoice(item)}
+                        className="h-9 px-3.5 rounded-lg bg-success-600 text-white font-bold text-[12px] disabled:opacity-40 active:bg-success-700 transition-colors whitespace-nowrap"
+                      >
+                        {paying ? '…' : 'សង​ពេញ'}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
 

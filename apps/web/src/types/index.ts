@@ -81,6 +81,9 @@ export interface DebtTransaction {
   type: 'charge' | 'payment'
   /** How a payment was received (payment txns only) — null for charges / legacy */
   method: DebtPaymentMethod | null
+  /** For payments: the debt item this payment fully settles — a sale.id (invoice)
+   *  or a manual-charge txn id. Absent/null = legacy pooled payment (FIFO). */
+  appliesToId?: string | null
   /** For manual charges (saleId=null): 'opening' = pre-existing/old debt,
    *  'manual' = new debt added by hand. Absent for sale-linked charges / legacy. */
   chargeKind?: 'opening' | 'manual'

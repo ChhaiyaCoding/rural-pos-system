@@ -31,6 +31,9 @@ export interface RecordPaymentInput {
   amount: KHR
   method?: DebtPaymentMethod
   note?: string
+  /** The debt item (sale.id or manual-charge txn id) this payment fully closes.
+   *  Policy: each payment settles exactly one invoice in full. */
+  appliesToId?: string
 }
 
 export interface ManualDebtInput {
@@ -101,6 +104,7 @@ export const debtService = {
       amount: input.amount,
       type: 'payment',
       method: input.method ?? null,
+      appliesToId: input.appliesToId ?? null,
       note: input.note ?? null,
       isVoid: false,
       createdAt: nowISO(),

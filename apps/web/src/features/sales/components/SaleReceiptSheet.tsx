@@ -33,6 +33,10 @@ export interface ReceiptData {
 interface Props {
   data: ReceiptData
   onClose: () => void
+  /** When viewing a past debt invoice that has since been fully settled, the
+   *  on-screen "នៅខ្វះ" box is shown gray + struck-through (value kept for
+   *  reference). Does not affect the printed / shared receipt text. */
+  debtSettled?: boolean
 }
 
 // ─── Helper: small label-value row ────────────────────────────────────────────
@@ -123,7 +127,7 @@ function buildShareText(data: ReceiptData, storeName = 'ហាងលក់ទំ
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function SaleReceiptSheet({ data, onClose }: Props) {
+export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) {
   const [copied,        setCopied]        = useState(false)
   const [capturing,     setCapturing]     = useState(false)
   const [imageDone,     setImageDone]     = useState(false)
@@ -418,17 +422,29 @@ export function SaleReceiptSheet({ data, onClose }: Props) {
                 />
               )}
 
-              {/* Debt still owed */}
+              {/* Debt still owed — struck-through & gray once fully settled */}
               {!isCash && data.debtRemaining != null && data.debtRemaining > 0 && (
-                <div className="flex items-center justify-between rounded-xl bg-danger-50 border border-danger-100 px-3.5 py-2.5">
-                  <span className="text-[12px] font-semibold text-danger-700">
+                <div className={[
+                  'flex items-center justify-between rounded-xl border px-3.5 py-2.5',
+                  debtSettled ? 'bg-slate-50 border-slate-200' : 'bg-danger-50 border-danger-100',
+                ].join(' ')}>
+                  <span className={[
+                    'text-[12px] font-semibold',
+                    debtSettled ? 'text-slate-400 line-through' : 'text-danger-700',
+                  ].join(' ')}>
                     នៅខ្វះ (ជំពាក់)
                   </span>
                   <div className="text-right">
-                    <span className="block text-[17px] font-extrabold text-danger-700 tabular-nums leading-tight">
+                    <span className={[
+                      'block text-[17px] font-extrabold tabular-nums leading-tight',
+                      debtSettled ? 'text-slate-400 line-through' : 'text-danger-700',
+                    ].join(' ')}>
                       {formatKHR(data.debtRemaining)}
                     </span>
-                    <span className="block text-[11px] font-bold text-primary-600 tabular-nums">
+                    <span className={[
+                      'block text-[11px] font-bold tabular-nums',
+                      debtSettled ? 'text-slate-400 line-through' : 'text-primary-600',
+                    ].join(' ')}>
                       {formatUSD(data.debtRemaining)}
                     </span>
                   </div>
