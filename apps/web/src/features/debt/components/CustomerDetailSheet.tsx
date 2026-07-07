@@ -134,6 +134,7 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
   const [reprintSale, setReprintSale] = useState<Sale | null>(null)
   const [openVoidId,  setOpenVoidId]  = useState<string | null>(null)
   const [pendingVoid, setPendingVoid] = useState<{ id: string; amount: KHR; kind: 'payment' | 'opening' } | null>(null)
+  const [pendingPay,  setPendingPay]  = useState<DebtItem | null>(null)
   const [voiding,     setVoiding]     = useState(false)
   const [editing,     setEditing]     = useState(false)
   const [paySuccess,  setPaySuccess]  = useState<{ paid: KHR; after: KHR } | null>(null)
@@ -231,6 +232,7 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
         const after = Math.max(0, live.debtBalance - amt) as KHR
         setPaySuccess({ paid: toKHR(amt) as KHR, after })
         setPayNote('')
+        setPendingPay(null)
         // Close the picker once nothing is left to settle; otherwise keep it open.
         if (openItems.filter((it) => it.id !== item.id).length === 0) setShowPay(false)
       }
@@ -718,10 +720,10 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
                       <button
                         type="button"
                         disabled={paying}
-                        onClick={() => handlePayInvoice(item)}
+                        onClick={() => setPendingPay(item)}
                         className="h-9 px-3.5 rounded-lg bg-success-600 text-white font-bold text-[12px] disabled:opacity-40 active:bg-success-700 transition-colors whitespace-nowrap"
                       >
-                        {paying ? '…' : 'សង​ពេញ'}
+                        សង​ពេញ
                       </button>
                     </div>
                   )
@@ -1010,6 +1012,56 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
       {/* Reprint receipt from an invoice */}
       {reprintSale && (
         <ReprintReceipt sale={reprintSale} onClose={() => setReprintSale(null)} />
+      )}
+
+      {/* Payment confirmation — guard against an accidental "សង​ពេញ" tap */}
+      {pendingPay && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 px-6"
+          onClick={() => { if (!paying) setPendingPay(null) }}
+          aria-hidden="true"
+        >
+          <div
+            className="w-full max-w-xs bg-white rounded-2xl shadow-pop p-5 animate-sheet-up"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="w-12 h-12 rounded-full bg-success-100 text-success-600 flex items-center justify-center mx-auto mb-3">
+              <Banknote size={22} strokeWidth={2.25} />
+            </div>
+            <p className="text-[15px] font-bold text-slate-900 text-center">
+              បញ្ជាក់​ការ​សង​ពេញ?
+            </p>
+            <p className="text-[13px] text-slate-500 text-center mt-1.5 leading-relaxed">
+              វិក្កយបត្រ{' '}
+              <span className="font-bold text-slate-700">
+                {pendingPay.kind === 'sale' ? `#${pendingPay.sale?.receiptNumber || pendingPay.id.slice(0, 8).toUpperCase()}` : 'បំណុល'}
+              </span>{' '}
+              នឹង​ត្រូវ​សង​ពេញ{' '}
+              <span className="font-bold text-success-700 tabular-nums">{formatKHR(toKHR(pendingPay.currentRemaining))}</span>{' '}
+              ({debtMethodLabel(payMethod)})។
+            </p>
+            <div className="flex gap-2.5 mt-4">
+              <button
+                type="button"
+                onClick={() => setPendingPay(null)}
+                disabled={paying}
+                className="flex-1 h-11 rounded-xl border border-slate-200 text-slate-600 font-semibold text-[14px] disabled:opacity-50 active:bg-slate-50 transition-colors"
+              >
+                បោះបង់
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePayInvoice(pendingPay)}
+                disabled={paying}
+                className="flex-1 h-11 rounded-xl bg-success-600 text-white font-bold text-[14px] disabled:opacity-50 active:bg-success-700 transition-colors"
+              >
+                {paying ? 'កំពុង​សង…' : 'បាទ/ចាស សង'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Void confirmation — payment or opening balance */}
