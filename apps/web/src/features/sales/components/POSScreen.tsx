@@ -407,7 +407,9 @@ export function POSScreen() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5">
+            /* Adaptive columns on tablet/desktop — cards stay ≥120px (touch-friendly)
+               and fill the row in both iPad portrait & landscape without overflow */
+            <div className="grid grid-cols-3 md:grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2.5">
               {filteredProducts.map((product, i) => (
                 <ProductCard
                   key={product.id}
@@ -457,7 +459,7 @@ export function POSScreen() {
       {/* ════════════════════════════════════════════════════
           RIGHT — Cart sidebar (tablet / desktop)
       ════════════════════════════════════════════════════ */}
-      <aside ref={cartPanelRef} className="hidden md:flex flex-col w-80 lg:w-[22rem] bg-white border-l border-slate-200 shadow-[-4px_0_24px_-16px_rgba(15,23,42,0.25)] shrink-0">
+      <aside ref={cartPanelRef} className="hidden md:flex flex-col w-72 lg:w-[22rem] bg-white border-l border-slate-200 shadow-[-4px_0_24px_-16px_rgba(15,23,42,0.25)] shrink-0">
         <CartPanel onPay={handlePay} onHold={handleHold} />
       </aside>
 
