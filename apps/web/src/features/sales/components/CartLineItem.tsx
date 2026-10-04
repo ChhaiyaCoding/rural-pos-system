@@ -1,17 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-import { Trash2, Minus, Plus, Tag, X } from 'lucide-react'
+import { Trash2, Tag, X } from 'lucide-react'
 import { useSaleStore } from '@/store/sale.store'
-import { formatKHR, formatUSD, multiplyKHR, toKHR } from '@/lib/money'
+import { formatKHR, multiplyKHR, toKHR } from '@/lib/money'
 import { PRODUCT_EMOJI } from '../mock-products'
+import { ProductThumb } from '@/components/ui/ProductThumb'
+import { Stepper } from '@/components/ui/Stepper'
+import { IconButton } from '@/components/ui/IconButton'
+import { cx } from '@/components/ui/cx'
+import { useCartChrome } from './cartChrome'
 import type { CartItem } from '@/types'
 import type { KHR } from '@/types/branded'
 
 /* Quick discount percentages */
 const PERCENTS = [5, 10, 15, 20, 50]
 
-export function CartLineItem({ item }: { item: CartItem }) {
+export function CartLineItem({ item, className }: { item: CartItem; className?: string | undefined }) {
+  const { tone } = useCartChrome()
+  const dark = tone === 'dark'
   const updateQty        = useSaleStore((s) => s.updateQty)
   const removeFromCart   = useSaleStore((s) => s.removeFromCart)
   const setLineDiscount  = useSaleStore((s) => s.setLineDiscount)
@@ -43,166 +50,150 @@ export function CartLineItem({ item }: { item: CartItem }) {
   }
 
   return (
-    <div className="px-4 py-3">
-      <div className="flex gap-3">
-        {/* Emoji thumbnail */}
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-slate-100 shrink-0 overflow-hidden">
-          {product.imageUri
-            ? <img src={product.imageUri} alt="" className="w-full h-full object-cover" />
-            : <span className="text-lg leading-none select-none">{emoji}</span>}
-        </div>
+    <div className={cx(dark ? 'py-3' : 'rounded-lg bg-surface p-3', className)}>
+      <div className="flex items-start gap-3">
+        <ProductThumb product={{ ...product, emoji }} size={48} />
 
-        {/* Right column */}
-        <div className="flex-1 min-w-0">
-          {/* Top: name + subtotal */}
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">
-              {product.nameKm}
-            </p>
-            <div className="shrink-0 text-right">
-              {hasDisc ? (
-                <>
-                  <span className="text-[11px] font-medium text-slate-400 line-through tabular-nums block leading-none">
-                    {formatKHR(gross)}
-                  </span>
-                  <span className="text-[14px] font-bold text-success-700 tabular-nums tracking-tight block leading-tight">
-                    {formatKHR(net)}
-                  </span>
-                  <span className="text-[10px] font-bold text-primary-600 tabular-nums block leading-none">
-                    {formatUSD(net)}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="text-[14px] font-bold text-slate-900 tabular-nums tracking-tight block leading-tight">
-                    {formatKHR(gross)}
-                  </span>
-                  <span className="text-[10px] font-bold text-primary-600 tabular-nums block leading-none">
-                    {formatUSD(gross)}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-
-          <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums">
-            {formatKHR(unitPrice)} / {product.unit}
-            {atMax && (
-              <span className="ml-1.5 text-warning-700 font-medium">· នៅសល់ {product.stockQty}</span>
-            )}
-          </p>
-
-          {/* Bottom: stepper + discount + remove */}
-          <div className="flex items-center justify-between mt-2 gap-2">
-            {/* Quantity stepper */}
-            <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden">
-              <button
-                type="button"
-                onClick={() => updateQty(product.id, qty - 1)}
-                className="min-h-0 min-w-0 w-9 h-9 flex items-center justify-center text-slate-600 active:bg-slate-100 transition-colors"
-                aria-label="ដក"
-              >
-                <Minus size={16} strokeWidth={2.5} />
-              </button>
-              <span className="w-9 h-9 flex items-center justify-center text-[14px] font-bold text-slate-900 tabular-nums border-x border-slate-200 select-none">
-                {qty}
-              </span>
-              <button
-                type="button"
-                onClick={() => updateQty(product.id, qty + 1)}
-                disabled={atMax}
-                className="min-h-0 min-w-0 w-9 h-9 flex items-center justify-center text-primary-600 active:bg-primary-50 transition-colors disabled:text-slate-300 disabled:active:bg-transparent disabled:pointer-events-none"
-                aria-label="បន្ថែម"
-              >
-                <Plus size={16} strokeWidth={2.5} />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-1">
-              {/* Discount toggle */}
-              <button
-                type="button"
-                onClick={() => setShowDisc(v => !v)}
-                className={[
-                  'min-h-0 min-w-0 h-9 px-2.5 flex items-center gap-1 rounded-lg text-[12px] font-semibold transition-colors',
-                  hasDisc
-                    ? 'bg-success-100 text-success-700 active:bg-success-200'
-                    : showDisc
-                      ? 'bg-primary-100 text-primary-700'
-                      : 'text-slate-400 active:bg-slate-100',
-                ].join(' ')}
-                aria-label="បញ្ចុះតម្លៃ"
-              >
-                <Tag size={14} strokeWidth={2.25} />
-                {hasDisc ? `−${formatKHR(discount)}` : 'បញ្ចុះ'}
-              </button>
-
-              {/* Remove */}
-              <button
-                type="button"
-                onClick={() => removeFromCart(product.id)}
-                className="min-h-0 min-w-0 w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 active:text-danger-600 active:bg-danger-50 transition-colors"
-                aria-label="លុប"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          </div>
-
-          {/* Discount editor (expandable) */}
-          {showDisc && (
-            <div className="mt-2.5 rounded-xl bg-slate-50 border border-slate-200 p-2.5 space-y-2">
-              {/* Percent quick buttons */}
-              <div className="flex flex-wrap gap-1.5">
-                {PERCENTS.map((pct) => (
-                  <button
-                    key={pct}
-                    type="button"
-                    onClick={() => applyPercent(pct)}
-                    className="h-8 px-2.5 rounded-lg bg-white border border-slate-200 text-[12px] font-bold text-slate-600 active:bg-primary-50 active:border-primary-300 active:text-primary-700 transition-colors"
-                  >
-                    {pct}%
-                  </button>
-                ))}
-                {hasDisc && (
-                  <button
-                    type="button"
-                    onClick={clearDisc}
-                    className="h-8 px-2.5 rounded-lg bg-danger-50 border border-danger-200 text-[12px] font-bold text-danger-600 active:bg-danger-100 transition-colors flex items-center gap-1"
-                  >
-                    <X size={12} strokeWidth={2.5} />
-                    លុប
-                  </button>
-                )}
-              </div>
-
-              {/* Custom KHR input */}
-              <div className="flex gap-1.5">
-                <div className="flex-1 flex items-center border border-slate-200 rounded-lg bg-white overflow-hidden">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    value={custom}
-                    onChange={(e) => setCustom(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && applyCustom()}
-                    placeholder="ចំនួន ៛ ផ្ទាល់…"
-                    className="flex-1 h-9 px-3 text-[13px] font-semibold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none tabular-nums"
-                  />
-                  <span className="pr-2.5 text-[12px] text-slate-400">៛</span>
-                </div>
-                <button
-                  type="button"
-                  disabled={!custom || Number(custom) < 0}
-                  onClick={applyCustom}
-                  className="h-9 px-3.5 rounded-lg bg-primary-600 text-white text-[12px] font-bold disabled:opacity-40 active:bg-primary-700 transition-colors"
-                >
-                  យក
-                </button>
-              </div>
-            </div>
+        {/* Tapping the row opens the line-discount editor */}
+        <button
+          type="button"
+          onClick={() => setShowDisc(v => !v)}
+          aria-expanded={showDisc}
+          className={cx(
+            'min-w-0 flex-1 rounded-sm text-left',
+            'focus-visible:outline-2 focus-visible:outline-offset-2',
+            dark ? 'focus-visible:outline-accent' : 'focus-visible:outline-ink-900',
           )}
+        >
+          <span className="flex items-start justify-between gap-2">
+            <span className={cx('truncate text-body-sm font-semibold', dark ? 'text-white' : 'text-text')}>
+              {product.nameKm}
+            </span>
+            <span className={cx('shrink-0 text-body-sm font-bold tabular-nums', dark ? 'text-white' : 'text-text')}>
+              {formatKHR(net)}
+            </span>
+          </span>
+          <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+            {hasDisc ? (
+              <span
+                className={cx(
+                  'inline-flex h-6 items-center rounded-full px-2 text-caption font-bold tabular-nums',
+                  dark ? 'bg-ink-800 text-success-on-dark' : 'bg-success-bg text-success',
+                )}
+              >
+                បញ្ចុះ −{formatKHR(discount)}
+              </span>
+            ) : (
+              <span className={cx('text-meta tabular-nums', dark ? 'text-ink-300' : 'text-text-muted')}>
+                {formatKHR(unitPrice)} × {qty}
+              </span>
+            )}
+            {atMax && (
+              <span className={cx('text-meta font-semibold', dark ? 'text-accent' : 'text-warn')}>
+                នៅសល់ {product.stockQty}
+              </span>
+            )}
+            <span className="sr-only">· បញ្ចុះតម្លៃ</span>
+          </span>
+        </button>
+      </div>
+
+      {/* Stepper + discount + remove */}
+      <div className="mt-2 flex items-center justify-between gap-2 pl-[60px]">
+        <Stepper
+          variant={dark ? 'onDark' : 'neutral'}
+          value={qty}
+          onDecrement={() => updateQty(product.id, qty - 1)}
+          onIncrement={() => updateQty(product.id, qty + 1)}
+          disableIncrement={atMax}
+          decrementLabel="ដក"
+          incrementLabel="បន្ថែម"
+        />
+        <div className="flex items-center gap-1">
+          <IconButton
+            aria-label="បញ្ចុះតម្លៃ"
+            aria-expanded={showDisc}
+            variant={dark ? 'onDark' : 'soft'}
+            onClick={() => setShowDisc(v => !v)}
+          >
+            <Tag size={18} strokeWidth={2.25} className={hasDisc ? (dark ? 'text-success-on-dark' : 'text-success') : undefined} />
+          </IconButton>
+          <IconButton
+            aria-label="លុប"
+            variant={dark ? 'onDark' : 'soft'}
+            onClick={() => removeFromCart(product.id)}
+          >
+            <Trash2 size={18} strokeWidth={2.25} className={dark ? 'text-debt-on-dark' : 'text-danger'} />
+          </IconButton>
         </div>
       </div>
+
+      {/* Discount editor (expandable) */}
+      {showDisc && (
+        <div className={cx('mt-3 space-y-2 rounded-md p-2.5', dark ? 'bg-ink-800' : 'bg-bg')}>
+          {/* Percent quick buttons */}
+          <div className="flex flex-wrap gap-1.5">
+            {PERCENTS.map((pct) => (
+              <button
+                key={pct}
+                type="button"
+                onClick={() => applyPercent(pct)}
+                className={cx(
+                  'h-12 rounded-sm px-3 text-body-sm font-bold tabular-nums transition-colors',
+                  'focus-visible:outline-2 focus-visible:outline-offset-2',
+                  dark
+                    ? 'bg-ink-700 text-white active:bg-ink-900 focus-visible:outline-accent'
+                    : 'bg-surface text-text-subtle active:bg-surface-2 focus-visible:outline-ink-900',
+                )}
+              >
+                {pct}%
+              </button>
+            ))}
+            {hasDisc && (
+              <button
+                type="button"
+                onClick={clearDisc}
+                className="flex h-12 items-center gap-1 rounded-sm bg-danger-bg px-3 text-body-sm font-bold text-danger active:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+              >
+                <X size={14} strokeWidth={2.5} aria-hidden="true" />
+                លុប
+              </button>
+            )}
+          </div>
+
+          {/* Custom KHR input */}
+          <div className="flex gap-1.5">
+            <div className={cx('flex flex-1 items-center overflow-hidden rounded-sm', dark ? 'bg-ink-700' : 'bg-surface')}>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={custom}
+                onChange={(e) => setCustom(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && applyCustom()}
+                placeholder="ចំនួន ៛ ផ្ទាល់…"
+                aria-label="ចំនួនបញ្ចុះ ៛"
+                className={cx(
+                  'h-12 min-w-0 flex-1 bg-transparent px-3 text-body font-semibold tabular-nums outline-none',
+                  dark ? 'text-white placeholder:text-ink-300' : 'text-text placeholder:text-text-muted',
+                )}
+              />
+              <span className={cx('pr-3 text-meta', dark ? 'text-ink-300' : 'text-text-muted')}>៛</span>
+            </div>
+            <button
+              type="button"
+              disabled={!custom || Number(custom) < 0}
+              onClick={applyCustom}
+              className={cx(
+                'h-12 rounded-sm px-4 text-body-sm font-bold transition-colors disabled:opacity-40',
+                'focus-visible:outline-2 focus-visible:outline-offset-2',
+                dark ? 'bg-accent text-ink-900 focus-visible:outline-white' : 'bg-ink-900 text-white active:bg-ink-800 focus-visible:outline-ink-900',
+              )}
+            >
+              យក
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -20,12 +20,14 @@ export interface PageHeaderProps {
   actions?: ReactNode | undefined
   /** Hero content under the title row */
   children?: ReactNode
+  /** Hero only: tighter top padding for task screens (e.g. the POS) */
+  compact?: boolean | undefined
   className?: string | undefined
 }
 
 export function PageHeader({
   variant = 'light', title, subtitle, backHref, onBack, backLabel = 'ត្រឡប់ក្រោយ',
-  actions, children, className,
+  actions, children, compact = false, className,
 }: PageHeaderProps) {
   const hero = variant === 'hero'
   const btnVariant = hero ? 'onDark' : 'light'
@@ -40,7 +42,10 @@ export function PageHeader({
       className={cx(
         'shrink-0 px-4 md:px-7',
         hero
-          ? 'rounded-b-2xl bg-ink-900 pb-5 text-white pt-[max(56px,calc(env(safe-area-inset-top)+20px))] md:pt-6'
+          ? cx(
+              'rounded-b-2xl bg-ink-900 text-white md:pt-6',
+              compact ? 'pb-4 pt-[max(16px,calc(env(safe-area-inset-top)+12px))]' : 'pb-5 pt-[max(56px,calc(env(safe-area-inset-top)+20px))]',
+            )
           : 'pb-3 pt-[max(20px,calc(env(safe-area-inset-top)+12px))]',
         className,
       )}
