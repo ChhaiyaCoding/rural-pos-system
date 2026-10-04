@@ -1,50 +1,59 @@
-import { type ButtonHTMLAttributes } from 'react'
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { cx } from './cx'
 
-type Variant = 'primary' | 'success' | 'danger' | 'secondary' | 'ghost'
-type Size    = 'sm' | 'md' | 'lg'
+export type ButtonVariant = 'primary' | 'dark' | 'secondary' | 'onDark' | 'dangerSoft' | 'dashed'
+export type ButtonSize = 'md' | 'lg' | 'xl'
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: Variant
-  size?: Size
-  fullWidth?: boolean
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant | undefined
+  /** md 48px · lg 56px · xl 62px (primary CTA) */
+  size?: ButtonSize | undefined
+  /** Leading icon (lucide element) */
+  icon?: ReactNode | undefined
+  /** Trailing icon */
+  iconEnd?: ReactNode | undefined
+  fullWidth?: boolean | undefined
 }
 
-const VARIANT: Record<Variant, string> = {
-  primary:   'bg-primary-600 text-white active:bg-primary-700',
-  success:   'bg-success-600 text-white active:bg-success-700',
-  danger:    'bg-danger-600 text-white active:bg-danger-700',
-  secondary: 'bg-slate-100 text-slate-700 active:bg-slate-200',
-  ghost:     'bg-transparent text-slate-700 active:bg-slate-100',
+const VARIANT: Record<ButtonVariant, string> = {
+  // Text on accent is always ink, never white.
+  primary:    'bg-accent text-ink-900 active:brightness-95 focus-visible:outline-ink-900',
+  dark:       'bg-ink-900 text-white active:bg-ink-800 focus-visible:outline-accent',
+  secondary:  'bg-surface text-ink-900 border border-line active:bg-surface-2 focus-visible:outline-ink-900',
+  onDark:     'bg-ink-800 text-white active:bg-ink-700 focus-visible:outline-accent',
+  dangerSoft: 'bg-danger-bg text-danger active:brightness-95 focus-visible:outline-danger',
+  dashed:     'bg-transparent text-text-subtle border-2 border-dashed border-line-strong active:bg-surface-2 focus-visible:outline-ink-900',
 }
 
-const SIZE: Record<Size, string> = {
-  sm: 'h-9 px-3 text-[13px]',
-  md: 'h-11 px-4 text-[14px]',
-  lg: 'h-13 px-5 text-[15px]',   // standard full-width primary CTA
+const SIZE: Record<ButtonSize, string> = {
+  md: 'h-12 px-4 text-body',
+  lg: 'h-14 px-5 text-label-lg',
+  xl: 'h-[62px] px-6 text-label-lg',
 }
 
-export function Button({
-  variant = 'primary',
-  size = 'md',
-  fullWidth = false,
-  className = '',
-  children,
-  ...props
-}: ButtonProps) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { variant = 'primary', size = 'md', icon, iconEnd, fullWidth = false, className, type = 'button', children, ...props },
+  ref,
+) {
   return (
     <button
+      ref={ref}
+      type={type}
       {...props}
-      className={[
-        'inline-flex items-center justify-center gap-2 rounded-xl font-bold',
-        'transition-colors select-none',
+      className={cx(
+        'inline-flex items-center justify-center gap-2 rounded-md font-bold select-none',
+        'transition-[background-color,filter] duration-150',
+        'focus-visible:outline-2 focus-visible:outline-offset-2',
         'disabled:opacity-50 disabled:pointer-events-none',
         VARIANT[variant],
         SIZE[size],
-        fullWidth ? 'w-full' : '',
+        fullWidth && 'w-full',
         className,
-      ].join(' ')}
+      )}
     >
+      {icon && <span className="shrink-0 inline-flex" aria-hidden="true">{icon}</span>}
       {children}
+      {iconEnd && <span className="shrink-0 inline-flex" aria-hidden="true">{iconEnd}</span>}
     </button>
   )
-}
+})

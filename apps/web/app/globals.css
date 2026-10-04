@@ -19,6 +19,7 @@
   --color-surface-2:   #F5F7FA;  /* nested blocks inside cards */
   --color-line:        #E2E6EC;  /* dividers */
   --color-line-strong: #D3D9E1;  /* input borders, dashed dividers */
+  --color-track:       #DDE2EA;  /* light segmented-control track */
 
   /* Text */
   --color-text:        #0F1B2D;
