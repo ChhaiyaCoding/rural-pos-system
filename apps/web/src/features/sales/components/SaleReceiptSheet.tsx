@@ -219,7 +219,7 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
       <div
         className="
           w-full md:max-w-[420px]
-          bg-surface rounded-t-2xl md:rounded-2xl
+          bg-bg rounded-t-2xl md:rounded-2xl
           max-h-[96dvh] flex flex-col
           shadow-pop animate-sheet-up
         "

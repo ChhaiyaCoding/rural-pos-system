@@ -295,7 +295,7 @@ export function POSScreen() {
   /* ────────────────────────────────────────────────────────── */
 
   return (
-    <div className="flex h-full overflow-hidden bg-surface">
+    <div className="flex h-full overflow-hidden bg-bg">
 
       {/* ════════════════════════════════════════════════════
           LEFT — Header + Search + Product Grid
@@ -424,7 +424,7 @@ export function POSScreen() {
 
         {/* ── Mobile checkout bar (above bottom nav) ───────── */}
         {count > 0 && (
-          <div className="md:hidden shrink-0 px-3 pb-3 pt-1 bg-surface">
+          <div className="md:hidden shrink-0 px-3 pb-3 pt-1 bg-bg">
             <button
               type="button"
               ref={cartBtnRef}
