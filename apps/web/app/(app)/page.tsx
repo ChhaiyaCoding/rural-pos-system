@@ -4,12 +4,19 @@ import Link from 'next/link'
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
   ShoppingCart, PackagePlus, Wallet, HandCoins,
-  TrendingUp, Package, Users, ChevronRight,
+  Package, Users, ChartColumn, ArrowRight,
 } from 'lucide-react'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
 import { todayISODate, startOfTodayISO } from '@/lib/date'
 import { useStoreProfile } from '@/store/storeProfile.store'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { MoneyText } from '@/components/ui/MoneyText'
+import { StatTile } from '@/components/ui/StatTile'
+import { ListRow } from '@/components/ui/ListRow'
+import { Pill } from '@/components/ui/Pill'
+import { cx } from '@/components/ui/cx'
+import { firstGrapheme } from '@/components/ui/text'
 import type { KHR, TenantId } from '@/types/branded'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
@@ -62,125 +69,140 @@ export default function HomePage() {
   const debtorCount = customers.filter(c => (c.debtBalance as number) > 0).length
 
   return (
-    <div className="flex flex-col h-full bg-slate-50">
+    <div className="mx-auto w-full max-w-5xl md:px-6 md:pt-6">
+      <div className="md:grid md:grid-cols-3 md:items-start md:gap-5">
 
-      {/* Header */}
-      <header className="shrink-0 px-4 pt-5 pb-4 bg-white border-b border-slate-200">
-        <p className="text-[13px] text-slate-400">សួស្តី {cashierName} 👋</p>
-        <h1 className="text-[19px] font-bold text-slate-900">{storeName}</h1>
-      </header>
-
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="px-4 pt-4 pb-8 space-y-4 max-w-xl mx-auto">
-
-          {/* Today stats */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-card p-4">
-              <div className="flex items-center gap-1.5 mb-1">
-                <ShoppingCart size={14} className="text-success-600" />
-                <p className="text-[11px] font-semibold text-slate-400">ការលក់ថ្ងៃនេះ</p>
-              </div>
-              <p className="text-[20px] font-extrabold text-slate-900 tabular-nums leading-tight">{formatKHR(todayRevenue)}</p>
-              <p className="text-[12px] font-bold text-primary-600 tabular-nums">{formatUSD(todayRevenue)}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">{todayCount} ការលក់</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-card p-4">
-              <div className="flex items-center gap-1.5 mb-1">
-                <TrendingUp size={14} className={todayProfit >= 0 ? 'text-success-600' : 'text-danger-600'} />
-                <p className="text-[11px] font-semibold text-slate-400">ចំណេញថ្ងៃនេះ</p>
-              </div>
-              <p className={[
-                'text-[20px] font-extrabold tabular-nums leading-tight',
-                todayProfit >= 0 ? 'text-success-700' : 'text-slate-900',
-              ].join(' ')}>{formatKHR(todayProfit)}</p>
-              <p className={[
-                'text-[12px] font-bold tabular-nums',
-                todayProfit >= 0 ? 'text-primary-600' : 'text-danger-600',
-              ].join(' ')}>{formatUSD(todayProfit)}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">ចំណូល − ចំណាយ</p>
-            </div>
-          </div>
-
-          {/* Low stock alert */}
-          <Link
-            href="/inventory"
-            className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white shadow-card px-4 py-3.5 active:bg-slate-50 transition-colors"
-          >
-            <div className={[
-              'shrink-0 w-10 h-10 rounded-xl flex items-center justify-center',
-              lowStockCount > 0 ? 'bg-warning-50 text-warning-600' : 'bg-slate-50 text-slate-400',
-            ].join(' ')}>
-              <Package size={20} strokeWidth={2} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-semibold text-slate-800">ស្តុកជិតអស់</p>
-              <p className="text-[12px] text-slate-400">
-                {lowStockCount > 0 ? `${lowStockCount} មុខ ត្រូវ​បន្ថែម​ស្តុក` : 'ស្តុក​គ្រប់គ្រាន់'}
-              </p>
-            </div>
-            {lowStockCount > 0 && (
-              <span className="shrink-0 min-w-[22px] h-[22px] px-1.5 rounded-full bg-warning-500 text-white text-[12px] font-bold flex items-center justify-center tabular-nums">
-                {lowStockCount}
+        {/* ── Hero: today's sales + stats + quick actions ───────── */}
+        <div className="md:col-span-2">
+          <PageHeader
+            variant="hero"
+            className="md:rounded-xl md:pb-6"
+            leading={
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-accent text-title-sm font-bold text-ink-900" aria-hidden="true">
+                {firstGrapheme(storeName || 'ហាង')}
               </span>
-            )}
-            <ChevronRight size={16} className="text-slate-300 shrink-0" />
-          </Link>
-
-          {/* Debt summary */}
-          <Link
-            href="/debt"
-            className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white shadow-card px-4 py-3.5 active:bg-slate-50 transition-colors"
+            }
+            title={storeName}
+            subtitle={`សួស្តី ${cashierName} 👋`}
           >
-            <div className={[
-              'shrink-0 w-10 h-10 rounded-xl flex items-center justify-center',
-              debtorCount > 0 ? 'bg-danger-50 text-danger-600' : 'bg-slate-50 text-slate-400',
-            ].join(' ')}>
-              <Users size={20} strokeWidth={2} />
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-meta font-semibold text-ink-300">ការលក់ថ្ងៃនេះ</p>
+              <Link
+                href="/reports"
+                className="inline-flex items-center gap-1 rounded-sm px-2 text-meta font-semibold text-accent focus-visible:outline-2 focus-visible:outline-accent"
+              >
+                របាយការណ៍
+                <ArrowRight size={16} strokeWidth={2.5} aria-hidden="true" />
+              </Link>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-semibold text-slate-800">បំណុលអតិថិជន</p>
-              <p className="text-[12px] text-slate-400">{debtorCount} នាក់ជំពាក់</p>
+            <MoneyText amount={todayRevenue} size="xl" tone="onDark" usd={false} />
+            <p className="text-meta tabular-nums text-ink-300">
+              {formatUSD(todayRevenue)} · {todayCount} វិក្កយបត្រ
+            </p>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <StatTile
+                tone="onDark"
+                label="ចំណេញ"
+                value={formatKHR(todayProfit)}
+                dot={todayProfit >= 0 ? 'bg-success-on-dark' : 'bg-debt-on-dark'}
+              />
+              <StatTile tone="onDark" label="ចំណាយ" value={formatKHR(todayExpenseTotal)} />
+              <StatTile tone="onDark" label="ជំពាក់" value={formatKHR(totalDebt)} sub={`${debtorCount} នាក់`} />
             </div>
-            <div className="shrink-0 text-right">
-              <p className="text-[14px] font-bold text-danger-600 tabular-nums leading-tight">{formatKHR(totalDebt)}</p>
-              <p className="text-[11px] font-bold text-primary-600 tabular-nums">{formatUSD(totalDebt)}</p>
-            </div>
-            <ChevronRight size={16} className="text-slate-300 shrink-0" />
-          </Link>
+          </PageHeader>
 
           {/* Quick actions */}
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">សកម្មភាពរហ័ស</p>
-            <div className="grid grid-cols-2 gap-3">
-              <QuickAction href="/sell"      icon={<ShoppingCart size={20} strokeWidth={2.25} />} label="លក់ទំនិញ"     primary />
-              <QuickAction href="/inventory" icon={<PackagePlus size={20} strokeWidth={2.25} />}  label="បន្ថែមទំនិញ" />
-              <QuickAction href="/expenses"  icon={<Wallet size={20} strokeWidth={2.25} />}       label="កត់ចំណាយ"    />
-              <QuickAction href="/debt"      icon={<HandCoins size={20} strokeWidth={2.25} />}    label="ទទួលបំណុល"   />
-            </div>
-          </div>
-
+          <nav aria-label="សកម្មភាពរហ័ស" className="grid grid-cols-4 gap-2 px-4 pt-5 md:px-0">
+            <QuickAction href="/sell"      icon={<ShoppingCart size={24} strokeWidth={2.25} />} label="លក់ទំនិញ"    primary />
+            <QuickAction href="/inventory" icon={<PackagePlus size={24} strokeWidth={2.25} />}  label="បន្ថែមទំនិញ" />
+            <QuickAction href="/expenses"  icon={<Wallet size={24} strokeWidth={2.25} />}       label="កត់ចំណាយ"    />
+            <QuickAction href="/debt"      icon={<HandCoins size={24} strokeWidth={2.25} />}    label="ទទួលបំណុល"   />
+          </nav>
         </div>
+
+        {/* ── Today's to-do ──────────────────────────────────────── */}
+        <section className="px-4 pb-6 pt-6 md:px-0 md:pt-0">
+          <h2 className="mb-2.5 text-title-sm font-bold text-text">ត្រូវធ្វើថ្ងៃនេះ</h2>
+          <div className="space-y-2">
+            <ListRow
+              href="/inventory"
+              leading={
+                <TaskIcon tone={lowStockCount > 0 ? 'warn' : 'neutral'}>
+                  <Package size={22} strokeWidth={2} />
+                </TaskIcon>
+              }
+              title="ស្តុកជិតអស់"
+              meta={lowStockCount > 0 ? `${lowStockCount} មុខ ត្រូវ​បន្ថែម​ស្តុក` : 'ស្តុក​គ្រប់គ្រាន់'}
+              trailing={lowStockCount > 0 ? <Pill variant="warn">{lowStockCount}</Pill> : undefined}
+              chevron
+            />
+            <ListRow
+              href="/debt"
+              leading={
+                <TaskIcon tone={debtorCount > 0 ? 'debt' : 'neutral'}>
+                  <Users size={22} strokeWidth={2} />
+                </TaskIcon>
+              }
+              title="បំណុលអតិថិជន"
+              meta={`${debtorCount} នាក់ជំពាក់`}
+              trailing={<MoneyText amount={totalDebt} tone={debtorCount > 0 ? 'debt' : 'muted'} align="right" />}
+              chevron
+            />
+            <ListRow
+              href="/reports"
+              leading={
+                <TaskIcon tone="ink">
+                  <ChartColumn size={22} strokeWidth={2} />
+                </TaskIcon>
+              }
+              title="របាយការណ៍"
+              meta="ចំណូល · ចំណាយ · ចំណេញ"
+              chevron
+            />
+          </div>
+        </section>
       </div>
     </div>
   )
 }
 
+/** Round-square quick action: 62px icon tile with the label underneath. */
 function QuickAction({
   href, icon, label, primary = false,
 }: { href: string; icon: React.ReactNode; label: string; primary?: boolean }) {
   return (
     <Link
       href={href}
-      className={[
-        'flex items-center gap-2.5 rounded-2xl px-4 h-16 font-bold text-[14px] shadow-card active:scale-[0.99] transition-all',
-        primary
-          ? 'bg-primary-600 text-white active:bg-primary-700'
-          : 'bg-white border border-slate-200 text-slate-800 active:bg-slate-50',
-      ].join(' ')}
+      className="flex flex-col items-center gap-1.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
     >
-      <span className={primary ? 'text-white' : 'text-primary-600'}>{icon}</span>
-      {label}
+      <span
+        className={cx(
+          'flex h-[62px] w-[62px] items-center justify-center rounded-[20px] transition-transform active:scale-95',
+          primary ? 'bg-accent text-ink-900' : 'bg-surface text-ink-900',
+        )}
+        aria-hidden="true"
+      >
+        {icon}
+      </span>
+      <span className="text-center text-meta font-semibold leading-tight text-text">{label}</span>
     </Link>
+  )
+}
+
+/** 48px tinted icon tile for a to-do row. */
+function TaskIcon({ tone, children }: { tone: 'warn' | 'debt' | 'ink' | 'neutral'; children: React.ReactNode }) {
+  return (
+    <span
+      className={cx(
+        'flex h-12 w-12 items-center justify-center rounded-md',
+        tone === 'warn' ? 'bg-warn-bg text-warn'
+          : tone === 'debt' ? 'bg-debt-bg text-debt'
+          : tone === 'ink' ? 'bg-ink-900 text-accent'
+          : 'bg-surface-2 text-text-muted',
+      )}
+      aria-hidden="true"
+    >
+      {children}
+    </span>
   )
 }

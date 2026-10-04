@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff, ShoppingBag, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, ShoppingBag, Loader2, Store } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { useAuthStore } from '@/store/auth.store'
 import type { UserId, TenantId } from '@/types/branded'
 
@@ -91,136 +93,117 @@ export default function LoginPage() {
   /* ──────────────────────────────────────────────────────────── */
 
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-primary-700 to-primary-500 flex flex-col items-center justify-center px-5 py-8">
+    <div className="flex min-h-dvh flex-col bg-ink-900 md:items-center md:justify-center md:p-8">
 
-      {/* App logo / header */}
-      <div className="text-center mb-8 space-y-2">
-        <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mx-auto shadow-lg">
-          <ShoppingBag size={32} className="text-white" strokeWidth={2} />
+      {/* Brand */}
+      <div className="flex flex-1 flex-col items-center justify-center px-6 pb-8 pt-[max(48px,env(safe-area-inset-top))] text-center md:flex-none md:pt-0">
+        <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-accent text-ink-900" aria-hidden="true">
+          <ShoppingBag size={32} strokeWidth={2} />
         </div>
-        <h1 className="text-[26px] font-extrabold text-white tracking-tight">
-          POS ហាង
-        </h1>
-        <p className="text-[13px] text-primary-200">
-          ប្រព័ន្ធគ្រប់គ្រងការលក់ · Offline-first
-        </p>
+        <h1 className="mt-4 text-title-lg font-bold text-white">POS ហាង</h1>
+        <p className="mt-1 text-body-sm text-ink-300">ប្រព័ន្ធគ្រប់គ្រងការលក់ · Offline-first</p>
       </div>
 
-      {/* Card */}
-      <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden">
+      {/* Panel */}
+      <div className="w-full rounded-t-2xl bg-surface px-6 pt-7 pb-[max(24px,env(safe-area-inset-bottom))] md:max-w-md md:rounded-2xl md:pb-7">
+        <h2 className="text-title-sm font-bold text-text">ចូលប្រើ</h2>
+        <p className="mt-0.5 text-meta text-text-muted">ចូលដើម្បី ចាប់ផ្ដើម គ្រប់គ្រង ហាង</p>
 
-        {/* Card header */}
-        <div className="px-6 pt-6 pb-4 border-b border-slate-100">
-          <h2 className="text-[18px] font-bold text-slate-900">ចូលប្រើ</h2>
-          <p className="text-[12px] text-slate-400 mt-0.5">
-            ចូលដើម្បី ចាប់ផ្ដើម គ្រប់គ្រង ហាង
-          </p>
-        </div>
-
-        <form onSubmit={handleLogin} className="px-6 py-5 space-y-4">
+        <form onSubmit={handleLogin} className="mt-5 space-y-3">
 
           {/* Error message */}
           {error && (
-            <div className="flex items-start gap-2.5 bg-danger-50 border border-danger-100 rounded-xl px-4 py-3">
-              <span className="text-danger-500 text-[16px] mt-0.5 shrink-0">⚠️</span>
-              <p className="text-[13px] font-medium text-danger-700 leading-snug">{error}</p>
+            <div role="alert" className="flex items-start gap-2.5 rounded-md bg-danger-bg px-4 py-3">
+              <span className="mt-0.5 shrink-0 text-body" aria-hidden="true">⚠️</span>
+              <p className="text-body-sm font-semibold text-danger">{error}</p>
             </div>
           )}
 
-          {/* Email */}
-          <div className="space-y-1.5">
-            <label className="block text-[13px] font-semibold text-slate-700">
-              អ៊ីមែល
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="your@email.com"
-              autoCapitalize="none"
-              autoComplete="email"
-              required={hasSupabase}
-              disabled={loading || demoLoading}
-              className="w-full h-12 px-4 border border-slate-200 rounded-xl text-[15px] text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:bg-slate-50 disabled:text-slate-400 transition-colors"
-            />
-          </div>
+          <Input
+            label="អ៊ីមែល"
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="your@email.com"
+            autoCapitalize="none"
+            autoComplete="email"
+            required={hasSupabase}
+            disabled={loading || demoLoading}
+          />
 
-          {/* Password */}
-          <div className="space-y-1.5">
-            <label className="block text-[13px] font-semibold text-slate-700">
-              លេខសម្ងាត់
-            </label>
-            <div className="relative">
-              <input
-                type={showPw ? 'text' : 'password'}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                required={hasSupabase}
-                disabled={loading || demoLoading}
-                className="w-full h-12 pl-4 pr-12 border border-slate-200 rounded-xl text-[15px] text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:bg-slate-50 disabled:text-slate-400 transition-colors"
-              />
+          <Input
+            label="លេខសម្ងាត់"
+            type={showPw ? 'text' : 'password'}
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            required={hasSupabase}
+            disabled={loading || demoLoading}
+            trailing={
               <button
                 type="button"
                 onClick={() => setShowPw(v => !v)}
-                className="min-h-0 min-w-0 absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-400 active:text-slate-600"
+                aria-label={showPw ? 'លាក់លេខសម្ងាត់' : 'បង្ហាញលេខសម្ងាត់'}
+                className="-mr-3 flex h-12 w-12 items-center justify-center rounded-md text-text-muted active:text-text"
                 tabIndex={-1}
               >
                 {showPw
-                  ? <EyeOff size={17} strokeWidth={2} />
-                  : <Eye    size={17} strokeWidth={2} />
+                  ? <EyeOff size={20} strokeWidth={2} aria-hidden="true" />
+                  : <Eye    size={20} strokeWidth={2} aria-hidden="true" />
                 }
               </button>
-            </div>
-          </div>
+            }
+          />
 
           {/* Login button — only show if Supabase configured */}
           {hasSupabase && (
-            <button
+            <Button
               type="submit"
+              variant="dark"
+              size="lg"
+              fullWidth
               disabled={loading || demoLoading || !email.trim() || !password}
-              className="w-full h-12 bg-primary-600 text-white font-bold text-[15px] rounded-xl active:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              icon={loading ? <Loader2 size={18} className="animate-spin" /> : undefined}
             >
-              {loading && <Loader2 size={18} className="animate-spin" />}
               {loading ? 'កំពុងចូល…' : 'ចូលប្រើ'}
-            </button>
+            </Button>
           )}
         </form>
 
         {/* Demo mode separator + button */}
-        <div className="px-6 pb-6 space-y-4">
+        <div className="mt-4 space-y-4">
           {hasSupabase && (
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-slate-100" />
-              <span className="text-[11px] text-slate-300 font-medium">ឬ</span>
-              <div className="flex-1 h-px bg-slate-100" />
+            <div className="flex items-center gap-3" aria-hidden="true">
+              <div className="h-px flex-1 bg-line" />
+              <span className="text-meta font-semibold text-text-muted">ឬ</span>
+              <div className="h-px flex-1 bg-line" />
             </div>
           )}
 
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
             onClick={handleDemo}
             disabled={loading || demoLoading}
-            className="w-full h-12 bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-[14px] rounded-xl active:bg-slate-100 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+            icon={demoLoading ? <Loader2 size={18} className="animate-spin" /> : <Store size={18} strokeWidth={2.25} />}
           >
-            {demoLoading && <Loader2 size={17} className="animate-spin text-slate-400" />}
-            {demoLoading ? 'កំពុងចូល Demo…' : '🏪 ចូល Demo Mode'}
-          </button>
+            {demoLoading ? 'កំពុងចូល Demo…' : 'សាកប្រើ Demo Mode'}
+          </Button>
 
           {!hasSupabase && (
-            <p className="text-center text-[11px] text-slate-300 leading-relaxed">
+            <p className="text-center text-meta text-text-muted">
               Supabase មិន​ទាន់ configure — ប្រើ Demo Mode ចំពោះ​ការ test
             </p>
           )}
         </div>
 
+        {/* Footer */}
+        <p className="mt-6 text-center text-caption text-text-muted">
+          Rural POS · Offline-first · Made for Cambodia 🇰🇭
+        </p>
       </div>
-
-      {/* Footer */}
-      <p className="mt-8 text-[11px] text-primary-300 text-center">
-        Rural POS · Offline-first · Made for Cambodia 🇰🇭
-      </p>
     </div>
   )
 }

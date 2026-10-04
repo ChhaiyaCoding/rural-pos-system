@@ -12,6 +12,12 @@ import { RestockSheet } from '@/features/inventory/components/RestockSheet'
 import { useCategoryStore } from '@/store/category.store'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SearchInput } from '@/components/ui/SearchInput'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Button } from '@/components/ui/Button'
+import { iconButtonClass } from '@/components/ui/IconButton'
+import { ProductThumb } from '@/components/ui/ProductThumb'
+import { cx } from '@/components/ui/cx'
+import type { KHR } from '@/types'
 import type { Product } from '@/types'
 import type { TenantId } from '@/types/branded'
 
@@ -90,196 +96,166 @@ export default function InventoryPage() {
     return base
   }, [products, tab, search])
 
-  return (
-    <div className="flex flex-col h-full bg-slate-50">
+  /* ── Display only ───────────────────────────────────────────── */
+  const stockValue = products.reduce((sum, p) => sum + (p.costPrice as number) * p.stockQty, 0) as KHR
+  const categoryTabs = TABS.filter((t) => t.id !== 'all' && t.id !== 'low')
 
-      {/* Header */}
-      <header className="shrink-0 px-4 pt-5 pb-4 bg-white border-b border-slate-200">
-        <div className="flex items-center justify-between">
-          <h1 className="text-[19px] font-bold text-slate-900">ស្តុកទំនិញ</h1>
-          <div className="flex items-center gap-3">
-            <Link href="/suppliers" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-slate-100 text-slate-600 text-[12px] font-bold active:bg-slate-200 transition-colors">
-              <Truck size={14} strokeWidth={2.25} /> អ្នកផ្គត់ផ្គង់
+  return (
+    <div className="mx-auto w-full max-w-3xl md:px-6">
+
+      <PageHeader
+        title="ស្តុកទំនិញ"
+        subtitle={`${products.length} ទំនិញ · តម្លៃស្តុក ${formatKHR(stockValue)}`}
+        className="md:px-0"
+        actions={
+          <>
+            <Link href="/suppliers" aria-label="អ្នកផ្គត់ផ្គង់" className={iconButtonClass('light')}>
+              <Truck size={20} strokeWidth={2.25} aria-hidden="true" />
             </Link>
-            <span className="text-[12px] text-slate-400 font-medium">{products.length} ទំនិញ</span>
+            <Button variant="dark" icon={<Plus size={18} strokeWidth={2.5} />} onClick={() => setAddOpen(true)}>
+              ទំនិញថ្មី
+            </Button>
+          </>
+        }
+      />
+
+      <div className="space-y-3 px-4 md:px-0">
+        {/* Filter tiles — ទាំងអស់ / ស្តុកតិច use the existing filters */}
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => setTab('all')}
+            aria-pressed={tab === 'all'}
+            className={cx(
+              'flex flex-col items-start rounded-lg bg-ink-900 p-3.5 text-left text-white',
+              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
+              tab === 'all' && 'ring-2 ring-accent',
+            )}
+          >
+            <span className="text-amount font-bold tabular-nums">{products.length}</span>
+            <span className="text-meta font-semibold text-ink-300">ទាំងអស់</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('low')}
+            aria-pressed={tab === 'low'}
+            className={cx(
+              'flex flex-col items-start rounded-lg bg-warn-bg p-3.5 text-left text-warn',
+              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warn',
+              tab === 'low' && 'ring-2 ring-warn',
+            )}
+          >
+            <span className="text-amount font-bold tabular-nums">{alertCount}</span>
+            <span className="text-meta font-semibold">ស្តុកតិច</span>
+          </button>
+          <div className="flex flex-col items-start rounded-lg bg-danger-bg p-3.5 text-danger">
+            <span className="text-amount font-bold tabular-nums">{outCount}</span>
+            <span className="text-meta font-semibold">អស់ស្តុក</span>
           </div>
         </div>
 
-        {/* Summary chips */}
-        {(lowStockCount > 0 || outCount > 0) && (
-          <div className="mt-2 flex gap-2">
-            {outCount > 0 && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-danger-700 bg-danger-50 border border-danger-100 rounded-full px-2.5 py-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-danger-500" />
-                អស់ស្តុក {outCount}
-              </span>
-            )}
-            {lowStockCount > 0 && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-warning-700 bg-warning-50 border border-warning-100 rounded-full px-2.5 py-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-warning-500" />
-                ស្ទើរអស់ {lowStockCount}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Search */}
         <SearchInput
-          className="mt-3"
           value={search}
           onChange={setSearch}
           placeholder="ស្វែង ឈ្មោះ · EN · barcode · តម្លៃ…"
         />
 
-        {/* Category tabs */}
-        <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar py-0.5">
-          {TABS.map((t) => {
-            const count = t.id === 'all' ? products.length
-                        : t.id === 'low' ? alertCount
-                        : products.filter((p) => p.categoryId === t.id).length
-            const isAlert = t.id === 'low'
-            const isActive = tab === t.id
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setTab(t.id)}
-                className={[
-                  'min-h-0 shrink-0 h-9 px-4 rounded-full whitespace-nowrap',
-                  'text-[13px] font-semibold transition-colors flex items-center gap-1.5',
-                  isActive
-                    ? isAlert ? 'bg-warning-500 text-white shadow-sm' : 'bg-primary-600 text-white shadow-sm'
-                    : isAlert && alertCount > 0
-                      ? 'bg-warning-100 text-warning-700 border border-warning-200 active:bg-warning-200'
-                      : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50',
-                ].join(' ')}
-              >
-                {t.label}
-                <span className={[
-                  'tabular-nums text-[11px] font-bold rounded-full px-1.5 min-w-[18px] text-center',
-                  isActive
-                    ? 'bg-white/20 text-white'
-                    : isAlert && alertCount > 0
-                      ? 'bg-warning-200/60 text-warning-700'
-                      : 'bg-slate-100 text-slate-500',
-                ].join(' ')}>
-                  {count}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </header>
+        {/* Category pills */}
+        {categoryTabs.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            {categoryTabs.map((t) => {
+              const isActive = tab === t.id
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTab(isActive ? 'all' : t.id)}
+                  aria-pressed={isActive}
+                  className={cx(
+                    'flex h-12 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 text-body-sm font-semibold transition-colors',
+                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
+                    isActive ? 'bg-ink-900 text-white' : 'bg-surface text-text-subtle active:bg-surface-2',
+                  )}
+                >
+                  {t.label}
+                  <span className="text-caption font-bold tabular-nums opacity-70">{categoryCounts[t.id] ?? 0}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Product list */}
-      {products.length === 0 ? (
-        <EmptyState
-          fullHeight
-          icon={<Package size={30} strokeWidth={1.5} />}
-          title="មិនទាន់មានទំនិញ"
-          description="ចុច + ដើម្បីបន្ថែមទំនិញដំបូង"
-        />
-      ) : filtered.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-[12px] text-slate-400">រកមិនឃើញ «{search}»</p>
-        </div>
-      ) : (
-        <div className="flex-1 overflow-y-auto">
-          <div className="px-4 pt-4 pb-24 max-w-xl mx-auto">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-card divide-y divide-slate-100 overflow-hidden">
-          {filtered.map((product) => {
-            const isOut   = product.stockQty === 0
-            const isLow   = !isOut && product.stockQty <= product.lowStockThreshold
-            const isAlert = isOut || isLow
-            return (
-              <div key={product.id} className="flex items-center gap-2 px-4 py-3.5">
-                {/* Tap row → edit */}
-                <button
-                  type="button"
-                  onClick={() => setEditing(product)}
-                  className="flex-1 flex items-center gap-3 min-w-0 text-left active:opacity-70 transition-opacity"
-                >
-                  {/* Image / Emoji */}
-                  <div className={[
-                    'shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-[24px] overflow-hidden',
-                    isOut ? 'bg-danger-50 border border-danger-100'
-                    : isLow ? 'bg-warning-50 border border-warning-100'
-                    : 'bg-slate-50 border border-slate-100',
-                  ].join(' ')}>
-                    {product.imageUri ? (
-                      <img src={product.imageUri} alt={product.nameKm} className="w-full h-full object-cover" />
-                    ) : (
-                      product.emoji || '📦'
-                    )}
-                  </div>
-
-                  {/* Name + category */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-semibold text-slate-900 truncate">{product.nameKm}</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      {CATEGORY_LABELS[product.categoryId] ?? product.categoryId}
-                      {' · '}{product.unit}
-                    </p>
-                  </div>
-
-                  {/* Stock info */}
-                  <div className="shrink-0 text-right">
-                    <p className={[
-                      'text-[14px] font-bold tabular-nums',
-                      isOut ? 'text-danger-600' : isLow ? 'text-warning-600' : 'text-success-700',
-                    ].join(' ')}>
-                      {isOut ? 'អស់' : `${product.stockQty} ${product.unit}`}
-                    </p>
-                    <p className="text-[12px] font-semibold text-slate-700 tabular-nums mt-0.5">
-                      {formatKHR(product.sellPrice)}
-                    </p>
-                    <p className="text-[10px] font-bold text-primary-600 tabular-nums">
-                      {formatUSD(product.sellPrice)}
-                    </p>
-                    {isAlert && (
-                      <span className={[
-                        'inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full mt-0.5',
-                        isOut ? 'bg-danger-100 text-danger-700' : 'bg-warning-100 text-warning-700',
-                      ].join(' ')}>
-                        {isOut ? '🔴 អស់ស្តុក' : '⚠️ ស្ទើរអស់'}
+      <div className="px-4 pb-6 pt-3 md:px-0">
+        {products.length === 0 ? (
+          <EmptyState
+            icon={<Package size={30} strokeWidth={1.5} />}
+            title="មិនទាន់មានទំនិញ"
+            description="ចុច + ដើម្បីបន្ថែមទំនិញដំបូង"
+          />
+        ) : filtered.length === 0 ? (
+          <p className="py-16 text-center text-meta text-text-muted">រកមិនឃើញ «{search}»</p>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map((product) => {
+              const isOut   = product.stockQty === 0
+              const isLow   = !isOut && product.stockQty <= product.lowStockThreshold
+              const isAlert = isOut || isLow
+              const full    = Math.max(1, product.lowStockThreshold * 3)
+              const ratio   = Math.min(1, product.stockQty / full)
+              return (
+                <div key={product.id} className="flex items-center gap-2 rounded-lg bg-surface py-3 pl-3 pr-2">
+                  {/* Tap row → edit */}
+                  <button
+                    type="button"
+                    onClick={() => setEditing(product)}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
+                  >
+                    <ProductThumb product={product} size={48} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-body-sm font-semibold text-text">{product.nameKm}</span>
+                      <span
+                        className={cx(
+                          'block truncate text-meta font-semibold tabular-nums',
+                          isOut ? 'text-danger' : isLow ? 'text-warn' : 'text-success',
+                        )}
+                      >
+                        {isOut ? 'អស់ស្តុក' : `សល់ ${product.stockQty} ${product.unit}`}
+                        <span className="font-normal text-text-muted"> · {CATEGORY_LABELS[product.categoryId] ?? product.categoryId}</span>
                       </span>
-                    )}
-                  </div>
-                </button>
+                      <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-bg" aria-hidden="true">
+                        <span
+                          className={cx('block h-full rounded-full', isOut ? 'bg-danger' : isLow ? 'bg-accent' : 'bg-success')}
+                          style={{ width: `${ratio * 100}%` }}
+                        />
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-right tabular-nums">
+                      <span className="block text-body-sm font-bold text-text">{formatKHR(product.sellPrice)}</span>
+                      <span className="block text-caption text-text-muted">/{product.unit} · {formatUSD(product.sellPrice)}</span>
+                    </span>
+                  </button>
 
-                {/* Quick restock button — only for alert items */}
-                {isAlert && (
+                  {/* Restock — accent when low / out */}
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setRestocking(product) }}
-                    className={[
-                      'shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors',
-                      isOut
-                        ? 'bg-danger-600 text-white active:bg-danger-700'
-                        : 'bg-warning-500 text-white active:bg-warning-600',
-                    ].join(' ')}
-                    aria-label="បន្ថែមស្តុក"
+                    className={cx(
+                      'flex h-12 w-12 shrink-0 items-center justify-center rounded-md transition-colors',
+                      'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
+                      isAlert ? 'bg-accent text-ink-900 active:brightness-95' : 'bg-surface-2 text-text-subtle active:bg-line',
+                    )}
+                    aria-label={`បន្ថែមស្តុក ${product.nameKm}`}
                   >
-                    <PackagePlus size={18} strokeWidth={2.25} />
+                    <PackagePlus size={20} strokeWidth={2.25} aria-hidden="true" />
                   </button>
-                )}
-              </div>
-            )
-          })}
-            </div>
+                </div>
+              )
+            })}
           </div>
-        </div>
-      )}
-
-      {/* FAB — Add product */}
-      <button
-        type="button"
-        onClick={() => setAddOpen(true)}
-        className="fixed bottom-[calc(108px+env(safe-area-inset-bottom))] right-4 md:bottom-6 md:right-6 w-14 h-14 rounded-full bg-primary-600 text-white shadow-lg shadow-primary-600/30 flex items-center justify-center active:bg-primary-700 active:scale-95 transition-all z-30"
-        aria-label="បន្ថែមទំនិញ"
-      >
-        <Plus size={26} strokeWidth={2.5} />
-      </button>
+        )}
+      </div>
 
       {/* Add sheet */}
       {addOpen && (

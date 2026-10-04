@@ -2,14 +2,18 @@
 
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Plus, Wallet } from 'lucide-react'
+import { Plus, Wallet, Package, Lightbulb, House, HardHat, Truck, ReceiptText, type LucideIcon } from 'lucide-react'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
 import { todayISODate, addDaysISODate } from '@/lib/date'
 import { ExpenseFormSheet } from '@/features/expense/components/ExpenseFormSheet'
 import { ExpenseCategorySheet } from '@/features/expense/components/ExpenseCategorySheet'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { EXPENSE_CATEGORIES, expenseCategoryLabel, expenseCategoryEmoji } from '@/services/expense.service'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { MoneyText } from '@/components/ui/MoneyText'
+import { cx } from '@/components/ui/cx'
+import { EXPENSE_CATEGORIES, expenseCategoryLabel } from '@/services/expense.service'
 import type { Expense } from '@/types'
 import type { KHR, TenantId } from '@/types/branded'
 
@@ -84,151 +88,159 @@ export default function ExpensesPage() {
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]))
   }, [expenses])
 
+  /* ── Display only: category color + icon (same order as EXPENSE_CATEGORIES) ── */
+  const CAT_UI: Record<string, { bar: string; dot: string; tile: string; icon: LucideIcon }> = {
+    stock:     { bar: 'bg-chart-1', dot: 'bg-chart-1', tile: 'bg-tint-4 text-tint-4-ink', icon: Package },
+    utilities: { bar: 'bg-chart-2', dot: 'bg-chart-2', tile: 'bg-tint-1 text-tint-1-ink', icon: Lightbulb },
+    rent:      { bar: 'bg-chart-3', dot: 'bg-chart-3', tile: 'bg-tint-10 text-tint-10-ink', icon: House },
+    salary:    { bar: 'bg-chart-4', dot: 'bg-chart-4', tile: 'bg-tint-8 text-tint-8-ink', icon: HardHat },
+    transport: { bar: 'bg-chart-5', dot: 'bg-chart-5', tile: 'bg-tint-6 text-tint-6-ink', icon: Truck },
+    other:     { bar: 'bg-chart-6', dot: 'bg-chart-6', tile: 'bg-tint-3 text-tint-3-ink', icon: ReceiptText },
+  }
+  const catUi = (id: string) => CAT_UI[id] ?? CAT_UI.other!
+  const periodItems = PERIODS.map((p) => ({ value: p.key, label: p.key === 'custom' ? 'ជ្រើសរើស' : p.label }))
+
   return (
-    <div className="flex flex-col h-full bg-slate-50">
+    <div className="mx-auto w-full max-w-3xl md:px-6 md:pt-6">
 
-      {/* Header */}
-      <header className="shrink-0 px-4 pt-5 pb-4 bg-white border-b border-slate-200">
-        <div className="flex items-center justify-between">
-          <h1 className="text-[19px] font-bold text-slate-900">ការចំណាយ</h1>
-          <span className="text-[12px] text-slate-400 font-medium">{expenses.length} ដង</span>
-        </div>
-
-        {/* Period tabs */}
-        <div className="flex gap-1.5 mt-3">
-          {PERIODS.map(p => (
-            <button
-              key={p.key}
-              type="button"
-              onClick={() => setPeriod(p.key)}
-              className={[
-                'flex-1 h-9 rounded-lg text-[12px] font-semibold transition-colors',
-                period === p.key ? 'bg-slate-800 text-white shadow-sm' : 'bg-slate-100 text-slate-500 active:bg-slate-200',
-              ].join(' ')}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+      {/* ── Hero: period · total · category split ───────────────── */}
+      <PageHeader
+        variant="hero"
+        className="md:rounded-xl"
+        title="ការចំណាយ"
+        subtitle={`${expenses.length} ដង`}
+        backHref="/more"
+      >
+        <SegmentedControl tone="dark" ariaLabel="រយៈពេល" value={period} onChange={setPeriod} items={periodItems} />
 
         {/* Custom date range */}
         {period === 'custom' && (
-          <div className="flex items-center gap-2 mt-2">
+          <div className="mt-2 flex items-center gap-2">
             <input
               type="date"
               value={customFrom}
               max={todayISODate()}
               onChange={(e) => setCustomFrom(e.target.value || todayISODate())}
-              className="flex-1 h-9 px-2.5 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-700 focus:outline-none focus:border-primary-500"
+              aria-label="ចាប់ពីថ្ងៃ"
+              className="h-12 min-w-0 flex-1 rounded-md bg-ink-800 px-3 text-body-sm font-semibold text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-accent"
             />
-            <span className="text-[12px] text-slate-400 shrink-0">ដល់</span>
+            <span className="shrink-0 text-meta text-ink-300">ដល់</span>
             <input
               type="date"
               value={customTo}
               max={todayISODate()}
               onChange={(e) => setCustomTo(e.target.value || todayISODate())}
-              className="flex-1 h-9 px-2.5 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-700 focus:outline-none focus:border-primary-500"
+              aria-label="ដល់ថ្ងៃ"
+              className="h-12 min-w-0 flex-1 rounded-md bg-ink-800 px-3 text-body-sm font-semibold text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
         )}
-      </header>
 
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="px-4 pt-4 pb-24 space-y-4 max-w-xl mx-auto">
+        <p className="mt-4 text-meta font-semibold text-ink-300">ចំណាយ​សរុប</p>
+        <MoneyText amount={total} size="xl" tone="debtOnDark" />
 
-          {/* Total */}
-          <div className="rounded-2xl border border-danger-100 bg-danger-50 px-4 py-3.5 flex items-center justify-between">
-            <span className="text-[13px] font-bold text-danger-700">ចំណាយ​សរុប</span>
-            <div className="text-right">
-              <p className="text-[20px] font-extrabold text-danger-700 tabular-nums leading-tight">{formatKHR(total)}</p>
-              <p className="text-[12px] font-bold text-primary-600 tabular-nums">{formatUSD(total)}</p>
-            </div>
+        {/* Stacked category bar */}
+        {total > 0 && (
+          <div className="mt-3 flex h-3 overflow-hidden rounded-full bg-ink-800" role="img" aria-label="ចំណាយតាមប្រភេទ">
+            {EXPENSE_CATEGORIES.map((cat) => {
+              const t = byCategory.get(cat.id)?.total ?? 0
+              if (t <= 0) return null
+              return <span key={cat.id} className={catUi(cat.id).bar} style={{ width: `${(t / total) * 100}%` }} />
+            })}
           </div>
+        )}
+      </PageHeader>
 
-          {/* Category cards */}
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">តាមប្រភេទ</p>
-            <div className="grid grid-cols-2 gap-3">
-              {EXPENSE_CATEGORIES.map((cat) => {
-                const stat = byCategory.get(cat.id) ?? { total: 0, count: 0 }
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setCatDetail(cat.id)}
-                    className="rounded-2xl border border-slate-200 bg-white shadow-card p-3.5 text-left active:bg-slate-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="shrink-0 w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-[20px]">
-                        {cat.emoji}
-                      </div>
-                      <p className="text-[13px] font-bold text-slate-800 leading-tight min-w-0">{cat.label}</p>
-                    </div>
-                    <p className="text-[16px] font-extrabold text-slate-900 tabular-nums leading-tight">
-                      {formatKHR(stat.total as KHR)}
-                    </p>
-                    <p className="text-[12px] font-bold text-primary-600 tabular-nums">{formatUSD(stat.total as KHR)}</p>
-                    <p className="text-[11px] text-slate-400 mt-1">{stat.count} ដង</p>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+      <div className="space-y-5 px-4 pb-28 pt-5 md:px-0 md:pb-24">
 
-          {/* All expenses history (unchanged) */}
-          {expenses.length === 0 ? (
-            <EmptyState
-              icon={<Wallet size={30} strokeWidth={1.5} />}
-              title="មិន​ទាន់​មាន​ការ​ចំណាយ"
-              description="ចុច + ដើម្បី​បន្ថែម​ការ​ចំណាយ"
-            />
-          ) : (
-            grouped.map(([dateISO, dayExpenses]) => {
-              const dayTotal = dayExpenses.reduce((s, e) => s + (e.amount as number), 0) as KHR
+        {/* Category cards */}
+        <section>
+          <h2 className="mb-2 px-1 text-body-sm font-bold text-text">តាមប្រភេទ</h2>
+          <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3">
+            {EXPENSE_CATEGORIES.map((cat) => {
+              const stat = byCategory.get(cat.id) ?? { total: 0, count: 0 }
+              const ui = catUi(cat.id)
+              const Icon = ui.icon
               return (
-                <div key={dateISO} className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-100">
-                    <span className="text-[12px] font-bold text-slate-600">{dateLabel(dateISO)}</span>
-                    <span className="text-[11px] font-semibold text-danger-600 tabular-nums">−{formatKHR(dayTotal)}</span>
-                  </div>
-                  <div className="divide-y divide-slate-50">
-                    {dayExpenses.map((e) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setCatDetail(cat.id)}
+                  className="rounded-lg bg-surface p-3.5 text-left transition-colors active:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
+                >
+                  <span className="mb-2 flex items-center gap-2">
+                    <span className={cx('flex h-10 w-10 shrink-0 items-center justify-center rounded-md', ui.tile)} aria-hidden="true">
+                      <Icon size={20} strokeWidth={2} />
+                    </span>
+                    <span className="min-w-0 text-meta font-bold leading-tight text-text">{cat.label}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className={cx('h-2 w-2 shrink-0 rounded-full', ui.dot)} aria-hidden="true" />
+                    <MoneyText amount={stat.total as KHR} />
+                  </span>
+                  <span className="mt-1 block text-caption text-text-muted">{stat.count} ដង</span>
+                </button>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* History */}
+        {expenses.length === 0 ? (
+          <EmptyState
+            icon={<Wallet size={30} strokeWidth={1.5} />}
+            title="មិន​ទាន់​មាន​ការ​ចំណាយ"
+            description="ចុច + ដើម្បី​បន្ថែម​ការ​ចំណាយ"
+          />
+        ) : (
+          grouped.map(([dateISO, dayExpenses]) => {
+            const dayTotal = dayExpenses.reduce((s, e) => s + (e.amount as number), 0) as KHR
+            return (
+              <section key={dateISO}>
+                <div className="mb-2 flex items-baseline justify-between px-1">
+                  <h2 className="text-body-sm font-bold text-text">{dateLabel(dateISO)}</h2>
+                  <span className="text-meta font-semibold tabular-nums text-debt">−{formatKHR(dayTotal)}</span>
+                </div>
+                <div className="space-y-2">
+                  {dayExpenses.map((e) => {
+                    const ui = catUi(e.categoryId)
+                    const Icon = ui.icon
+                    return (
                       <button
                         key={e.id}
                         type="button"
                         onClick={() => setEditing(e)}
-                        className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-slate-50 transition-colors"
+                        className="flex w-full items-center gap-3 rounded-lg bg-surface px-4 py-3 text-left transition-colors active:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
                       >
-                        <div className="shrink-0 w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-[20px]">
-                          {expenseCategoryEmoji(e.categoryId)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-semibold text-slate-800">{expenseCategoryLabel(e.categoryId)}</p>
-                          {e.note && <p className="text-[11px] text-slate-400 truncate">{e.note}</p>}
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <p className="text-[14px] font-bold text-danger-600 tabular-nums">−{formatKHR(e.amount)}</p>
-                          <p className="text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(e.amount)}</p>
-                        </div>
+                        <span className={cx('flex h-12 w-12 shrink-0 items-center justify-center rounded-md', ui.tile)} aria-hidden="true">
+                          <Icon size={22} strokeWidth={2} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-body-sm font-semibold text-text">{expenseCategoryLabel(e.categoryId)}</span>
+                          {e.note && <span className="block truncate text-meta text-text-muted">{e.note}</span>}
+                        </span>
+                        <span className="shrink-0 text-right tabular-nums">
+                          <span className="block text-body-sm font-bold text-debt">−{formatKHR(e.amount)}</span>
+                          <span className="block text-caption font-semibold text-text-muted">{formatUSD(e.amount)}</span>
+                        </span>
                       </button>
-                    ))}
-                  </div>
+                    )
+                  })}
                 </div>
-              )
-            })
-          )}
-        </div>
+              </section>
+            )
+          })
+        )}
       </div>
 
-      {/* FAB */}
+      {/* Floating accent "new expense" */}
       <button
         type="button"
         onClick={() => setAdding(true)}
-        className="fixed bottom-[calc(108px+env(safe-area-inset-bottom))] right-4 md:bottom-6 md:right-6 w-14 h-14 rounded-full bg-primary-600 text-white shadow-lg shadow-primary-600/30 flex items-center justify-center active:bg-primary-700 active:scale-95 transition-all z-30"
-        aria-label="បន្ថែម​ការ​ចំណាយ"
+        className="fixed bottom-[calc(108px+env(safe-area-inset-bottom))] right-4 z-30 flex h-14 items-center gap-2 rounded-full bg-accent pl-4 pr-5 text-body font-bold text-ink-900 shadow-fab transition-transform active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900 md:bottom-6 md:right-6"
       >
-        <Plus size={26} strokeWidth={2.5} />
+        <Plus size={22} strokeWidth={2.5} aria-hidden="true" />
+        ចំណាយថ្មី
       </button>
 
       {adding && (

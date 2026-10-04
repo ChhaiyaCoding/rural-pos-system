@@ -2,14 +2,12 @@
 
 import { Truck } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 export default function SuppliersPage() {
   return (
-    <div className="flex flex-col h-full bg-slate-50">
-      <header className="shrink-0 px-4 pt-5 pb-4 bg-white border-b border-slate-200">
-        <h1 className="text-[19px] font-bold text-slate-900">អ្នកផ្គត់ផ្គង់</h1>
-        <p className="text-[12px] text-slate-400 mt-0.5">Suppliers · ការ​ទិញ​ចូល</p>
-      </header>
+    <div className="flex min-h-full flex-col">
+      <PageHeader title="អ្នកផ្គត់ផ្គង់" subtitle="Suppliers · ការ​ទិញ​ចូល" backHref="/inventory" />
       <EmptyState
         fullHeight
         icon={<Truck size={30} strokeWidth={1.5} />}

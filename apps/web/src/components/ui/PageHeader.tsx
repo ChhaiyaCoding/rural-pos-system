@@ -16,6 +16,8 @@ export interface PageHeaderProps {
   /** … or as a callback */
   onBack?: (() => void) | undefined
   backLabel?: string | undefined
+  /** Shown before the title when there is no back button (e.g. a store tile) */
+  leading?: ReactNode | undefined
   /** Right-side buttons */
   actions?: ReactNode | undefined
   /** Hero content under the title row */
@@ -27,7 +29,7 @@ export interface PageHeaderProps {
 
 export function PageHeader({
   variant = 'light', title, subtitle, backHref, onBack, backLabel = 'ត្រឡប់ក្រោយ',
-  actions, children, compact = false, className,
+  leading, actions, children, compact = false, className,
 }: PageHeaderProps) {
   const hero = variant === 'hero'
   const btnVariant = hero ? 'onDark' : 'light'
@@ -51,7 +53,7 @@ export function PageHeader({
       )}
     >
       <div className="flex items-center gap-3">
-        {back}
+        {back ?? leading}
         <div className="min-w-0 flex-1">
           <h1 className={cx('truncate text-title font-bold', hero ? 'text-white' : 'text-text')}>{title}</h1>
           {subtitle != null && (
