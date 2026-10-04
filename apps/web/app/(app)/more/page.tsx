@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Users, NotebookText, Wallet, UserCog, Settings, ChevronRight } from 'lucide-react'
+import { Users, NotebookText, Wallet, UserCog, Settings, ChevronRight, ChartColumn } from 'lucide-react'
 
 interface MoreItem {
   href:  string
@@ -21,6 +21,7 @@ const GROUPS: { title: string; items: MoreItem[] }[] = [
   {
     title: 'ហិរញ្ញវត្ថុ',
     items: [
+      { href: '/reports',  icon: <ChartColumn size={18} />,  label: 'របាយការណ៍',   sub: 'ចំណូល · ចំណាយ · ចំណេញ' },
       { href: '/expenses', icon: <Wallet size={18} />,       label: 'ការចំណាយ',    sub: 'កត់ត្រា​ការ​ចំណាយ​ប្រចាំ​ថ្ងៃ' },
     ],
   },

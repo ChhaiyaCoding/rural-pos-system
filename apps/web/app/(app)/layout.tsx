@@ -4,11 +4,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 import {
-  Home,
-  ShoppingCart,
-  Package,
-  BarChart2,
+  House,
   LayoutGrid,
+  Package,
+  NotebookText,
+  ChartColumn,
+  Ellipsis,
+  type LucideIcon,
 } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
@@ -16,6 +18,10 @@ import { getDueInfo } from '@/lib/dueDate'
 import { todayISODate } from '@/lib/date'
 import { SyncStatusBar } from '@/components/shared/SyncStatusBar'
 import { PWAInstallBanner } from '@/components/shared/PWAInstallBanner'
+import { Pill } from '@/components/ui/Pill'
+import { cx } from '@/components/ui/cx'
+import { firstGrapheme } from '@/components/ui/text'
+import { useStoreProfile } from '@/store/storeProfile.store'
 import type { TenantId } from '@/types/branded'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
@@ -37,25 +43,41 @@ function showNotif(title: string, body: string, tag = 'pos', icon = '/icons/icon
   new Notification(title, { body, icon, badge: icon, tag })
 }
 
-const NAV = [
-  { href: '/',          icon: Home,         label: 'ទំព័រដើម'  },
-  { href: '/sell',      icon: ShoppingCart, label: 'លក់'       },
-  { href: '/inventory', icon: Package,      label: 'ស្តុក'      },
-  { href: '/reports',   icon: BarChart2,    label: 'របាយការណ៍' },
-  { href: '/more',      icon: LayoutGrid,   label: 'ច្រើនទៀត'  },
+type BadgeKey = 'stock' | 'debt'
+
+interface NavItem {
+  href:   string
+  icon:   LucideIcon
+  label:  string
+  /** Extra route prefixes that keep this item highlighted */
+  also?:  string[]
+  badge?: BadgeKey
+}
+
+/* Phone floating tab bar — លក់ is the raised center slot */
+const TABS_LEFT: NavItem[] = [
+  { href: '/',          icon: House,   label: 'ទំព័រដើម' },
+  { href: '/inventory', icon: Package, label: 'ស្តុក', also: ['/suppliers'], badge: 'stock' },
+]
+const TAB_SELL: NavItem = { href: '/sell', icon: LayoutGrid, label: 'លក់' }
+const TABS_RIGHT: NavItem[] = [
+  { href: '/debt', icon: NotebookText, label: 'បំណុល',    also: ['/customers'], badge: 'debt' },
+  { href: '/more', icon: Ellipsis,     label: 'ច្រើនទៀត', also: ['/reports', '/receipts', '/expenses', '/settings', '/staff'] },
 ]
 
-/* Routes that live under the "More" hub — keep the More tab highlighted there */
-const MORE_ROUTES = ['/more', '/debt', '/customers', '/expenses', '/settings', '/staff']
+/* iPad left rail — six items, Reports has its own slot */
+const RAIL: NavItem[] = [
+  { href: '/',          icon: House,        label: 'ទំព័រដើម' },
+  { href: '/sell',      icon: LayoutGrid,   label: 'លក់' },
+  { href: '/inventory', icon: Package,      label: 'ស្តុក',     also: ['/suppliers'], badge: 'stock' },
+  { href: '/debt',      icon: NotebookText, label: 'បំណុល',     also: ['/customers'], badge: 'debt' },
+  { href: '/reports',   icon: ChartColumn,  label: 'របាយការណ៍', also: ['/receipts'] },
+  { href: '/more',      icon: Ellipsis,     label: 'ច្រើនទៀត',  also: ['/expenses', '/settings', '/staff'] },
+]
 
-function isTabActive(href: string, pathname: string): boolean {
-  if (href === '/')     return pathname === '/'
-  if (href === '/more') return MORE_ROUTES.some((p) => pathname.startsWith(p))
-  if (href === '/inventory')
-    return pathname.startsWith('/inventory') || pathname.startsWith('/suppliers')
-  if (href === '/reports')
-    return pathname.startsWith('/reports') || pathname.startsWith('/receipts')
-  return pathname.startsWith(href)
+function isActive(item: NavItem, pathname: string): boolean {
+  if (item.href === '/') return pathname === '/'
+  return [item.href, ...(item.also ?? [])].some((p) => pathname.startsWith(p))
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -158,81 +180,130 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dueCustomers])
 
+  const { storeName } = useStoreProfile()
+  const badgeCount = (key: BadgeKey | undefined): number =>
+    key === 'stock' ? stockAlertCount : key === 'debt' ? debtorCount : 0
+
+  /* The POS shows its own cart bar on phone, so the tab bar hides there */
+  const showTabBar = !pathname.startsWith('/sell')
+
   return (
-    <div className="flex flex-col h-dvh w-full max-w-[430px] md:max-w-full mx-auto bg-white">
-      <SyncStatusBar />
+    <div className="relative flex h-dvh w-full bg-bg">
 
-      <main className="flex-1 overflow-y-auto min-h-0">
-        {children}
-      </main>
-
-      <PWAInstallBanner />
-
-      <nav className="shrink-0 bg-white border-t border-slate-200 pt-1 pb-[env(safe-area-inset-bottom)]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 10px)' }}>
-        {/* Constrain nav items to reasonable width on very wide screens */}
-        <div className="flex h-[64px] max-w-screen-md mx-auto">
-          {NAV.map(({ href, icon: Icon, label }) => {
-            const active = isTabActive(href, pathname)
-
-            /* Badge value + color per tab — debt now lives under "More" */
-            const badge      = href === '/inventory' ? stockAlertCount
-                             : href === '/more'      ? debtorCount
-                             : 0
-            const badgeClass = href === '/inventory'
-              ? 'bg-warning-500'
-              : 'bg-danger-500'
-
-            return (
-              <Link
-                key={href}
-                href={href}
-                className="relative flex flex-col items-center justify-center flex-1 gap-1 select-none"
-              >
-                {/* Active top indicator */}
-                <span
-                  className={[
-                    'absolute top-0 h-0.5 w-9 rounded-full transition-colors',
-                    active ? 'bg-primary-600' : 'bg-transparent',
-                  ].join(' ')}
-                />
-
-                {/* Icon with alert badge */}
-                <span className="relative">
-                  <Icon
-                    size={22}
-                    strokeWidth={active ? 2.5 : 1.9}
-                    className={active ? 'text-primary-600' : 'text-slate-400'}
-                    aria-hidden="true"
-                  />
-                  {badge > 0 && (
-                    <span
-                      className={[
-                        'absolute -top-1.5 -right-2',
-                        'min-w-[16px] h-[16px] px-0.5 rounded-full',
-                        'flex items-center justify-center',
-                        'text-[9px] font-black text-white leading-none',
-                        badgeClass,
-                      ].join(' ')}
-                      aria-label={`${badge} alerts`}
-                    >
-                      {badge > 9 ? '9+' : badge}
-                    </span>
-                  )}
-                </span>
-
-                <span
-                  className={[
-                    'text-[10.5px] transition-colors',
-                    active ? 'text-primary-700 font-bold' : 'text-slate-400 font-medium',
-                  ].join(' ')}
-                >
-                  {label}
-                </span>
-              </Link>
-            )
-          })}
+      {/* ── iPad (md+): left rail ─────────────────────────────── */}
+      <nav
+        aria-label="ម៉ឺនុយមេ"
+        className="hidden md:flex w-24 shrink-0 flex-col items-center gap-2 overflow-y-auto bg-ink-900 py-5"
+      >
+        <div
+          className="mb-3 flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-md bg-accent text-title-sm font-bold text-ink-900"
+          aria-hidden="true"
+        >
+          {firstGrapheme(storeName || 'ហាង')}
         </div>
+        {RAIL.map((item) => {
+          const active = isActive(item, pathname)
+          const count  = badgeCount(item.badge)
+          const Icon   = item.icon
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={active ? 'page' : undefined}
+              className={cx(
+                'relative flex h-[68px] w-[78px] shrink-0 flex-col items-center justify-center gap-1 rounded-lg transition-colors',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+                active ? 'bg-accent text-ink-900' : 'text-ink-300 active:bg-ink-800',
+              )}
+            >
+              <Icon size={22} strokeWidth={active ? 2.5 : 2} aria-hidden="true" />
+              <span className="text-caption font-semibold leading-tight">{item.label}</span>
+              {count > 0 && (
+                <Pill variant="count" className="absolute top-1.5 right-2.5" aria-label={`${count}`}>
+                  {count > 9 ? '9+' : count}
+                </Pill>
+              )}
+            </Link>
+          )
+        })}
       </nav>
+
+      {/* ── Content column (phone: max 430px, centered) ───────── */}
+      <div className="relative mx-auto flex w-full min-w-0 max-w-[430px] flex-1 flex-col md:max-w-none">
+        <SyncStatusBar />
+
+        <main
+          className={cx(
+            'min-h-0 flex-1 overflow-y-auto',
+            // keep content clear of the floating tab bar (20 gap + 72 bar + 20 air)
+            showTabBar && 'pb-[calc(112px+env(safe-area-inset-bottom))] md:pb-0',
+          )}
+        >
+          {children}
+        </main>
+
+        <PWAInstallBanner />
+
+        {/* ── Phone (< md): floating tab bar ──────────────────── */}
+        {showTabBar && (
+          <nav
+            aria-label="ម៉ឺនុយមេ"
+            className="absolute inset-x-3 bottom-[calc(20px+env(safe-area-inset-bottom))] z-30 flex h-[72px] items-stretch rounded-[26px] bg-surface px-1 shadow-float md:hidden"
+          >
+            {TABS_LEFT.map((item) => (
+              <TabLink key={item.href} item={item} active={isActive(item, pathname)} count={badgeCount(item.badge)} />
+            ))}
+
+            {/* Raised center: លក់ */}
+            <div className="relative flex flex-1 justify-center">
+              <Link
+                href={TAB_SELL.href}
+                aria-current={isActive(TAB_SELL, pathname) ? 'page' : undefined}
+                className={cx(
+                  'absolute -top-[34px] flex h-[66px] w-[66px] flex-col items-center justify-center gap-0.5',
+                  'rounded-xl border-[5px] border-bg bg-ink-900 text-white shadow-fab',
+                  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
+                )}
+              >
+                <LayoutGrid size={22} strokeWidth={2.5} className="text-accent" aria-hidden="true" />
+                <span className="text-caption font-bold leading-none">{TAB_SELL.label}</span>
+              </Link>
+            </div>
+
+            {TABS_RIGHT.map((item) => (
+              <TabLink key={item.href} item={item} active={isActive(item, pathname)} count={badgeCount(item.badge)} />
+            ))}
+          </nav>
+        )}
+      </div>
     </div>
+  )
+}
+
+/** One slot of the phone tab bar. Inactive icons use nav-off; inactive labels
+ *  use text-muted so the 12px text keeps 4.5:1 contrast on white. */
+function TabLink({ item, active, count }: { item: NavItem; active: boolean; count: number }) {
+  const Icon = item.icon
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? 'page' : undefined}
+      className={cx(
+        'relative flex flex-1 flex-col items-center justify-center gap-1 rounded-[20px]',
+        'focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-ink-900',
+      )}
+    >
+      <span className="relative">
+        <Icon size={24} strokeWidth={active ? 2.5 : 2} className={active ? 'text-ink-900' : 'text-nav-off'} aria-hidden="true" />
+        {count > 0 && (
+          <Pill variant="count" className="absolute -top-1.5 -right-2.5" aria-label={`${count}`}>
+            {count > 9 ? '9+' : count}
+          </Pill>
+        )}
+      </span>
+      <span className={cx('text-caption font-bold leading-tight', active ? 'text-ink-900' : 'text-text-muted')}>
+        {item.label}
+      </span>
+    </Link>
   )
 }

@@ -156,7 +156,7 @@ export default function CustomersPage() {
       <button
         type="button"
         onClick={() => setAdding(true)}
-        className="fixed bottom-20 right-4 w-14 h-14 rounded-full bg-primary-600 text-white shadow-lg shadow-primary-600/30 flex items-center justify-center active:bg-primary-700 active:scale-95 transition-all z-30"
+        className="fixed bottom-[calc(108px+env(safe-area-inset-bottom))] right-4 md:bottom-6 md:right-6 w-14 h-14 rounded-full bg-primary-600 text-white shadow-lg shadow-primary-600/30 flex items-center justify-center active:bg-primary-700 active:scale-95 transition-all z-30"
         aria-label="បន្ថែម​អតិថិជន"
       >
         <Plus size={26} strokeWidth={2.5} />

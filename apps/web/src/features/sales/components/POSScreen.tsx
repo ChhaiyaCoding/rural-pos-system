@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Search, ScanLine, X, CheckCircle2, ShoppingCart, ChevronUp, Receipt, PauseCircle } from 'lucide-react'
+import Link from 'next/link'
+import { Search, ScanLine, X, CheckCircle2, ShoppingCart, ChevronUp, Receipt, PauseCircle, ChevronLeft } from 'lucide-react'
+import { iconButtonClass } from '@/components/ui/IconButton'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useSaleStore } from '@/store/sale.store'
 import { formatKHR, addKHR, toKHR, multiplyKHR, subtractKHR } from '@/lib/money'
@@ -308,7 +310,11 @@ export function POSScreen() {
 
             {/* Store / cashier identity */}
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-primary-600 text-white flex items-center justify-center font-bold text-[15px] shrink-0 shadow-sm">
+              {/* Phone: the tab bar is hidden on /sell, so the header carries the way back */}
+              <Link href="/" aria-label="ត្រឡប់ក្រោយ" className={iconButtonClass('soft', 'md:hidden')}>
+                <ChevronLeft size={22} strokeWidth={2.25} aria-hidden="true" />
+              </Link>
+              <div className="hidden md:flex w-9 h-9 rounded-xl bg-primary-600 text-white items-center justify-center font-bold text-[15px] shrink-0 shadow-sm">
                 ហ
               </div>
               <div className="min-w-0">
