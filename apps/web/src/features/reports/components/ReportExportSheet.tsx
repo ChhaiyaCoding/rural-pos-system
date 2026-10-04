@@ -67,26 +67,26 @@ export function ReportExportSheet({
         <meta charset="utf-8" />
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: 'Khmer OS', 'Noto Sans Khmer', sans-serif; padding: 24px; color: #1e293b; }
+          body { font-family: 'Khmer OS', 'Noto Sans Khmer', sans-serif; padding: 24px; color: #0F1B2D; }
           .card { max-width: 360px; margin: 0 auto; }
-          .header { text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 16px; }
+          .header { text-align: center; border-bottom: 2px solid #E2E6EC; padding-bottom: 16px; margin-bottom: 16px; }
           .store { font-size: 20px; font-weight: 800; }
-          .period { font-size: 13px; color: #64748b; margin-top: 4px; }
-          .date { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+          .period { font-size: 13px; color: #5A6676; margin-top: 4px; }
+          .date { font-size: 11px; color: #5A6676; margin-top: 2px; }
           .section { margin-bottom: 16px; }
-          .section-title { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
-          .big-num { font-size: 28px; font-weight: 800; color: #0f172a; }
-          .row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f1f5f9; }
-          .label { font-size: 13px; color: #475569; }
-          .value { font-size: 14px; font-weight: 700; color: #1e293b; }
+          .section-title { font-size: 10px; font-weight: 700; color: #5A6676; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+          .big-num { font-size: 28px; font-weight: 800; color: #0F1B2D; }
+          .row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #EEF1F5; }
+          .label { font-size: 13px; color: #3E4A5C; }
+          .value { font-size: 14px; font-weight: 700; color: #0F1B2D; }
           .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700; }
-          .cash { background: #f0fdf4; color: #16a34a; }
-          .debt { background: #fef2f2; color: #dc2626; }
-          .rank { display: inline-block; width: 18px; height: 18px; border-radius: 50%; background: #f1f5f9; color: #64748b; font-size: 10px; font-weight: 700; text-align: center; line-height: 18px; margin-right: 6px; }
-          .rank.gold { background: #fbbf24; color: white; }
-          .rank.silver { background: #94a3b8; color: white; }
-          .rank.bronze { background: #d97706; color: white; }
-          .footer { text-align: center; font-size: 10px; color: #94a3b8; margin-top: 20px; padding-top: 12px; border-top: 1px dashed #e2e8f0; }
+          .cash { background: #DDF5EA; color: #067A55; }
+          .debt { background: #FFEBE2; color: #B93815; }
+          .rank { display: inline-block; width: 18px; height: 18px; border-radius: 50%; background: #EEF1F5; color: #3E4A5C; font-size: 10px; font-weight: 700; text-align: center; line-height: 18px; margin-right: 6px; }
+          .rank.gold { background: #FFB020; color: #0F1B2D; }
+          .rank.silver { background: #D3D9E1; color: #0F1B2D; }
+          .rank.bronze { background: #F5EAD2; color: #7E5A10; }
+          .footer { text-align: center; font-size: 10px; color: #5A6676; margin-top: 20px; padding-top: 12px; border-top: 1px dashed #E2E6EC; }
         </style>
       </head>
       <body>
@@ -100,25 +100,25 @@ export function ReportExportSheet({
           <div class="section">
             <div class="section-title">ចំណូលសរុប</div>
             <div class="big-num">${formatKHR(totalRevenue)}</div>
-            <div style="font-size:15px;color:#2563eb;font-weight:700;margin-top:2px">${formatUSD(totalRevenue)}</div>
-            <div style="font-size:13px;color:#64748b;margin-top:4px">${salesCount} ការលក់</div>
+            <div style="font-size:15px;color:#3E4A5C;font-weight:700;margin-top:2px">${formatUSD(totalRevenue)}</div>
+            <div style="font-size:13px;color:#5A6676;margin-top:4px">${salesCount} ការលក់</div>
           </div>
 
           <div class="section">
             <div class="section-title">ចំណេញសុទ្ធ</div>
             <div style="display:flex;gap:10px;margin-bottom:8px">
-              <div style="flex:1;background:#ecfdf5;border:1px solid #d1fae5;border-radius:10px;padding:8px 10px">
-                <div style="font-size:11px;color:#059669;font-weight:600">ចំណូល</div>
-                <div style="font-size:15px;color:#065f46;font-weight:800">${formatKHR(totalRevenue)}</div>
-                <div style="font-size:11px;color:#2563eb;font-weight:700">${formatUSD(totalRevenue)}</div>
+              <div style="flex:1;background:#DDF5EA;border:1px solid #DDF5EA;border-radius:10px;padding:8px 10px">
+                <div style="font-size:11px;color:#067A55;font-weight:600">ចំណូល</div>
+                <div style="font-size:15px;color:#067A55;font-weight:800">${formatKHR(totalRevenue)}</div>
+                <div style="font-size:11px;color:#3E4A5C;font-weight:700">${formatUSD(totalRevenue)}</div>
               </div>
-              <div style="flex:1;background:#fef2f2;border:1px solid #fee2e2;border-radius:10px;padding:8px 10px">
-                <div style="font-size:11px;color:#dc2626;font-weight:600">ចំណាយ</div>
-                <div style="font-size:15px;color:#b91c1c;font-weight:800">${formatKHR(totalExpenses)}</div>
-                <div style="font-size:11px;color:#2563eb;font-weight:700">${formatUSD(totalExpenses)}</div>
+              <div style="flex:1;background:#FFEBE2;border:1px solid #FFEBE2;border-radius:10px;padding:8px 10px">
+                <div style="font-size:11px;color:#B93815;font-weight:600">ចំណាយ</div>
+                <div style="font-size:15px;color:#B93815;font-weight:800">${formatKHR(totalExpenses)}</div>
+                <div style="font-size:11px;color:#3E4A5C;font-weight:700">${formatUSD(totalExpenses)}</div>
               </div>
             </div>
-            <div class="row" style="border-top:1px solid #e2e8f0;padding-top:6px"><span class="label" style="font-weight:700">ចំណេញសុទ្ធ</span><span class="value" style="color:${(netProfit as number) >= 0 ? '#047857' : '#b91c1c'};font-weight:800;font-size:16px">${formatKHR(netProfit)} · ${formatUSD(netProfit)}</span></div>
+            <div class="row" style="border-top:1px solid #E2E6EC;padding-top:6px"><span class="label" style="font-weight:700">ចំណេញសុទ្ធ</span><span class="value" style="color:${(netProfit as number) >= 0 ? '#067A55' : '#B42318'};font-weight:800;font-size:16px">${formatKHR(netProfit)} · ${formatUSD(netProfit)}</span></div>
           </div>
 
           ${expenseByCat.length > 0 ? `
@@ -127,7 +127,7 @@ export function ReportExportSheet({
             ${expenseByCat.map(([cat, amt]) => `
               <div class="row">
                 <span class="label">${expenseCategoryEmoji(cat)} ${expenseCategoryLabel(cat)}</span>
-                <span class="value" style="color:#dc2626">${formatKHR(amt as KHR)}</span>
+                <span class="value" style="color:#B93815">${formatKHR(amt as KHR)}</span>
               </div>
             `).join('')}
           </div>
@@ -165,7 +165,7 @@ export function ReportExportSheet({
             <div class="section-title">បំណុលអតិថិជន</div>
             <div class="row">
               <span class="label">👥 ${debtorCount} នាក់ជំពាក់</span>
-              <span class="value" style="color:#dc2626">${formatKHR(totalDebt)} · ${formatUSD(totalDebt)}</span>
+              <span class="value" style="color:#B93815">${formatKHR(totalDebt)} · ${formatUSD(totalDebt)}</span>
             </div>
           </div>
           ` : ''}
@@ -337,9 +337,9 @@ export function ReportExportSheet({
                   <div key={p.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className={[
-                        'shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white',
-                        i === 0 ? 'bg-yellow-400' : i === 1 ? 'bg-slate-400' : i === 2 ? 'bg-amber-600' : 'bg-slate-200',
-                      ].join(' ')} style={i >= 3 ? { color: '#64748b' } : {}}>
+                        'shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black',
+                        i === 0 ? 'bg-accent text-ink-900' : i === 1 ? 'bg-line-strong text-ink-900' : i === 2 ? 'bg-tint-5 text-tint-5-ink' : 'bg-line text-text-muted',
+                      ].join(' ')}>
                         {i + 1}
                       </span>
                       <span className="text-[12px] font-semibold text-slate-700 truncate">{p.name}</span>
