@@ -498,7 +498,7 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-body-sm font-bold text-success">
-                  {paySuccess.after === 0 ? 'សំណូលអស់ហើយ!' : 'ទទួលប្រាក់ជោគជ័យ'}
+                  {paySuccess.after === 0 ? 'សងបំណុលអស់ហើយ!' : 'ទទួលប្រាក់ជោគជ័យ'}
                 </span>
                 <span className="mt-0.5 block text-meta tabular-nums text-success">
                   ទទួល {formatKHR(paySuccess.paid)}
