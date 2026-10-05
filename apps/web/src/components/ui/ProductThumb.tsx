@@ -17,7 +17,7 @@ const BOX: Record<ProductThumbSize, string> = {
   54: 'h-[54px] w-[54px] rounded-sm',
   84: 'h-[84px] w-[84px] rounded-md',
 }
-const LETTER: Record<ProductThumbSize, string> = { 48: 'text-title', 54: 'text-title-lg', 84: 'text-amount-lg' }
+const LETTER: Record<ProductThumbSize, string> = { 48: 'text-title', 54: 'text-title-lg', 84: 'text-amount-xl' }
 const EMOJI: Record<ProductThumbSize, string> = { 48: 'text-amount', 54: 'text-amount', 84: 'text-amount-xl' }
 
 /** The seed / form default — not treated as a "custom" emoji. */

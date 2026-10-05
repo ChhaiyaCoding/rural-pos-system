@@ -57,12 +57,14 @@ export function ProductCard({ product, onFly, className }: ProductCardProps) {
         onClick={handleAdd}
         disabled={isOutOfStock}
         className={cx(
-          'group flex flex-col rounded-md text-left select-none touch-manipulation',
+          'group flex w-full flex-col rounded-md text-left select-none touch-manipulation',
           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
           'disabled:pointer-events-none',
         )}
       >
-        <span className="relative block">
+        {/* grid stretches the thumb to the full card width without relying on
+            a % width inside <button> (iOS Safari shrinks that to the emoji). */}
+        <span className="relative grid w-full">
           <ProductThumb
             product={product}
             size={84}
@@ -72,10 +74,10 @@ export function ProductCard({ product, onFly, className }: ProductCardProps) {
           {/* Stock pill */}
           <span
             className={cx(
-              'absolute left-1.5 top-1.5 inline-flex h-6 items-center rounded-full px-2 text-caption font-bold tabular-nums',
+              'absolute left-2 top-2 inline-flex h-6 max-w-[calc(100%-16px)] items-center whitespace-nowrap rounded-full px-2 text-caption font-bold tabular-nums shadow-xs',
               isOutOfStock ? 'bg-danger text-white'
                 : isLowStock ? 'bg-warn text-white'
-                : 'bg-white/85 text-text-subtle',
+                : 'bg-surface text-text-subtle',
             )}
           >
             {isOutOfStock ? 'អស់ស្តុក' : isLowStock ? `ជិតអស់ · ${product.stockQty}` : `សល់ ${product.stockQty}`}
