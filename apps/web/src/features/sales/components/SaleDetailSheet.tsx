@@ -1,12 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Receipt, User, Trash2, AlertTriangle, Printer } from 'lucide-react'
+import { User, Trash2, AlertTriangle, Printer } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { saleService } from '@/services/sale.service'
 import { formatKHR } from '@/lib/money'
 import { ReprintReceipt } from './ReprintReceipt'
+import { Sheet } from '@/components/ui/Sheet'
+import { Button } from '@/components/ui/Button'
+import { Pill } from '@/components/ui/Pill'
+import { cx } from '@/components/ui/cx'
 import type { Sale } from '@/types'
 import type { KHR, TenantId, SaleId } from '@/types/branded'
 
@@ -22,9 +26,9 @@ const PAYMENT_CONFIG: Record<
   Sale['paymentType'],
   { label: string; cls: string; dotCls: string; emoji: string }
 > = {
-  cash:    { label: 'សាច់ប្រាក់', cls: 'bg-success-100 text-success-700',  dotCls: 'bg-success-500',  emoji: '💵' },
-  debt:    { label: 'ជំពាក់',    cls: 'bg-danger-100 text-danger-700',    dotCls: 'bg-danger-500',   emoji: '📒' },
-  partial: { label: 'ទូទាត់ផ្នែក', cls: 'bg-warning-100 text-warning-700', dotCls: 'bg-warning-500',  emoji: '🔀' },
+  cash:    { label: 'សាច់ប្រាក់', cls: 'bg-success-bg text-success', dotCls: 'bg-success', emoji: '💵' },
+  debt:    { label: 'ជំពាក់',     cls: 'bg-debt-bg text-debt',       dotCls: 'bg-debt',    emoji: '📒' },
+  partial: { label: 'បង់ខ្លះ',     cls: 'bg-warn-bg text-warn',       dotCls: 'bg-warn',    emoji: '🔀' },
 }
 
 export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
@@ -77,100 +81,77 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
 
   /* ─────────────────────────────────────────────── */
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/70"
-      onClick={onClose}
-      aria-hidden="true"
-    >
-      <div
-        className="w-full md:max-w-md bg-white rounded-t-2xl md:rounded-2xl max-h-[90dvh] flex flex-col overflow-hidden shadow-pop animate-sheet-up"
-        onClick={e => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
+    <>
+      <Sheet
+        open
+        onClose={onClose}
+        title={
+          <span className="flex items-center gap-2">
+            លម្អិតការលក់
+            {isVoid && <Pill variant="danger">❌ លុបហើយ</Pill>}
+          </span>
+        }
+        ariaLabel="លម្អិតការលក់"
+        headerActions={
+          <Button variant="secondary" icon={<Printer size={18} strokeWidth={2.25} />} onClick={() => setShowReprint(true)}>
+            បោះពុម្ព
+          </Button>
+        }
+        bodyClassName="px-0 pb-0"
       >
-        {/* ── Header ─────────────────────────────── */}
-        <div className="shrink-0 flex items-center justify-between px-4 h-14 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <Receipt size={17} strokeWidth={2.25} className={isVoid ? 'text-slate-400' : 'text-primary-500'} />
-            <span className="text-[15px] font-bold text-slate-900">លម្អិតការលក់</span>
-            {isVoid && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-danger-600 bg-danger-50 border border-danger-200 rounded-full px-2 py-0.5">
-                ❌ លុបហើយ
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowReprint(true)}
-              className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-primary-50 text-primary-700 text-[12px] font-bold active:bg-primary-100"
-            >
-              <Printer size={14} strokeWidth={2.25} /> បោះពុម្ព
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 active:bg-slate-200"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* ── Scrollable body ─────────────────────── */}
-        <div className={['flex-1 overflow-y-auto', isVoid ? 'opacity-60' : ''].join(' ')}>
+        <div className={cx(isVoid && 'opacity-60')}>
 
           {/* Void success banner */}
           {voidDone && (
-            <div className="mx-4 mt-4 rounded-xl bg-success-50 border border-success-200 px-4 py-3 flex items-center gap-3">
-              <span className="text-[22px]">✅</span>
+            <div className="mx-4 mt-2 flex items-center gap-3 rounded-md bg-success-bg px-4 py-3 text-success md:mx-6">
+              <span className="text-title" aria-hidden="true">✅</span>
               <div>
-                <p className="text-[13px] font-bold text-success-800">លុបការលក់ជោគជ័យ!</p>
-                <p className="text-[11px] text-success-600">ស្តុកត្រូវបានបន្ថែមត្រឡប់ + បំណុលត្រូវបានកាត់</p>
+                <p className="text-body-sm font-bold">លុបការលក់ជោគជ័យ!</p>
+                <p className="text-meta">ស្តុកត្រូវបានបន្ថែមត្រឡប់ + បំណុលត្រូវបានកាត់</p>
               </div>
             </div>
           )}
 
           {/* Sale meta */}
-          <div className="px-4 pt-4 pb-4 border-b border-slate-100">
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <div>
-                <p className="text-[12px] text-slate-400">{dateStr}</p>
-                <p className={['text-[28px] font-extrabold tabular-nums tracking-tight leading-tight mt-0.5', isVoid ? 'text-slate-400 line-through' : 'text-slate-900'].join(' ')}>
+          <div className="border-b border-line px-4 pb-4 pt-2 md:px-6">
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-meta text-text-muted">{dateStr}</p>
+                <p className={cx('mt-0.5 text-amount font-bold tabular-nums tracking-tight', isVoid ? 'text-text-muted line-through' : 'text-text')}>
                   {formatKHR(liveSale.totalAmount)}
                 </p>
               </div>
-              <span className={`mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold shrink-0 ${pt.cls}`}>
-                {pt.emoji} {pt.label}
+              <span className={cx('mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-meta font-bold', pt.cls)}>
+                <span aria-hidden="true">{pt.emoji}</span> {pt.label}
               </span>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-1 bg-slate-100 rounded-full px-2.5 py-1 text-[11px] font-medium text-slate-600">
+              <span className="inline-flex items-center gap-1 rounded-full bg-bg px-3 py-1 text-meta font-medium text-text-subtle">
                 🕐 {timeStr}
               </span>
               {customer && (
-                <span className="inline-flex items-center gap-1 bg-slate-100 rounded-full px-2.5 py-1 text-[11px] font-medium text-slate-600">
-                  <User size={11} />
+                <span className="inline-flex items-center gap-1 rounded-full bg-bg px-3 py-1 text-meta font-medium text-text-subtle">
+                  <User size={14} aria-hidden="true" />
                   {customer.nameKm}
                 </span>
               )}
-              <span className="inline-flex items-center gap-1 bg-slate-100 rounded-full px-2.5 py-1 text-[11px] font-medium text-slate-600">
+              <span className="inline-flex items-center gap-1 rounded-full bg-bg px-3 py-1 text-meta font-medium text-text-subtle">
                 🛒 {items.length} មុខ
               </span>
             </div>
 
             {liveSale.paymentType === 'partial' && (
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-success-50 border border-success-100 px-3 py-2.5">
-                  <p className="text-[10px] font-bold text-success-600">ទូទាត់ហើយ</p>
-                  <p className="text-[15px] font-extrabold text-success-800 tabular-nums">
+                <div className="rounded-md bg-success-bg px-3 py-2.5 text-success">
+                  <p className="text-caption font-bold">ទូទាត់ហើយ</p>
+                  <p className="text-body font-bold tabular-nums">
                     {formatKHR(liveSale.paidAmount)}
                   </p>
                 </div>
-                <div className="rounded-xl bg-danger-50 border border-danger-100 px-3 py-2.5">
-                  <p className="text-[10px] font-bold text-danger-600">នៅជំពាក់</p>
-                  <p className="text-[15px] font-extrabold text-danger-700 tabular-nums">
+                <div className="rounded-md bg-debt-bg px-3 py-2.5 text-debt">
+                  <p className="text-caption font-bold">នៅជំពាក់</p>
+                  <p className="text-body font-bold tabular-nums">
                     {formatKHR(debtAmount > 0 ? debtAmount : 0 as KHR)}
                   </p>
                 </div>
@@ -179,59 +160,59 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
           </div>
 
           {/* Items */}
-          <div className="px-4 py-3">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+          <div className="px-4 py-3 md:px-6">
+            <p className="mb-1 text-meta font-semibold text-text-subtle">
               បញ្ជីទំនិញ
             </p>
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-line">
               {items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between py-3 gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-semibold text-slate-800 leading-snug truncate">{item.nameKm}</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums">
+                <div key={item.id} className="flex items-center justify-between gap-2 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-body-sm font-semibold text-text">{item.nameKm}</p>
+                    <p className="mt-0.5 text-meta tabular-nums text-text-muted">
                       {formatKHR(item.unitPrice)} × {item.qty}
                     </p>
                   </div>
-                  <p className="text-[14px] font-bold text-slate-900 tabular-nums shrink-0">
+                  <p className="shrink-0 text-body-sm font-bold tabular-nums text-text">
                     {formatKHR(item.subtotal)}
                   </p>
                 </div>
               ))}
               {items.length === 0 && (
-                <p className="py-4 text-center text-[13px] text-slate-400">គ្មានទំនិញ</p>
+                <p className="py-4 text-center text-meta text-text-muted">គ្មានទំនិញ</p>
               )}
             </div>
           </div>
 
           {/* Total */}
-          <div className="mx-4 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 flex items-center justify-between">
-            <span className="text-[14px] font-bold text-slate-600">សរុប</span>
-            <span className={['text-[20px] font-extrabold tabular-nums', isVoid ? 'line-through text-slate-400' : 'text-slate-900'].join(' ')}>
+          <div className="mx-4 flex items-center justify-between rounded-md bg-surface-2 px-4 py-3 md:mx-6">
+            <span className="text-body-sm font-bold text-text-subtle">សរុប</span>
+            <span className={cx('text-title font-bold tabular-nums', isVoid ? 'text-text-muted line-through' : 'text-text')}>
               {formatKHR(liveSale.totalAmount)}
             </span>
           </div>
 
           {/* ── Void section ────────────────────────── */}
           {!isVoid && !voidDone && (
-            <div className="px-4 pt-4 pb-6">
+            <div className="px-4 pb-6 pt-4 md:px-6">
               {!confirmVoid ? (
                 /* Step 1 — Void button */
-                <button
-                  type="button"
+                <Button
+                  variant="dangerSoft"
+                  fullWidth
                   onClick={() => setConfirmVoid(true)}
-                  className="w-full h-11 rounded-xl border border-danger-200 text-danger-600 font-semibold text-[13px] flex items-center justify-center gap-2 active:bg-danger-50 transition-colors"
+                  icon={<Trash2 size={18} strokeWidth={2.25} />}
                 >
-                  <Trash2 size={15} strokeWidth={2} />
                   លុប / Cancel ការលក់នេះ
-                </button>
+                </Button>
               ) : (
                 /* Step 2 — Confirm */
-                <div className="rounded-2xl bg-danger-50 border border-danger-200 p-4 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle size={20} className="text-danger-600 shrink-0 mt-0.5" />
+                <div className="space-y-3 rounded-lg bg-danger-bg p-4">
+                  <div className="flex items-start gap-3 text-danger">
+                    <AlertTriangle size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
                     <div>
-                      <p className="text-[13px] font-bold text-danger-800">ប្រាកដទេ?</p>
-                      <p className="text-[11px] text-danger-600 mt-0.5 leading-relaxed">
+                      <p className="text-body-sm font-bold">ប្រាកដទេ?</p>
+                      <p className="mt-0.5 text-meta">
                         ការលក់នឹងត្រូវបានលុប ស្តុកត្រូវបានបន្ថែមត្រឡប់
                         {(liveSale.paymentType === 'debt' || liveSale.paymentType === 'partial') && (
                           <> និង បំណុលអតិថិជនត្រូវបានកាត់</>
@@ -244,14 +225,14 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
                       type="button"
                       disabled={voiding}
                       onClick={handleVoid}
-                      className="flex-1 h-11 rounded-xl bg-danger-600 text-white font-bold text-[13px] disabled:opacity-50 active:bg-danger-700 transition-colors"
+                      className="h-12 flex-1 rounded-md bg-danger text-body-sm font-bold text-white transition-[filter] active:brightness-95 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
                     >
                       {voiding ? 'កំពុងលុប…' : '✓ លុបការលក់'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirmVoid(false)}
-                      className="flex-1 h-11 rounded-xl border border-slate-200 text-slate-600 font-semibold text-[13px] active:bg-slate-50 transition-colors"
+                      className="h-12 flex-1 rounded-md bg-surface text-body-sm font-semibold text-text transition-colors active:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
                     >
                       បោះបង់
                     </button>
@@ -263,17 +244,17 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
 
           {/* Already void info */}
           {isVoid && (
-            <div className="mx-4 mt-3 mb-6 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-center">
-              <p className="text-[12px] text-slate-500">❌ ការលក់នេះត្រូវបានលុករួចហើយ</p>
+            <div className="mx-4 mb-6 mt-3 rounded-md bg-surface-2 px-4 py-3 text-center md:mx-6">
+              <p className="text-meta text-text-subtle">❌ ការលក់នេះត្រូវបានលុករួចហើយ</p>
             </div>
           )}
         </div>
-      </div>
+      </Sheet>
 
       {/* Reprint receipt */}
       {showReprint && (
         <ReprintReceipt sale={liveSale} onClose={() => setShowReprint(false)} />
       )}
-    </div>
+    </>
   )
 }

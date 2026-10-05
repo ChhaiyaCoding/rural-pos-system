@@ -33,7 +33,7 @@ export function StoreDaySummaryView({ summary }: Props) {
         <Row label="លក់សុទ្ធ (Cash)" value={summary.cashSales}     dot="bg-chart-3" />
         <Row label="ABA"             value={summary.abaSales}      dot="bg-chart-1" />
         <Row label="ជំពាក់ (ឥណទាន)"  value={summary.debtSales}     dot="bg-chart-5" valueClass="text-debt" />
-        <Row label="ចំណាយសរុប"       value={summary.totalExpenses} dot="bg-danger" valueClass="text-danger" prefix="−" />
+        <Row label="ចំណាយសរុប"       value={summary.totalExpenses} dot="bg-danger" valueClass="text-danger" prefix={summary.totalExpenses > 0 ? '−' : ''} />
         <div className="flex items-center justify-between gap-3 bg-surface-2 px-4 py-3">
           <span className="text-body-sm font-semibold text-text">សាច់ប្រាក់គួរមានក្នុងថត</span>
           <span className="text-body font-bold tabular-nums text-text">{formatKHR(expectedCash)}</span>

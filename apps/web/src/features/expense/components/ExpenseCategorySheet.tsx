@@ -1,12 +1,14 @@
 'use client'
 
 import { useMemo } from 'react'
-import { X } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
 import { formatDateOnlyKm, todayISODate, addDaysISODate } from '@/lib/date'
 import { expenseCategoryLabel, expenseCategoryEmoji } from '@/services/expense.service'
+import { Sheet } from '@/components/ui/Sheet'
+import { cx } from '@/components/ui/cx'
+import { expenseCategoryUi } from '../categoryUi'
 import type { Expense } from '@/types'
 import type { KHR, TenantId } from '@/types/branded'
 
@@ -44,72 +46,56 @@ export function ExpenseCategorySheet({ categoryId, from, to, onClose }: Props) {
   const total = expenses.reduce((s, e) => s + (e.amount as number), 0) as KHR
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/50"
-      onClick={onClose}
-      aria-hidden="true"
-    >
-      <div
-        className="w-full md:max-w-md bg-white rounded-t-2xl md:rounded-2xl max-h-[92dvh] flex flex-col shadow-pop animate-sheet-up"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        {/* Header */}
-        <div className="shrink-0 flex items-center justify-between px-4 h-14 border-b border-slate-200">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="shrink-0 w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-[20px]">
-              {expenseCategoryEmoji(categoryId)}
-            </div>
-            <span className="text-[16px] font-bold text-slate-900 truncate">{expenseCategoryLabel(categoryId)}</span>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="បិទ"
-            className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 active:bg-slate-200"
+    <Sheet
+      open
+      onClose={onClose}
+      ariaLabel={expenseCategoryLabel(categoryId)}
+      title={
+        <span className="flex min-w-0 items-center gap-2.5">
+          <span
+            className={cx('flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-title', expenseCategoryUi(categoryId).tile)}
+            aria-hidden="true"
           >
-            <X size={17} />
-          </button>
+            {expenseCategoryEmoji(categoryId)}
+          </span>
+          <span className="truncate">{expenseCategoryLabel(categoryId)}</span>
+        </span>
+      }
+    >
+      {/* Summary */}
+      <div className="flex items-center justify-between gap-3 rounded-lg bg-debt-bg px-4 py-3.5 text-debt">
+        <div>
+          <p className="text-meta font-bold">ចំណាយ​សរុប</p>
+          <p className="mt-0.5 text-meta">{expenses.length} ដង</p>
         </div>
-
-        {/* Summary */}
-        <div className="shrink-0 px-4 py-4 border-b border-slate-100">
-          <div className="rounded-2xl border border-danger-100 bg-danger-50 px-4 py-3.5 flex items-center justify-between">
-            <div>
-              <p className="text-[12px] font-bold text-danger-700">ចំណាយ​សរុប</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">{expenses.length} ដង</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[20px] font-extrabold text-danger-700 tabular-nums leading-tight">{formatKHR(total)}</p>
-              <p className="text-[12px] font-bold text-primary-600 tabular-nums">{formatUSD(total)}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* History list (this category only) */}
-        <div className="flex-1 overflow-y-auto min-h-0 px-4 py-3">
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">ប្រវត្តិ​ការ​ចំណាយ</p>
-          {sorted.length === 0 ? (
-            <p className="py-8 text-center text-[12px] text-slate-400">គ្មាន​ការ​ចំណាយ​ក្នុង​ប្រភេទ​នេះ</p>
-          ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-card divide-y divide-slate-100 overflow-hidden">
-              {sorted.map((e: Expense) => (
-                <div key={e.id} className="flex items-start gap-3 px-4 py-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-bold text-slate-700">{dateLabel(e.spentAt)}</p>
-                    {e.note && <p className="text-[11px] text-slate-400 mt-0.5 truncate">{e.note}</p>}
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-[14px] font-bold text-danger-600 tabular-nums leading-tight">−{formatKHR(e.amount)}</p>
-                    <p className="text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(e.amount)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="text-right tabular-nums">
+          <p className="text-title font-bold">{formatKHR(total)}</p>
+          <p className="text-meta font-semibold">{formatUSD(total)}</p>
         </div>
       </div>
-    </div>
+
+      {/* History list (this category only) */}
+      <div className="pb-2 pt-4">
+        <p className="mb-2 text-meta font-semibold text-text-subtle">ប្រវត្តិ​ការ​ចំណាយ</p>
+        {sorted.length === 0 ? (
+          <p className="py-8 text-center text-meta text-text-muted">គ្មាន​ការ​ចំណាយ​ក្នុង​ប្រភេទ​នេះ</p>
+        ) : (
+          <div className="divide-y divide-line overflow-hidden rounded-lg bg-bg">
+            {sorted.map((e: Expense) => (
+              <div key={e.id} className="flex items-start gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-body-sm font-bold text-text">{dateLabel(e.spentAt)}</p>
+                  {e.note && <p className="mt-0.5 truncate text-meta text-text-muted">{e.note}</p>}
+                </div>
+                <div className="shrink-0 text-right tabular-nums">
+                  <p className="text-body-sm font-bold text-debt">−{formatKHR(e.amount)}</p>
+                  <p className="text-caption font-semibold text-text-muted">{formatUSD(e.amount)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Sheet>
   )
 }
