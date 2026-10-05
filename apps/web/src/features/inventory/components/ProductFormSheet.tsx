@@ -31,16 +31,6 @@ const EMOJIS = [
   '💊','🩹','🧰','🔧','👕','👖','👟','🛒','🎯','🏷️',
 ]
 
-const CATEGORIES = [
-  { id: 'food',         label: 'ម្ហូបអាហារ' },
-  { id: 'drink',        label: 'ភេសជ្ជៈ' },
-  { id: 'household',    label: 'គ្រឿងប្រើប្រាស់' },
-  { id: 'medicine',     label: 'ថ្នាំ/សុខភាព' },
-  { id: 'construction', label: 'គ្រឿងសំណង់' },
-  { id: 'clothing',     label: 'សំលៀកបំពាក់' },
-  { id: 'other',        label: 'ផ្សេងៗ' },
-]
-
 interface ProductFormSheetProps {
   product?: Product
   onClose: () => void

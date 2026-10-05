@@ -18,7 +18,7 @@ import { MoneyText } from '@/components/ui/MoneyText'
 import { LetterAvatar } from '@/components/ui/LetterAvatar'
 import { Pill } from '@/components/ui/Pill'
 import type { Customer, Sale } from '@/types'
-import type { TenantId, KHR } from '@/types/branded'
+import type { TenantId } from '@/types/branded'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 

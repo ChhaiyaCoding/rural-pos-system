@@ -18,7 +18,7 @@ import { StatTile } from '@/components/ui/StatTile'
 import { LetterAvatar } from '@/components/ui/LetterAvatar'
 import { Pill } from '@/components/ui/Pill'
 import type { Customer } from '@/types'
-import type { KHR, TenantId } from '@/types/branded'
+import type { TenantId } from '@/types/branded'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 

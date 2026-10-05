@@ -65,9 +65,9 @@ export function BarcodeScanMini({ onDetected, onClose }: Props) {
       })
       controlsRef.current = controls
 
-    } catch (err: any) {
+    } catch (err) {
       setMode('error')
-      setErrorReason(err?.name === 'NotAllowedError' ? 'camera_denied' : 'no_camera')
+      setErrorReason((err as Error | null)?.name === 'NotAllowedError' ? 'camera_denied' : 'no_camera')
     } finally {
       setStarting(false)
     }

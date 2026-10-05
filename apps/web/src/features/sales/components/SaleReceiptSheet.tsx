@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { X, Printer, Share2, RotateCcw, CheckCircle2, Check, ImageDown } from 'lucide-react'
+import { X, Printer, Share2, CheckCircle2, Check, ImageDown } from 'lucide-react'
 import { formatKHR, formatUSD, toKHR, addKHR, multiplyKHR } from '@/lib/money'
 import { formatDateTimeKm } from '@/lib/date'
 import { useStoreProfile } from '@/store/storeProfile.store'

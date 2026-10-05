@@ -17,7 +17,7 @@ import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
 import { formatDateKm, formatDateTimeKm } from '@/lib/date'
 import type { Customer, Sale } from '@/types'
-import type { TenantId, CustomerId, KHR } from '@/types/branded'
+import type { TenantId, KHR } from '@/types/branded'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 

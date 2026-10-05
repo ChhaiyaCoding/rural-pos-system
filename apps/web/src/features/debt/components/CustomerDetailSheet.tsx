@@ -199,7 +199,6 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
   }, [txns])
 
   const hasDebt = live.debtBalance > 0
-  const initial = live.nameKm.charAt(0) || '?'
 
   /* ── Due date ──────────────────────────────────────────── */
   const [savingDue, setSavingDue] = useState(false)

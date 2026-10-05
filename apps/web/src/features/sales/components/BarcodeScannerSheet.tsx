@@ -100,10 +100,11 @@ export function BarcodeScannerSheet({ onClose }: Props) {
       })
       controlsRef.current = controls
 
-    } catch (err: any) {
-      if (err?.name === 'NotAllowedError') {
+    } catch (err) {
+      const name = (err as Error | null)?.name
+      if (name === 'NotAllowedError') {
         setState({ status: 'error', reason: 'camera_denied' })
-      } else if (err?.name === 'NotFoundError') {
+      } else if (name === 'NotFoundError') {
         setState({ status: 'error', reason: 'no_camera' })
       } else {
         setState({ status: 'manual' })

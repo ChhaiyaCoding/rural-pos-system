@@ -7,7 +7,6 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { cx } from '@/components/ui/cx'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { stockMovementService } from '@/services/stockMovement.service'
-import { formatDateTimeKm } from '@/lib/date'
 import type { Product, StockMovement, StockMovementType } from '@/types'
 import type { ProductId } from '@/types/branded'
 
