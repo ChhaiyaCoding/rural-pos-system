@@ -68,7 +68,7 @@ Severity: **P0** data/money wrong, crash, flow blocked · **P1** feature unreach
 | B35 | `/login` | all | Supabase not configured | The email/password fields are hidden | Fields show with no login button, plus a note "Supabase មិនទាន់ configure". Same as before the redesign (only the button was ever hidden) | P3 | **Open: auth is on hold** (BUG-AUTH-001) | — |
 | B36 | Settings "ជូនដំណឹងស្តុកតិចនៅ" | all | Change it to 3 → save → reload | The threshold is saved and used | The input is local state only (`useState('5')`). It is never saved or applied; products use their own threshold. It is a dead control | P2 | **Open: waiting for OK** (remove it, or wire it as the default for new products) | — |
 | B37 | `SaleDetailSheet` | all | Open a voided sale | Correct Khmer | "ត្រូវបានលុករួចហើយ" (typo for លុប) | P3 | Fixed | `66f2321` |
-| B38 | Debt success banner — `CustomerDetailSheet.tsx` | all | Pay the last open invoice | Clear Khmer | "សំណូលអស់ហើយ!": is this the intended word? (emoji removed) | P3 | **Question for you** | — |
+| B38 | Debt success banner — `CustomerDetailSheet.tsx` | all | Pay the last open invoice | Clear Khmer | "សំណូលអស់ហើយ!" | P3 | Fixed: "សងបំណុលអស់ហើយ!" (wording chosen by the founder) | `18d0a40` |
 
 ## Systematic pass (§3)
 
@@ -122,7 +122,7 @@ Severity: **P0** data/money wrong, crash, flow blocked · **P1** feature unreach
 | B34 | Backup format change |
 | B35 | Login page; auth is on hold (BUG-AUTH-001) |
 | B36 | Needs a decision: remove the control or make it work |
-| B26, B30, B38 | Design or wording decisions for you |
+| B26, B30 | Design decisions for you |
 | B19 | Badge colour token change affects the whole app; needs your OK on a darker red |
 | B20, B21 | html2canvas rendering / `viewport-fit=cover` opt-in: needs testing on a real iPhone first |
 | B22, B23 | Lint warnings and root turbo config: tooling, low risk, separate cleanup |
