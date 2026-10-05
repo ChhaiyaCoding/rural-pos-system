@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from 'next'
-import { Kantumruy_Pro } from 'next/font/google'
+import { Noto_Sans_Khmer } from 'next/font/google'
 import { Providers } from '@/components/Providers'
 import './globals.css'
 
-const kantumruyPro = Kantumruy_Pro({
+// Variable font: one file per subset covers every weight (400–700 are used).
+const notoSansKhmer = Noto_Sans_Khmer({
   subsets: ['khmer', 'latin'],
-  weight: ['400', '500', '600', '700'],
   variable: '--font-khmer',
   display: 'swap',
 })
@@ -34,7 +34,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="km" className={kantumruyPro.variable}>
+    <html lang="km" className={notoSansKhmer.variable}>
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>

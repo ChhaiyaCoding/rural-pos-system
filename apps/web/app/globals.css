@@ -3,7 +3,7 @@
 @theme {
   /* Khmer + Latin font — next/font (app/layout.tsx) injects the real family
      into this same variable; the value here is only the fallback. */
-  --font-khmer: "Kantumruy Pro", system-ui, sans-serif;
+  --font-khmer: "Noto Sans Khmer", system-ui, sans-serif;
 
   /* ══ Design v2 palette ═════════════════════════════════════════ */
 

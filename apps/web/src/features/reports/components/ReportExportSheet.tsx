@@ -65,10 +65,10 @@ export function ReportExportSheet({
       <head>
         <title>របាយការណ៍ ${periodLabel}</title>
         <meta charset="utf-8" />
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&display=swap" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap" />
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: 'Kantumruy Pro', 'Khmer OS', 'Noto Sans Khmer', sans-serif; line-height: 1.5; padding: 24px; color: #0F1B2D; }
+          body { font-family: 'Noto Sans Khmer', 'Khmer OS', sans-serif; line-height: 1.5; padding: 24px; color: #0F1B2D; }
           .card { max-width: 360px; margin: 0 auto; }
           .header { text-align: center; border-bottom: 2px solid #E2E6EC; padding-bottom: 16px; margin-bottom: 16px; }
           .store { font-size: 20px; font-weight: 800; }
