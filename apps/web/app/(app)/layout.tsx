@@ -232,14 +232,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="relative mx-auto flex w-full min-w-0 max-w-[430px] flex-1 flex-col md:max-w-none">
         <SyncStatusBar />
 
-        <main
-          className={cx(
-            'min-h-0 flex-1 overflow-y-auto',
-            // keep content clear of the floating tab bar (20 gap + 72 bar + 20 air)
-            showTabBar && 'pb-[calc(112px+env(safe-area-inset-bottom))] md:pb-0',
-          )}
-        >
-          {children}
+        <main className="min-h-0 flex-1 overflow-y-auto">
+          {/* Bottom clearance for the floating tab bar (72 bar + 20 offset +
+              home indicator + 16 air). It sits on an inner wrapper, not on the
+              scroll container: iOS Safari drops a scroll container's
+              padding-bottom from the scrollable area. */}
+          <div className={showTabBar ? 'min-h-full pb-[calc(108px+env(safe-area-inset-bottom))] md:pb-0' : 'h-full'}>
+            {children}
+          </div>
         </main>
 
         <PWAInstallBanner />

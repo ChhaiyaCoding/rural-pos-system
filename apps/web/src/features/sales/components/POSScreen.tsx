@@ -410,29 +410,34 @@ export function POSScreen() {
         />
 
         {/* ── Product grid ─────────────────────────────────── */}
-        <div
-          className={cx(
-            'min-h-0 flex-1 overflow-y-auto px-4 pt-1 md:px-6 md:pt-3',
-            count > 0 ? 'pb-[calc(118px+env(safe-area-inset-bottom))] md:pb-6' : 'pb-6',
-          )}
-        >
-          {filteredProducts.length === 0 ? (
-            <EmptyState
-              icon={<Search size={28} strokeWidth={1.75} />}
-              title={search ? `រកមិនឃើញ «${search}»` : 'គ្មានទំនិញក្នុងប្រភេទនេះ'}
-            />
-          ) : (
-            <div className="grid grid-cols-2 gap-2.5 md:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] md:gap-3">
-              {filteredProducts.map((product, i) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  index={i}
-                  onFly={handleFly}
-                />
-              ))}
-            </div>
-          )}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {/* Bottom clearance for the cart bar (74 bar + 20 offset + home
+              indicator + 16 air) on an inner wrapper — iOS Safari ignores a
+              scroll container's own padding-bottom. */}
+          <div
+            className={cx(
+              'px-4 pt-1 md:px-6 md:pt-3',
+              count > 0 ? 'pb-[calc(110px+env(safe-area-inset-bottom))] md:pb-6' : 'pb-6',
+            )}
+          >
+            {filteredProducts.length === 0 ? (
+              <EmptyState
+                icon={<Search size={28} strokeWidth={1.75} />}
+                title={search ? `រកមិនឃើញ «${search}»` : 'គ្មានទំនិញក្នុងប្រភេទនេះ'}
+              />
+            ) : (
+              <div className="grid grid-cols-2 gap-2.5 md:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] md:gap-3">
+                {filteredProducts.map((product, i) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    index={i}
+                    onFly={handleFly}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Phone cart bar (fly-to-cart target) ──────────── */}
