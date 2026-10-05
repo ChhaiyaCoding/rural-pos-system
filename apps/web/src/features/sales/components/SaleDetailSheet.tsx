@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { User, Trash2, AlertTriangle, Printer } from 'lucide-react'
+import { User, Trash2, AlertTriangle, Printer, CheckCircle2, Clock, ShoppingCart } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { saleService } from '@/services/sale.service'
@@ -88,7 +88,7 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
         title={
           <span className="flex items-center gap-2">
             លម្អិតការលក់
-            {isVoid && <Pill variant="danger">❌ លុបហើយ</Pill>}
+            {isVoid && <Pill variant="danger">លុបហើយ</Pill>}
           </span>
         }
         ariaLabel="លម្អិតការលក់"
@@ -104,7 +104,7 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
           {/* Void success banner */}
           {voidDone && (
             <div className="mx-4 mt-2 flex items-center gap-3 rounded-md bg-success-bg px-4 py-3 text-success md:mx-6">
-              <span className="text-title" aria-hidden="true">✅</span>
+              <CheckCircle2 size={24} className="shrink-0" aria-hidden="true" />
               <div>
                 <p className="text-body-sm font-bold">លុបការលក់ជោគជ័យ!</p>
                 <p className="text-meta">ស្តុកត្រូវបានបន្ថែមត្រឡប់ + បំណុលត្រូវបានកាត់</p>
@@ -122,13 +122,14 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
                 </p>
               </div>
               <span className={cx('mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-meta font-bold', pt.cls)}>
-                <span aria-hidden="true">{pt.emoji}</span> {pt.label}
+                {pt.label}
               </span>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1 rounded-full bg-bg px-3 py-1 text-meta font-medium text-text-subtle">
-                🕐 {timeStr}
+                <Clock size={14} aria-hidden="true" />
+                {timeStr}
               </span>
               {customer && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-bg px-3 py-1 text-meta font-medium text-text-subtle">
@@ -137,7 +138,8 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
                 </span>
               )}
               <span className="inline-flex items-center gap-1 rounded-full bg-bg px-3 py-1 text-meta font-medium text-text-subtle">
-                🛒 {items.length} មុខ
+                <ShoppingCart size={14} aria-hidden="true" />
+                {items.length} មុខ
               </span>
             </div>
 
@@ -245,7 +247,7 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
           {/* Already void info */}
           {isVoid && (
             <div className="mx-4 mb-6 mt-3 rounded-md bg-surface-2 px-4 py-3 text-center md:mx-6">
-              <p className="text-meta text-text-subtle">❌ ការលក់នេះត្រូវបានលុករួចហើយ</p>
+              <p className="text-meta text-text-subtle">ការលក់នេះត្រូវបានលុបរួចហើយ</p>
             </div>
           )}
         </div>

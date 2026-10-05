@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   Camera, X, User, FileText, Check,
   Package, ChevronRight, Info, ShieldAlert, Receipt, Database,
-  LogOut, Trash2, Banknote, Pencil,
+  LogOut, Trash2, Banknote, Pencil, Phone, AlertTriangle,
 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
@@ -165,7 +165,11 @@ export default function SettingsPage() {
             <div className="min-w-0 flex-1">
               <p className="truncate text-title-sm font-bold">{displayName}</p>
               <p className="truncate text-meta text-ink-300">{address.trim() || storeAddress}</p>
-              {(phone.trim() || storePhone) && <p className="truncate text-meta text-ink-300">📞 {phone.trim() || storePhone}</p>}
+              {(phone.trim() || storePhone) && (
+                <p className="flex items-center gap-1.5 truncate text-meta text-ink-300">
+                  <Phone size={14} className="shrink-0" aria-hidden="true" />{phone.trim() || storePhone}
+                </p>
+              )}
             </div>
             <a
               href="#store-info"
@@ -228,8 +232,9 @@ export default function SettingsPage() {
               className="w-full min-w-0 bg-transparent text-title-sm font-bold text-text outline-none placeholder:font-normal placeholder:text-text-muted"
             />
           </label>
-          <p className="col-span-2 px-1 text-meta text-text-muted">
-            💱 តម្លៃ​ទាំងអស់​បង្ហាញ​ទាំង ៛ និង $ — DB រក្សាទុក​ជា ៛ ប៉ុណ្ណោះ
+          <p className="col-span-2 flex items-start gap-1.5 px-1 text-meta text-text-muted">
+            <Banknote size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+            តម្លៃ​ទាំងអស់​បង្ហាញ​ទាំង ៛ និង $ — DB រក្សាទុក​ជា ៛ ប៉ុណ្ណោះ
           </p>
         </section>
 
@@ -392,8 +397,9 @@ export default function SettingsPage() {
               </span>
             </span>
           </label>
-          <p className="col-span-2 px-1 text-meta text-text-muted">
-            ⚠️ នៅពេលស្តុកធ្លាក់ចុះទៅ {threshold || '5'} ឯកតា — ប្រព័ន្ធនឹងជូនដំណឹង
+          <p className="col-span-2 flex items-start gap-1.5 px-1 text-meta text-text-muted">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+            នៅពេលស្តុកធ្លាក់ចុះទៅ {threshold || '5'} ឯកតា — ប្រព័ន្ធនឹងជូនដំណឹង
           </p>
         </section>
 

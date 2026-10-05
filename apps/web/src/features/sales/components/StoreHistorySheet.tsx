@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, History } from 'lucide-react'
+import { ChevronDown, History, StickyNote } from 'lucide-react'
 import { Sheet } from '@/components/ui/Sheet'
 import { Pill } from '@/components/ui/Pill'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -89,8 +89,9 @@ export function StoreHistorySheet({ onClose }: Props) {
                   <div className="border-t border-line bg-bg/60 p-3">
                     <StoreDaySummaryView summary={summary} />
                     {drawer.note && (
-                      <p className="mt-2 rounded-md bg-surface px-3 py-2 text-meta text-text-subtle">
-                        📝 {drawer.note}
+                      <p className="mt-2 flex items-start gap-2 rounded-md bg-surface px-3 py-2 text-meta text-text-subtle">
+                        <StickyNote size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+                        <span>{drawer.note}</span>
                       </p>
                     )}
                   </div>

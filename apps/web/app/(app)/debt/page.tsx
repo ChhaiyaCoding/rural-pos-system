@@ -182,7 +182,7 @@ export default function DebtPage() {
           ) : filtered.length === 0 ? (
             <p className="py-16 text-center text-meta text-text-muted">
               {search !== ''        ? `រក​មិន​ឃើញ «${search}»`
-              : tab === 'outstanding' ? 'គ្មាន​អ្នក​ជំពាក់​ទេ 🎉'
+              : tab === 'outstanding' ? 'គ្មាន​អ្នក​ជំពាក់​ទេ'
               : tab === 'partial'     ? 'គ្មាន​អ្នក​បង់​ខ្លះ'
               : tab === 'paid'        ? 'មិន​ទាន់​មាន​អ្នក​សង​អស់'
               : 'មិន​ទាន់​មាន​អតិថិជន'}

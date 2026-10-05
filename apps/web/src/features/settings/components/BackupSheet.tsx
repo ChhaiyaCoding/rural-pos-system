@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Download, Upload, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { Download, Upload, CheckCircle2, AlertTriangle, Lightbulb } from 'lucide-react'
 import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
 import { backupService, type BackupFile, type BackupStats } from '@/services/backup.service'
@@ -191,8 +191,9 @@ export function BackupSheet({ onClose }: Props) {
             )}
 
             {/* Tip */}
-            <p className="rounded-md bg-surface-2 px-3.5 py-3 text-meta text-text-muted">
-              💡 Export ទុក backup ជារៀងរាល់ថ្ងៃ → ផ្ញើ Telegram ខ្លួនឯង ឬ save Google Drive ដើម្បីការពារទិន្នន័យបាត់។
+            <p className="flex items-start gap-2 rounded-md bg-surface-2 px-3.5 py-3 text-meta text-text-muted">
+              <Lightbulb size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+              <span>Export ទុក backup ជារៀងរាល់ថ្ងៃ → ផ្ញើ Telegram ខ្លួនឯង ឬ save Google Drive ដើម្បីការពារទិន្នន័យបាត់។</span>
             </p>
           </>
         )}

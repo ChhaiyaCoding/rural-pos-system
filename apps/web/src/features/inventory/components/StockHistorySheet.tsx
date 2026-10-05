@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { History, ShoppingCart, PackagePlus, RotateCcw, Settings2 } from 'lucide-react'
+import { History, ShoppingCart, PackagePlus, RotateCcw, Settings2, StickyNote } from 'lucide-react'
 import { Sheet } from '@/components/ui/Sheet'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { cx } from '@/components/ui/cx'
@@ -110,7 +110,10 @@ export function StockHistorySheet({ product, onClose }: Props) {
                         {t} · {m.qtyBefore} → {m.qtyAfter} {product.unit}
                       </p>
                       {m.note && (
-                        <p className="mt-0.5 truncate text-meta text-text-subtle">📝 {m.note}</p>
+                        <p className="mt-0.5 flex items-center gap-1.5 text-meta text-text-subtle">
+                          <StickyNote size={14} className="shrink-0" aria-hidden="true" />
+                          <span className="truncate">{m.note}</span>
+                        </p>
                       )}
                     </div>
                     <p className={cx('shrink-0 text-body font-bold tabular-nums', isUp ? 'text-success' : 'text-debt')}>

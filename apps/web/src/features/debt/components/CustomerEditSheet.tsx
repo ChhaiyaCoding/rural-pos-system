@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Camera, MapPin, Trash2, FileText, Lock } from 'lucide-react'
+import { Camera, MapPin, Trash2, FileText, Lock, AlertTriangle } from 'lucide-react'
 import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
@@ -200,8 +200,9 @@ export function CustomerEditSheet({ customer, onClose, onSaved }: Props) {
             </Button>
           ) : (
             <div className="space-y-3 rounded-md bg-danger-bg px-4 py-3">
-              <p className="text-body-sm font-semibold text-danger">
-                ⚠️ អ្នកប្រាកដទេ? មិនអាចដកស្រង់វិញបានទេ!
+              <p className="flex items-start gap-2 text-body-sm font-semibold text-danger">
+                <AlertTriangle size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
+                អ្នកប្រាកដទេ? មិនអាចដកស្រង់វិញបានទេ!
               </p>
               <div className="flex gap-2">
                 <button

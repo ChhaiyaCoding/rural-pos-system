@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Banknote, History } from 'lucide-react'
+import { Banknote, History, Lightbulb } from 'lucide-react'
 import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
 import { cx } from '@/components/ui/cx'
@@ -125,8 +125,9 @@ export function OpenShiftSheet({ cashierName, onOpened, onClose }: Props) {
           </div>
 
           {/* Info note */}
-          <p className="rounded-md bg-surface-2 px-3.5 py-3 text-meta text-text-muted">
-            💡 ប្រាក់ដែលមានក្នុងហ្គូ <span className="font-semibold text-text">មុន</span>ពេលចាប់ផ្ដើមលក់ថ្ងៃនេះ
+          <p className="flex items-start gap-2 rounded-md bg-surface-2 px-3.5 py-3 text-meta text-text-muted">
+            <Lightbulb size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <span>ប្រាក់ដែលមានក្នុងហ្គូ <span className="font-semibold text-text">មុន</span>ពេលចាប់ផ្ដើមលក់ថ្ងៃនេះ</span>
           </p>
         </div>
       </Sheet>
