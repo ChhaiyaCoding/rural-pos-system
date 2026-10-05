@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Camera, X, User, FileText, Check,
@@ -26,7 +26,38 @@ import type { TenantId } from '@/types/branded'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
+/* The form below copies the saved profile into local state once, on its first
+   render. While React hydrates the page, zustand hands out the *initial*
+   (default) profile, so mounting the form then made it start from the defaults
+   and «រក្សាទុក» silently overwrote the saved settings (QA B33). Mount it only
+   after hydration and after the persisted profile has been restored. */
 export default function SettingsPage() {
+  const ready = useProfileReady()
+  if (!ready) {
+    return (
+      <div className="mx-auto w-full max-w-2xl md:px-6">
+        <PageHeader title="ការកំណត់" subtitle="កំណត់ព័ត៌មានហាង និងមុខងារ" backHref="/more" className="md:px-0" />
+      </div>
+    )
+  }
+  return <SettingsForm />
+}
+
+/** True once the page has mounted (React hydration done) and the persisted store profile is restored. */
+function useProfileReady(): boolean {
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    const { persist } = useStoreProfile
+    if (persist.hasHydrated()) {
+      setReady(true)
+      return
+    }
+    return persist.onFinishHydration(() => setReady(true))
+  }, [])
+  return ready
+}
+
+function SettingsForm() {
   const {
     storeName, storeAddress, storePhone,
     storeLogo, cashierName, receiptFooter,
