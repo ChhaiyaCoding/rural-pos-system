@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
   ShoppingCart, PackagePlus, Wallet, HandCoins,
-  Package, Users, ChartColumn, ArrowRight,
+  Package, Users, ChartColumn, ArrowRight, CircleCheck,
 } from 'lucide-react'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
@@ -83,7 +83,7 @@ export default function HomePage() {
               </span>
             }
             title={storeName}
-            subtitle={`សួស្តី ${cashierName} 👋`}
+            subtitle={`សួស្តី ${cashierName}`}
           >
             <div className="flex items-center justify-between gap-3">
               <p className="text-meta font-semibold text-ink-300">ការលក់ថ្ងៃនេះ</p>
@@ -124,30 +124,46 @@ export default function HomePage() {
         <section className="px-4 pb-6 pt-6 md:px-0 md:pt-0">
           <h2 className="mb-2.5 text-title-sm font-bold text-text">ត្រូវធ្វើថ្ងៃនេះ</h2>
           <div className="space-y-2">
-            <ListRow
-              href="/inventory"
-              leading={
-                <TaskIcon tone={lowStockCount > 0 ? 'warn' : 'neutral'}>
-                  <Package size={22} strokeWidth={2} />
-                </TaskIcon>
-              }
-              title="ស្តុកជិតអស់"
-              meta={lowStockCount > 0 ? `${lowStockCount} មុខ ត្រូវ​បន្ថែម​ស្តុក` : 'ស្តុក​គ្រប់គ្រាន់'}
-              trailing={lowStockCount > 0 ? <Pill variant="warn">{lowStockCount}</Pill> : undefined}
-              chevron
-            />
-            <ListRow
-              href="/debt"
-              leading={
-                <TaskIcon tone={debtorCount > 0 ? 'debt' : 'neutral'}>
-                  <Users size={22} strokeWidth={2} />
-                </TaskIcon>
-              }
-              title="បំណុលអតិថិជន"
-              meta={`${debtorCount} នាក់ជំពាក់`}
-              trailing={<MoneyText amount={totalDebt} tone={debtorCount > 0 ? 'debt' : 'muted'} align="right" />}
-              chevron
-            />
+            {/* Only rows with something to act on; otherwise one "all good" row */}
+            {lowStockCount > 0 && (
+              <ListRow
+                href="/inventory"
+                leading={
+                  <TaskIcon tone="warn">
+                    <Package size={22} strokeWidth={2} />
+                  </TaskIcon>
+                }
+                title="ស្តុកជិតអស់"
+                meta={`${lowStockCount} មុខ ត្រូវ​បន្ថែម​ស្តុក`}
+                trailing={<Pill variant="warn">{lowStockCount}</Pill>}
+                chevron
+              />
+            )}
+            {debtorCount > 0 && (
+              <ListRow
+                href="/debt"
+                leading={
+                  <TaskIcon tone="debt">
+                    <Users size={22} strokeWidth={2} />
+                  </TaskIcon>
+                }
+                title="បំណុលអតិថិជន"
+                meta={`${debtorCount} នាក់ជំពាក់`}
+                trailing={<MoneyText amount={totalDebt} tone="debt" align="right" />}
+                chevron
+              />
+            )}
+            {lowStockCount === 0 && debtorCount === 0 && (
+              <ListRow
+                leading={
+                  <TaskIcon tone="success">
+                    <CircleCheck size={22} strokeWidth={2} />
+                  </TaskIcon>
+                }
+                title="អ្វីៗ​ល្អ​ទាំងអស់"
+                meta="ស្តុក​គ្រប់គ្រាន់ · គ្មាន​អតិថិជន​ជំពាក់"
+              />
+            )}
             <ListRow
               href="/reports"
               leading={
@@ -190,7 +206,7 @@ function QuickAction({
 }
 
 /** 48px tinted icon tile for a to-do row. */
-function TaskIcon({ tone, children }: { tone: 'warn' | 'debt' | 'ink' | 'neutral'; children: React.ReactNode }) {
+function TaskIcon({ tone, children }: { tone: 'warn' | 'debt' | 'ink' | 'success' | 'neutral'; children: React.ReactNode }) {
   return (
     <span
       className={cx(
@@ -198,6 +214,7 @@ function TaskIcon({ tone, children }: { tone: 'warn' | 'debt' | 'ink' | 'neutral
         tone === 'warn' ? 'bg-warn-bg text-warn'
           : tone === 'debt' ? 'bg-debt-bg text-debt'
           : tone === 'ink' ? 'bg-ink-900 text-accent'
+          : tone === 'success' ? 'bg-success-bg text-success'
           : 'bg-surface-2 text-text-muted',
       )}
       aria-hidden="true"
