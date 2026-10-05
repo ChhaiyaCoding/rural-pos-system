@@ -15,6 +15,18 @@ export interface StatTileProps {
   className?: string | undefined
 }
 
+/* A 3-up phone tile has ~81px for the value. Long money strings
+   ("13,125,000 ៛") are stepped down in size instead of being cut off with "…";
+   only extreme lengths may wrap. */
+function valueSize(value: ReactNode): string {
+  if (typeof value !== 'string') return 'text-title-sm truncate'
+  if (value.length <= 7) return 'text-title-sm whitespace-nowrap'
+  if (value.length <= 9) return 'text-body whitespace-nowrap'
+  if (value.length <= 11) return 'text-body-sm whitespace-nowrap'
+  if (value.length <= 13) return 'text-meta whitespace-nowrap'
+  return 'text-meta'
+}
+
 export function StatTile({ label, value, sub, tone = 'light', dot, onClick, pressed, className }: StatTileProps) {
   const dark = tone === 'onDark'
   const classes = cx(
@@ -31,7 +43,7 @@ export function StatTile({ label, value, sub, tone = 'light', dot, onClick, pres
         {dot && <span className={cx('h-2 w-2 shrink-0 rounded-full', dot)} aria-hidden="true" />}
         {label}
       </span>
-      <span className={cx('text-title-sm font-bold tabular-nums truncate max-w-full', dark ? 'text-white' : 'text-text')}>
+      <span className={cx('max-w-full font-bold tabular-nums', valueSize(value), dark ? 'text-white' : 'text-text')}>
         {value}
       </span>
       {sub && <span className={cx('text-caption', dark ? 'text-ink-300' : 'text-text-muted')}>{sub}</span>}
