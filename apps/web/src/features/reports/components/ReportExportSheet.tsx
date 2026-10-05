@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
-import { X, Printer, Share2, CheckCircle2 } from 'lucide-react'
+import { X, Printer, Share2, CheckCircle2, Banknote, NotebookPen, Users } from 'lucide-react'
 import { formatKHR, formatUSD } from '@/lib/money'
 import { expenseCategoryLabel, expenseCategoryEmoji } from '@/services/expense.service'
 import type { KHR } from '@/types/branded'
@@ -238,10 +238,10 @@ export function ReportExportSheet({
       >
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between px-4 h-14 border-b border-line">
-          <span className="text-body-sm font-bold text-text">📤 Export របាយការណ៍</span>
-          <button type="button" onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-2 text-text-muted active:bg-line">
-            <X size={16} />
+          <span className="text-body-sm font-bold text-text">នាំចេញរបាយការណ៍</span>
+          <button type="button" onClick={onClose} aria-label="បិទ"
+            className="w-12 h-12 -mr-2 flex items-center justify-center rounded-full bg-surface-2 text-text-muted active:bg-line">
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 
@@ -308,7 +308,7 @@ export function ReportExportSheet({
               <p className="text-caption font-bold text-text-muted uppercase tracking-wider">របៀបទូទាត់</p>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-body">💵</span>
+                  <Banknote size={18} className="text-success" aria-hidden="true" />
                   <span className="text-meta font-semibold text-text-subtle">សាច់ប្រាក់</span>
                   <span className="text-caption text-text-muted">{cashCount} ដង</span>
                 </div>
@@ -319,7 +319,7 @@ export function ReportExportSheet({
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-body">📒</span>
+                  <NotebookPen size={18} className="text-debt" aria-hidden="true" />
                   <span className="text-meta font-semibold text-text-subtle">ជំពាក់</span>
                   <span className="text-caption text-text-muted">{debtCount} ដង</span>
                 </div>
@@ -359,7 +359,7 @@ export function ReportExportSheet({
               <div className="px-5 py-3 border-b border-line">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-caption font-bold text-debt">👥 បំណុលអតិថិជន</p>
+                    <p className="flex items-center gap-1.5 text-caption font-bold text-debt"><Users size={14} aria-hidden="true" />បំណុលអតិថិជន</p>
                     <p className="text-caption text-text-muted">{debtorCount} នាក់ជំពាក់</p>
                   </div>
                   <div className="text-right">
@@ -383,16 +383,16 @@ export function ReportExportSheet({
               onClick={handlePrint}
               className="h-13 py-3.5 rounded-2xl bg-ink-800 text-white font-bold text-body-sm flex items-center justify-center gap-2 active:bg-ink-900 transition-colors"
             >
-              <Printer size={18} strokeWidth={2} />
-              Print
+              <Printer size={18} strokeWidth={2} aria-hidden="true" />
+              បោះពុម្ព
             </button>
             <button
               type="button"
               onClick={handleShare}
               className="h-13 py-3.5 rounded-2xl bg-ink-900 text-white font-bold text-body-sm flex items-center justify-center gap-2 active:bg-ink-800 transition-colors"
             >
-              <Share2 size={18} strokeWidth={2} />
-              Share
+              <Share2 size={18} strokeWidth={2} aria-hidden="true" />
+              ចែករំលែក
             </button>
           </div>
 
