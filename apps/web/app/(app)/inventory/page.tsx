@@ -172,7 +172,7 @@ export default function InventoryPage() {
 
         {/* Category pills */}
         {categoryTabs.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+          <div className="flex gap-2 overflow-x-auto overscroll-x-contain no-scrollbar [mask-image:linear-gradient(to_right,#000_calc(100%-40px),transparent)]">
             {categoryTabs.map((t) => {
               const isActive = tab === t.id
               return (
@@ -192,6 +192,8 @@ export default function InventoryPage() {
                 </button>
               )
             })}
+            {/* End spacer: clears the right-edge fade and Safari's ignored padding-right */}
+            <span className="w-10 shrink-0" aria-hidden="true" />
           </div>
         )}
       </div>
