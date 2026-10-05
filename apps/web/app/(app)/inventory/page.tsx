@@ -70,7 +70,7 @@ export default function InventoryPage() {
 
   /* If the active category tab becomes empty, fall back to "all" */
   useEffect(() => {
-    if (tab !== 'all' && tab !== 'low' && (categoryCounts[tab] ?? 0) === 0) setTab('all')
+    if (tab !== 'all' && tab !== 'low' && tab !== 'out' && (categoryCounts[tab] ?? 0) === 0) setTab('all')
   }, [categoryCounts, tab])
 
   const filtered = useMemo(() => {
@@ -78,6 +78,7 @@ export default function InventoryPage() {
       const isAlert     = p.stockQty === 0 || p.stockQty <= p.lowStockThreshold
       const matchCat    = tab === 'all' ? true
                         : tab === 'low' ? isAlert
+                        : tab === 'out' ? p.stockQty === 0
                         : p.categoryId === tab
       const matchSearch = productMatchesQuery(p, search)
       return matchCat && matchSearch
@@ -98,7 +99,7 @@ export default function InventoryPage() {
 
   /* ── Display only ───────────────────────────────────────────── */
   const stockValue = products.reduce((sum, p) => sum + (p.costPrice as number) * p.stockQty, 0) as KHR
-  const categoryTabs = TABS.filter((t) => t.id !== 'all' && t.id !== 'low')
+  const categoryTabs = TABS.filter((t) => t.id !== 'all' && t.id !== 'low' && t.id !== 'out')
 
   return (
     <div className="mx-auto w-full max-w-3xl md:px-6">
@@ -142,16 +143,25 @@ export default function InventoryPage() {
             className={cx(
               'flex flex-col items-start rounded-lg bg-warn-bg p-3.5 text-left text-warn',
               'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warn',
-              tab === 'low' && 'ring-2 ring-warn',
+              tab === 'low' && 'ring-2 ring-accent',
             )}
           >
             <span className="text-amount font-bold tabular-nums">{alertCount}</span>
             <span className="text-meta font-semibold">ស្តុកតិច</span>
           </button>
-          <div className="flex flex-col items-start rounded-lg bg-danger-bg p-3.5 text-danger">
+          <button
+            type="button"
+            onClick={() => setTab('out')}
+            aria-pressed={tab === 'out'}
+            className={cx(
+              'flex flex-col items-start rounded-lg bg-danger-bg p-3.5 text-left text-danger',
+              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger',
+              tab === 'out' && 'ring-2 ring-accent',
+            )}
+          >
             <span className="text-amount font-bold tabular-nums">{outCount}</span>
             <span className="text-meta font-semibold">អស់ស្តុក</span>
-          </div>
+          </button>
         </div>
 
         <SearchInput
@@ -195,7 +205,9 @@ export default function InventoryPage() {
             description="ចុច + ដើម្បីបន្ថែមទំនិញដំបូង"
           />
         ) : filtered.length === 0 ? (
-          <p className="py-16 text-center text-meta text-text-muted">រកមិនឃើញ «{search}»</p>
+          <p className="py-16 text-center text-meta text-text-muted">
+            {search ? `រកមិនឃើញ «${search}»` : tab === 'out' ? 'គ្មានទំនិញអស់ស្តុក' : tab === 'low' ? 'គ្មានទំនិញស្តុកតិច' : 'គ្មានទំនិញក្នុងប្រភេទនេះ'}
+          </p>
         ) : (
           <div className="space-y-2">
             {filtered.map((product) => {
