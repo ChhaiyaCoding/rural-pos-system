@@ -1,4 +1,4 @@
-import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from 'react'
+import { forwardRef, useId, type InputHTMLAttributes, type TextareaHTMLAttributes, type ReactNode } from 'react'
 import { cx } from './cx'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -58,3 +58,44 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 )
 
 Input.displayName = 'Input'
+
+interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label?: string | undefined
+  /** Small icon shown before the label */
+  icon?: ReactNode | undefined
+  fill?: 'bg' | 'surface' | undefined
+}
+
+/** Filled multi-line field matching Input (label inside, radius 18). */
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
+  ({ label, icon, fill = 'bg', className, id, ...props }, ref) => {
+    const autoId = useId()
+    const fieldId = id ?? autoId
+    return (
+      <div
+        className={cx(
+          'flex flex-col rounded-[18px] px-4 py-2 focus-within:ring-2 focus-within:ring-ink-900/20',
+          fill === 'surface' ? 'bg-surface' : 'bg-bg',
+        )}
+      >
+        {label && (
+          <label htmlFor={fieldId} className="flex items-center gap-1 text-caption font-semibold text-text-subtle">
+            {icon && <span className="inline-flex" aria-hidden="true">{icon}</span>}
+            {label}
+          </label>
+        )}
+        <textarea
+          ref={ref}
+          id={fieldId}
+          {...props}
+          className={cx(
+            'w-full resize-none bg-transparent text-body text-text outline-none placeholder:text-text-muted',
+            className,
+          )}
+        />
+      </div>
+    )
+  },
+)
+
+Textarea.displayName = 'Textarea'

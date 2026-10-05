@@ -1,7 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { X, ScanLine, PackageSearch, ZapOff, Keyboard } from 'lucide-react'
+import { PackageSearch, ZapOff, Keyboard, Check, Plus } from 'lucide-react'
+import { Sheet } from '@/components/ui/Sheet'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
+import { ProductThumb } from '@/components/ui/ProductThumb'
 import { db } from '@/db'
 import { useSaleStore } from '@/store/sale.store'
 import { formatKHR } from '@/lib/money'
@@ -142,194 +146,150 @@ export function BarcodeScannerSheet({ onClose }: Props) {
 
   /* ─────────────────────────────────────────────────── */
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/80"
-      onClick={handleClose}
-      aria-hidden="true"
+    <Sheet
+      open
+      onClose={handleClose}
+      tone="dark"
+      title="ស្កែន Barcode"
+      bodyClassName="p-0"
+      headerActions={
+        <IconButton
+          variant="onDark"
+          aria-label="វាយ Barcode ដៃ"
+          aria-pressed={state.status === 'manual'}
+          onClick={() => setState(s => s.status === 'manual' ? { status: 'scanning' } : { status: 'manual' })}
+        >
+          <Keyboard size={20} strokeWidth={2} />
+        </IconButton>
+      }
     >
-      <div
-        className="w-full md:max-w-md bg-slate-900 rounded-t-2xl md:rounded-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-pop animate-sheet-up"
-        onClick={e => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        {/* Header */}
-        <div className="shrink-0 flex items-center justify-between px-4 h-14">
-          <div className="flex items-center gap-2 text-white">
-            <ScanLine size={18} strokeWidth={2.25} className="text-primary-400" />
-            <span className="text-[15px] font-bold">ស្កែន Barcode</span>
+      {/* Camera viewport */}
+      <div className="relative overflow-hidden bg-black" style={{ aspectRatio: '4/3' }}>
+        <video ref={videoRef} className="w-full h-full object-cover" muted playsInline autoPlay />
+
+        {/* Scan frame overlay */}
+        {state.status === 'scanning' && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
+            <div className="relative h-40 w-56">
+              <span className="absolute left-0 top-0 h-7 w-7 rounded-tl-md border-l-[3px] border-t-[3px] border-accent" />
+              <span className="absolute right-0 top-0 h-7 w-7 rounded-tr-md border-r-[3px] border-t-[3px] border-accent" />
+              <span className="absolute bottom-0 left-0 h-7 w-7 rounded-bl-md border-b-[3px] border-l-[3px] border-accent" />
+              <span className="absolute bottom-0 right-0 h-7 w-7 rounded-br-md border-b-[3px] border-r-[3px] border-accent" />
+              <div className="absolute inset-x-2 top-1/2 h-0.5 animate-pulse rounded-full bg-accent/80" />
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setState(s => s.status === 'manual' ? { status: 'scanning' } : { status: 'manual' })}
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 active:bg-slate-600"
-              aria-label="វាយ Barcode ដៃ"
-            >
-              <Keyboard size={15} strokeWidth={2} />
-            </button>
-            <button
-              type="button"
-              onClick={handleClose}
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-700 text-slate-300 active:bg-slate-600"
-            >
-              <X size={17} />
-            </button>
+        )}
+
+        {/* Found overlay */}
+        {state.status === 'found' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-ink-900/70" role="status">
+            <div className="text-center">
+              <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-accent text-ink-900" aria-hidden="true">
+                <Check size={34} strokeWidth={3} />
+              </div>
+              <p className="text-body font-bold text-white">ជោគជ័យ!</p>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Camera viewport */}
-        <div className="relative bg-black overflow-hidden" style={{ aspectRatio: '4/3' }}>
-          <video ref={videoRef} className="w-full h-full object-cover" muted playsInline autoPlay />
-
-          {/* Scan frame overlay */}
-          {state.status === 'scanning' && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="relative w-56 h-40">
-                <span className="absolute top-0 left-0 w-7 h-7 border-t-[3px] border-l-[3px] border-primary-400 rounded-tl-md" />
-                <span className="absolute top-0 right-0 w-7 h-7 border-t-[3px] border-r-[3px] border-primary-400 rounded-tr-md" />
-                <span className="absolute bottom-0 left-0 w-7 h-7 border-b-[3px] border-l-[3px] border-primary-400 rounded-bl-md" />
-                <span className="absolute bottom-0 right-0 w-7 h-7 border-b-[3px] border-r-[3px] border-primary-400 rounded-br-md" />
-                <div className="absolute inset-x-2 top-1/2 h-0.5 bg-primary-400/80 rounded-full animate-pulse" />
-              </div>
+        {/* Not found overlay */}
+        {state.status === 'notfound' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-ink-900/80" role="status">
+            <div className="px-6 text-center">
+              <PackageSearch size={40} className="mx-auto mb-2 text-debt-on-dark" aria-hidden="true" />
+              <p className="text-body font-bold text-white">រកមិនឃើញទំនិញ</p>
+              <p className="mt-1 font-mono text-meta text-debt-on-dark">{state.code}</p>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Found overlay */}
-          {state.status === 'found' && (
-            <div className="absolute inset-0 bg-success-900/60 flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-success-500 text-white flex items-center justify-center mx-auto mb-2 text-[32px]">✓</div>
-                <p className="text-white font-bold text-[15px]">ជោគជ័យ!</p>
-              </div>
+        {/* Error overlay */}
+        {state.status === 'error' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-ink-900/90" role="alert">
+            <div className="px-6 text-center">
+              <ZapOff size={36} className="mx-auto mb-3 text-ink-300" aria-hidden="true" />
+              <p className="text-body font-bold text-white">
+                {state.reason === 'camera_denied' ? 'មិនអនុញ្ញាតប្រើ Camera' : 'រក Camera មិនឃើញ'}
+              </p>
+              <p className="mt-1 text-meta text-ink-300">
+                {state.reason === 'camera_denied'
+                  ? 'ចូល Settings > Safari > Camera ដើម្បីអនុញ្ញាត'
+                  : 'ឧបករណ៍មិនមាន Camera'}
+              </p>
             </div>
-          )}
-
-          {/* Not found overlay */}
-          {state.status === 'notfound' && (
-            <div className="absolute inset-0 bg-danger-900/60 flex items-center justify-center">
-              <div className="text-center px-6">
-                <PackageSearch size={40} className="text-danger-300 mx-auto mb-2" />
-                <p className="text-white font-bold text-[14px]">រកមិនឃើញទំនិញ</p>
-                <p className="text-danger-300 text-[12px] mt-1 font-mono">{state.code}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Error overlay */}
-          {state.status === 'error' && (
-            <div className="absolute inset-0 bg-slate-900/90 flex items-center justify-center">
-              <div className="text-center px-6">
-                <ZapOff size={36} className="text-slate-400 mx-auto mb-3" />
-                <p className="text-white font-bold text-[14px]">
-                  {state.reason === 'camera_denied' ? 'មិនអនុញ្ញាតប្រើ Camera' : 'រក Camera មិនឃើញ'}
-                </p>
-                <p className="text-slate-400 text-[12px] mt-1 leading-relaxed">
-                  {state.reason === 'camera_denied'
-                    ? 'ចូល Settings > Safari > Camera ដើម្បីអនុញ្ញាត'
-                    : 'ឧបករណ៍មិនមាន Camera'}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Bottom panel */}
-        <div className="shrink-0 px-4 py-4 space-y-3">
-
-          {/* Manual input */}
-          {state.status === 'manual' && (
-            <div>
-              <p className="text-[11px] text-slate-400 mb-2">វាយ Barcode ដៃ</p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={manualInput}
-                  onChange={e => setManualInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleManualSearch()}
-                  placeholder="8851234567890"
-                  autoFocus
-                  className="flex-1 h-11 rounded-xl bg-slate-700 border border-slate-600 text-white px-4 text-[14px] font-mono placeholder:text-slate-500 focus:outline-none focus:border-primary-500"
-                />
-                <button
-                  type="button"
-                  disabled={!manualInput.trim() || manualLoading}
-                  onClick={handleManualSearch}
-                  className="h-11 px-4 rounded-xl bg-primary-600 text-white font-bold text-[13px] disabled:opacity-50 active:bg-primary-700 transition-colors"
-                >
-                  {manualLoading ? '…' : 'ស្វែងរក'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Hint */}
-          {state.status === 'scanning' && (
-            <p className="text-center text-[12px] text-slate-400">
-              ដាក់ Barcode ក្នុង Frame ខាងលើ
-            </p>
-          )}
-
-          {/* Found: product card */}
-          {state.status === 'found' && (
-            <div className="rounded-xl bg-slate-800 border border-slate-600 p-3 flex items-center gap-3">
-              <div className="shrink-0 w-11 h-11 rounded-xl bg-slate-700 flex items-center justify-center text-[24px] overflow-hidden">
-                {state.product.imageUri
-                  ? <img src={state.product.imageUri} alt="" className="w-full h-full object-cover" />
-                  : (state.product.emoji || '📦')}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-bold text-white truncate">{state.product.nameKm}</p>
-                <p className="text-[12px] text-primary-400 font-semibold tabular-nums">
-                  {formatKHR(state.product.sellPrice)}
-                  <span className="text-slate-500"> · {state.product.stockQty} {state.product.unit}</span>
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleAddToCart(state.product)}
-                className="shrink-0 h-10 px-4 rounded-xl bg-success-600 text-white font-bold text-[13px] active:bg-success-700 transition-colors"
-              >
-                + រទេះ
-              </button>
-            </div>
-          )}
-
-          {/* Not found: retry */}
-          {state.status === 'notfound' && (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleRetry}
-                className="flex-1 h-11 rounded-xl bg-slate-700 text-white font-semibold text-[14px] active:bg-slate-600"
-              >
-                ស្កែនម្ដងទៀត
-              </button>
-              <button
-                type="button"
-                onClick={() => setState({ status: 'manual' })}
-                className="flex-1 h-11 rounded-xl border border-slate-600 text-slate-300 font-semibold text-[13px] active:bg-slate-800"
-              >
-                <Keyboard size={14} className="inline mr-1.5 mb-0.5" />
-                វាយដៃ
-              </button>
-            </div>
-          )}
-
-          {/* Error: show manual */}
-          {state.status === 'error' && (
-            <button
-              type="button"
-              onClick={() => setState({ status: 'manual' })}
-              className="w-full h-11 rounded-xl bg-slate-700 text-white font-semibold text-[14px] active:bg-slate-600 flex items-center justify-center gap-2"
-            >
-              <Keyboard size={16} />
-              ប្រើ Manual Input ជំនួស
-            </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-    </div>
+
+      {/* Bottom panel */}
+      <div className="space-y-3 px-4 pt-4 pb-[max(16px,env(safe-area-inset-bottom))] md:px-6">
+
+        {/* Manual input */}
+        {state.status === 'manual' && (
+          <div>
+            <label htmlFor="manual-barcode" className="mb-2 block text-meta text-ink-300">វាយ Barcode ដៃ</label>
+            <div className="flex gap-2">
+              <input
+                id="manual-barcode"
+                type="text"
+                inputMode="numeric"
+                value={manualInput}
+                onChange={e => setManualInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleManualSearch()}
+                placeholder="8851234567890"
+                autoFocus
+                className="h-12 min-w-0 flex-1 rounded-md bg-ink-800 px-4 font-mono text-body text-white placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+              <Button variant="primary" disabled={!manualInput.trim() || manualLoading} onClick={handleManualSearch}>
+                {manualLoading ? '…' : 'ស្វែងរក'}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Hint */}
+        {state.status === 'scanning' && (
+          <p className="text-center text-body-sm text-ink-300">
+            ដាក់ Barcode ក្នុង Frame ខាងលើ
+          </p>
+        )}
+
+        {/* Found: product card */}
+        {state.status === 'found' && (
+          <div className="flex items-center gap-3 rounded-lg bg-ink-800 p-3">
+            <ProductThumb product={state.product} size={48} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-body-sm font-bold text-white">{state.product.nameKm}</p>
+              <p className="text-meta font-semibold tabular-nums text-accent">
+                {formatKHR(state.product.sellPrice)}
+                <span className="text-ink-300"> · {state.product.stockQty} {state.product.unit}</span>
+              </p>
+            </div>
+            <Button variant="primary" icon={<Plus size={18} strokeWidth={2.5} />} onClick={() => handleAddToCart(state.product)}>
+              រទេះ
+            </Button>
+          </div>
+        )}
+
+        {/* Not found: retry */}
+        {state.status === 'notfound' && (
+          <div className="flex gap-2">
+            <Button variant="primary" className="flex-1" onClick={handleRetry}>
+              ស្កែនម្ដងទៀត
+            </Button>
+            <Button variant="onDark" className="flex-1" icon={<Keyboard size={16} />} onClick={() => setState({ status: 'manual' })}>
+              វាយដៃ
+            </Button>
+          </div>
+        )}
+
+        {/* Error: show manual */}
+        {state.status === 'error' && (
+          <Button variant="onDark" fullWidth icon={<Keyboard size={16} />} onClick={() => setState({ status: 'manual' })}>
+            ប្រើ Manual Input ជំនួស
+          </Button>
+        )}
+      </div>
+    </Sheet>
   )
 }

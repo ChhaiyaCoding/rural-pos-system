@@ -1,7 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { X, ChevronDown, History } from 'lucide-react'
+import { ChevronDown, History } from 'lucide-react'
+import { Sheet } from '@/components/ui/Sheet'
+import { Pill } from '@/components/ui/Pill'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { cx } from '@/components/ui/cx'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { cashDrawerService } from '@/services/cashDrawer.service'
 import type { StoreDaySummary } from '@/services/cashDrawer.service'
@@ -41,97 +45,61 @@ export function StoreHistorySheet({ onClose }: Props) {
   }, []) ?? []
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/60"
-      onClick={onClose}
-      aria-hidden="true"
-    >
-      <div
-        className="w-full md:max-w-md bg-white rounded-t-2xl md:rounded-2xl max-h-[92dvh] flex flex-col shadow-pop animate-sheet-up"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        {/* Header */}
-        <div className="shrink-0 flex items-center justify-between px-4 h-14 border-b border-slate-200">
-          <div className="flex items-center gap-2.5">
-            <History size={19} className="text-slate-700" />
-            <span className="text-[16px] font-bold text-slate-900">ប្រវត្តិបើក/បិទហាង</span>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="បិទ"
-            className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 active:bg-slate-200"
-          >
-            <X size={17} />
-          </button>
-        </div>
-
-        {/* List */}
-        <div className="flex-1 overflow-y-auto min-h-0 px-4 py-3 space-y-2.5">
-          {records.length === 0 ? (
-            <p className="py-12 text-center text-[13px] text-slate-400">មិនទាន់មានប្រវត្តិហាងនៅឡើយ</p>
-          ) : (
-            records.map(({ drawer, summary }) => {
-              const expanded = openId === drawer.id
-              const isOpen   = !drawer.closedAt
-              const profitPositive = summary.netProfit >= 0
-              return (
-                <div
-                  key={drawer.id}
-                  className="rounded-2xl border border-slate-200 bg-white shadow-card overflow-hidden"
+    <Sheet open onClose={onClose} tone="bg" title="ប្រវត្តិបើក/បិទហាង">
+      {records.length === 0 ? (
+        <EmptyState icon={<History size={30} strokeWidth={1.5} />} title="មិនទាន់មានប្រវត្តិហាងនៅឡើយ" />
+      ) : (
+        <div className="space-y-2.5 pb-2">
+          {records.map(({ drawer, summary }) => {
+            const expanded = openId === drawer.id
+            const isOpen   = !drawer.closedAt
+            const profitPositive = summary.netProfit >= 0
+            return (
+              <div key={drawer.id} className="overflow-hidden rounded-lg bg-surface">
+                <button
+                  type="button"
+                  onClick={() => setOpenId(expanded ? null : drawer.id)}
+                  aria-expanded={expanded}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ink-900"
                 >
-                  <button
-                    type="button"
-                    onClick={() => setOpenId(expanded ? null : drawer.id)}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-slate-50"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-[13px] font-bold text-slate-800">{formatDateKm(drawer.openedAt)}</p>
-                        {isOpen && (
-                          <span className="text-[10px] font-bold text-success-700 bg-success-50 border border-success-200 rounded-full px-2 py-0.5">
-                            បើក
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        {drawer.cashierName} · {timeOnly(drawer.openedAt)}
-                        {drawer.closedAt ? ` → ${timeOnly(drawer.closedAt)}` : ''}
-                      </p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-body-sm font-bold text-text">{formatDateKm(drawer.openedAt)}</p>
+                      {isOpen && <Pill variant="success">បើក</Pill>}
                     </div>
-                    <div className="shrink-0 text-right">
-                      <p className="text-[10px] text-slate-400">ចំណេញ</p>
-                      <p className={[
-                        'text-[14px] font-extrabold tabular-nums',
-                        profitPositive ? 'text-success-700' : 'text-danger-700',
-                      ].join(' ')}>
-                        {profitPositive ? '' : '−'}{formatKHR(Math.abs(summary.netProfit) as KHR)}
-                      </p>
-                    </div>
-                    <ChevronDown
-                      size={18}
-                      className={['shrink-0 text-slate-300 transition-transform', expanded ? 'rotate-180' : ''].join(' ')}
-                    />
-                  </button>
+                    <p className="mt-0.5 text-meta text-text-muted">
+                      {drawer.cashierName} · {timeOnly(drawer.openedAt)}
+                      {drawer.closedAt ? ` → ${timeOnly(drawer.closedAt)}` : ''}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-caption text-text-muted">ចំណេញ</p>
+                    <p className={cx('text-body-sm font-bold tabular-nums', profitPositive ? 'text-success' : 'text-danger')}>
+                      {profitPositive ? '' : '−'}{formatKHR(Math.abs(summary.netProfit) as KHR)}
+                    </p>
+                  </div>
+                  <ChevronDown
+                    size={20}
+                    className={cx('shrink-0 text-nav-off transition-transform', expanded && 'rotate-180')}
+                    aria-hidden="true"
+                  />
+                </button>
 
-                  {expanded && (
-                    <div className="px-3 pb-3 pt-1 bg-slate-50/60 border-t border-slate-100">
-                      <StoreDaySummaryView summary={summary} />
-                      {drawer.note && (
-                        <p className="mt-2 text-[11px] text-slate-500 bg-white rounded-xl border border-slate-200 px-3 py-2">
-                          📝 {drawer.note}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            })
-          )}
+                {expanded && (
+                  <div className="border-t border-line bg-bg/60 p-3">
+                    <StoreDaySummaryView summary={summary} />
+                    {drawer.note && (
+                      <p className="mt-2 rounded-md bg-surface px-3 py-2 text-meta text-text-subtle">
+                        📝 {drawer.note}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
-      </div>
-    </div>
+      )}
+    </Sheet>
   )
 }

@@ -16,8 +16,8 @@ export interface SheetProps {
   headerActions?: ReactNode | undefined
   /** auto: bottom sheet up to 92dvh · full: full screen on phone */
   size?: 'auto' | 'full' | undefined
-  /** surface: white panel · bg: app-background panel (e.g. the cart) */
-  tone?: 'surface' | 'bg' | undefined
+  /** surface: white panel · bg: app-background panel (e.g. the cart) · dark: ink panel (camera) */
+  tone?: 'surface' | 'bg' | 'dark' | undefined
   /** false = scrim tap does nothing (e.g. while saving) */
   dismissible?: boolean | undefined
   hideClose?: boolean | undefined
@@ -42,6 +42,7 @@ export function Sheet({
 }: SheetProps) {
   if (!open) return null
   const full = size === 'full'
+  const dark = tone === 'dark'
   const showHeader = title != null || subtitle != null || headerActions != null || !hideClose
 
   return (
@@ -57,7 +58,7 @@ export function Sheet({
         aria-label={typeof title === 'string' ? title : ariaLabel}
         className={cx(
           'relative flex w-full flex-col overflow-hidden shadow-pop animate-sheet-up',
-          tone === 'bg' ? 'bg-bg' : 'bg-surface',
+          dark ? 'bg-ink-900' : tone === 'bg' ? 'bg-bg' : 'bg-surface',
           full
             ? 'h-[100dvh] pt-[env(safe-area-inset-top)] md:h-[92dvh] md:max-w-[720px] md:rounded-[28px] md:pt-0'
             : 'max-h-[92dvh] rounded-t-[28px] md:max-w-[580px] md:rounded-[28px]',
@@ -66,19 +67,19 @@ export function Sheet({
       >
         {!full && (
           <div className="flex shrink-0 justify-center pt-2.5 pb-1 md:hidden" aria-hidden="true">
-            <span className="h-[5px] w-10 rounded-full bg-line-strong" />
+            <span className={cx('h-[5px] w-10 rounded-full', dark ? 'bg-ink-700' : 'bg-line-strong')} />
           </div>
         )}
 
         {showHeader && (
           <div className={cx('flex shrink-0 items-start gap-3 px-4 pb-3 md:px-6', full ? 'pt-3' : 'pt-1 md:pt-5')}>
             <div className="min-w-0 flex-1 self-center">
-              {title != null && <h2 className="text-title-sm font-bold text-text">{title}</h2>}
-              {subtitle != null && <p className="text-meta text-text-muted">{subtitle}</p>}
+              {title != null && <h2 className={cx('text-title-sm font-bold', dark ? 'text-white' : 'text-text')}>{title}</h2>}
+              {subtitle != null && <p className={cx('text-meta', dark ? 'text-ink-300' : 'text-text-muted')}>{subtitle}</p>}
             </div>
             {headerActions}
             {!hideClose && (
-              <IconButton aria-label="បិទ" variant={tone === 'bg' ? 'light' : 'soft'} onClick={onClose}>
+              <IconButton aria-label="បិទ" variant={dark ? 'onDark' : tone === 'bg' ? 'light' : 'soft'} onClick={onClose}>
                 <X size={20} strokeWidth={2.25} />
               </IconButton>
             )}
@@ -90,7 +91,7 @@ export function Sheet({
         </div>
 
         {footer != null && (
-          <div className="shrink-0 border-t border-line px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] md:px-6">
+          <div className={cx('shrink-0 border-t px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] md:px-6', dark ? 'border-ink-800' : 'border-line')}>
             {footer}
           </div>
         )}

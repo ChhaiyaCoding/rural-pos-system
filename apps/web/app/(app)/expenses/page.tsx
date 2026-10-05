@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Plus, Wallet, Package, Lightbulb, House, HardHat, Truck, ReceiptText, type LucideIcon } from 'lucide-react'
+import { Plus, Wallet } from 'lucide-react'
+import { expenseCategoryUi } from '@/features/expense/categoryUi'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
 import { todayISODate, addDaysISODate } from '@/lib/date'
@@ -88,16 +89,7 @@ export default function ExpensesPage() {
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]))
   }, [expenses])
 
-  /* ── Display only: category color + icon (same order as EXPENSE_CATEGORIES) ── */
-  const CAT_UI: Record<string, { bar: string; dot: string; tile: string; icon: LucideIcon }> = {
-    stock:     { bar: 'bg-chart-1', dot: 'bg-chart-1', tile: 'bg-tint-4 text-tint-4-ink', icon: Package },
-    utilities: { bar: 'bg-chart-2', dot: 'bg-chart-2', tile: 'bg-tint-1 text-tint-1-ink', icon: Lightbulb },
-    rent:      { bar: 'bg-chart-3', dot: 'bg-chart-3', tile: 'bg-tint-10 text-tint-10-ink', icon: House },
-    salary:    { bar: 'bg-chart-4', dot: 'bg-chart-4', tile: 'bg-tint-8 text-tint-8-ink', icon: HardHat },
-    transport: { bar: 'bg-chart-5', dot: 'bg-chart-5', tile: 'bg-tint-6 text-tint-6-ink', icon: Truck },
-    other:     { bar: 'bg-chart-6', dot: 'bg-chart-6', tile: 'bg-tint-3 text-tint-3-ink', icon: ReceiptText },
-  }
-  const catUi = (id: string) => CAT_UI[id] ?? CAT_UI.other!
+  const catUi = expenseCategoryUi
   const periodItems = PERIODS.map((p) => ({ value: p.key, label: p.key === 'custom' ? 'ជ្រើសរើស' : p.label }))
 
   return (

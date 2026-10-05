@@ -1,7 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Trash2, Loader2 } from 'lucide-react'
+import { Trash2, Loader2 } from 'lucide-react'
+import { Sheet } from '@/components/ui/Sheet'
+import { Button } from '@/components/ui/Button'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { cx } from '@/components/ui/cx'
+import { expenseCategoryUi } from '../categoryUi'
 import { expenseService, EXPENSE_CATEGORIES } from '@/services/expense.service'
 import { formatKHR, toKHR, getExchangeRate } from '@/lib/money'
 import { todayISODate } from '@/lib/date'
@@ -77,173 +82,134 @@ export function ExpenseFormSheet({ expense, onClose, onSaved }: Props) {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/50"
-      onClick={onClose}
-      aria-hidden="true"
+    <Sheet
+      open
+      onClose={onClose}
+      title={isEdit ? 'កែ​ការ​ចំណាយ' : 'បន្ថែម​ការ​ចំណាយ'}
+      footer={
+        <Button
+          variant="primary"
+          size="xl"
+          fullWidth
+          disabled={!canSave}
+          onClick={handleSave}
+          icon={saving ? <Loader2 size={20} className="animate-spin" /> : undefined}
+        >
+          {isEdit ? 'រក្សាទុក' : 'បន្ថែម​ការ​ចំណាយ'}
+        </Button>
+      }
     >
-      <div
-        className="w-full md:max-w-md bg-white rounded-t-2xl md:rounded-2xl max-h-[92dvh] flex flex-col shadow-pop animate-sheet-up"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        {/* Header */}
-        <div className="shrink-0 flex items-center justify-between px-4 h-14 border-b border-slate-200">
-          <span className="text-[16px] font-bold text-slate-900">
-            {isEdit ? 'កែ​ការ​ចំណាយ' : 'បន្ថែម​ការ​ចំណាយ'}
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="បិទ"
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 active:bg-slate-200"
-          >
-            <X size={17} />
-          </button>
-        </div>
+      <div className="space-y-4 pt-1">
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-4">
-
-          {/* Amount + currency toggle */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-[12px] font-semibold text-slate-500">ចំនួន​ទឹក​ប្រាក់ *</p>
-              <div className="flex items-center rounded-lg border border-slate-200 bg-white overflow-hidden">
-                {(['KHR', 'USD'] as const).map((cur) => (
-                  <button
-                    key={cur}
-                    type="button"
-                    onClick={() => switchCurrency(cur)}
-                    className={[
-                      'min-h-0 min-w-0 h-7 px-3 text-[13px] font-bold tabular-nums transition-colors',
-                      currency === cur ? 'bg-primary-600 text-white' : 'text-slate-500 active:bg-slate-50',
-                    ].join(' ')}
-                  >
-                    {cur === 'KHR' ? '៛' : '$'}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center rounded-xl border border-slate-200 bg-white overflow-hidden focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/15">
-              <span className="pl-4 text-[16px] font-bold text-slate-400 shrink-0">
-                {currency === 'USD' ? '$' : '៛'}
-              </span>
+        {/* Amount + currency toggle */}
+        <div className="space-y-2">
+          <SegmentedControl
+            ariaLabel="រូបិយប័ណ្ណ"
+            value={currency}
+            onChange={switchCurrency}
+            items={[{ value: 'KHR', label: '៛ រៀល' }, { value: 'USD', label: '$ ដុល្លារ' }]}
+          />
+          <div className="flex min-h-[64px] items-center gap-2 rounded-[18px] bg-bg px-4 focus-within:ring-2 focus-within:ring-ink-900/20">
+            <div className="flex min-w-0 flex-1 flex-col py-1.5">
+              <label htmlFor="expense-amount" className="text-caption font-semibold text-text-subtle">ចំនួន​ទឹក​ប្រាក់ *</label>
               <input
+                id="expense-amount"
                 type="number"
                 inputMode="decimal"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0"
-                className="flex-1 h-12 px-3 text-right text-[22px] font-extrabold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none tabular-nums min-w-0"
+                className="w-full min-w-0 bg-transparent text-title font-bold tabular-nums text-text outline-none placeholder:text-text-muted"
               />
             </div>
-            {currency === 'USD' && amountKhr > 0 && (
-              <p className="text-right text-[12px] font-bold text-primary-600 tabular-nums mt-1">
-                = {formatKHR(amountKhr)}
-              </p>
-            )}
+            <span className="text-title-sm font-bold text-text-subtle">{currency === 'USD' ? '$' : '៛'}</span>
           </div>
-
-          {/* Category */}
-          <div>
-            <p className="text-[12px] font-semibold text-slate-500 mb-1.5">ប្រភេទ</p>
-            <div className="grid grid-cols-3 gap-2">
-              {EXPENSE_CATEGORIES.map((c) => {
-                const active = categoryId === c.id
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setCategoryId(c.id)}
-                    className={[
-                      'h-14 rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-colors',
-                      active
-                        ? 'border-primary-500 bg-primary-50 text-primary-700'
-                        : 'border-slate-200 text-slate-600 active:bg-slate-50',
-                    ].join(' ')}
-                  >
-                    <span className="text-[18px] leading-none">{c.emoji}</span>
-                    <span className="text-[11px] font-semibold">{c.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Date */}
-          <div>
-            <p className="text-[12px] font-semibold text-slate-500 mb-1.5">ថ្ងៃ​ចំណាយ</p>
-            <input
-              type="date"
-              value={spentAt}
-              onChange={(e) => setSpentAt(e.target.value || todayISODate())}
-              className="w-full h-11 rounded-xl border border-slate-200 px-3 text-[14px] text-slate-900 focus:outline-none focus:border-primary-500"
-            />
-          </div>
-
-          {/* Note */}
-          <div>
-            <p className="text-[12px] font-semibold text-slate-500 mb-1.5">កំណត់​ចំណាំ (ស្រេចចិត្ត)</p>
-            <input
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="ឧ. ថ្លៃ​ដឹក​ទំនិញ"
-              className="w-full h-11 rounded-xl border border-slate-200 px-3 text-[14px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500"
-            />
-          </div>
-
-          {/* Delete (edit only) */}
-          {isEdit && (
-            confirmDel ? (
-              <div className="rounded-xl border border-danger-200 bg-danger-50 p-3 space-y-2">
-                <p className="text-[12px] font-semibold text-danger-700">លុប​ការ​ចំណាយ​នេះ?</p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    className="flex-1 h-10 rounded-lg bg-danger-600 text-white font-bold text-[13px] active:bg-danger-700 disabled:opacity-60 flex items-center justify-center gap-1.5"
-                  >
-                    {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
-                    បាទ/ចាស លុប
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDel(false)}
-                    className="px-4 h-10 rounded-lg border border-slate-200 text-slate-600 text-[13px] active:bg-slate-50"
-                  >
-                    បោះបង់
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmDel(true)}
-                className="flex items-center gap-1.5 text-[12px] font-semibold text-danger-600 active:text-danger-700"
-              >
-                <Trash2 size={14} /> លុប​ការ​ចំណាយ​នេះ
-              </button>
-            )
+          {currency === 'USD' && amountKhr > 0 && (
+            <p className="text-right text-meta font-semibold tabular-nums text-text-muted">
+              = {formatKHR(amountKhr)}
+            </p>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="shrink-0 border-t border-slate-200 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <button
-            type="button"
-            disabled={!canSave}
-            onClick={handleSave}
-            className="w-full h-13 rounded-xl bg-primary-600 text-white font-bold text-[15px] py-3.5 active:bg-primary-700 disabled:opacity-50 disabled:pointer-events-none transition-colors flex items-center justify-center gap-2"
-          >
-            {saving ? <Loader2 size={18} className="animate-spin" /> : null}
-            {isEdit ? 'រក្សាទុក' : 'បន្ថែម​ការ​ចំណាយ'}
-          </button>
+        {/* Category */}
+        <div>
+          <p className="mb-2 text-meta font-semibold text-text-subtle">ប្រភេទ</p>
+          <div className="grid grid-cols-3 gap-2">
+            {EXPENSE_CATEGORIES.map((c) => {
+              const active = categoryId === c.id
+              const Icon = expenseCategoryUi(c.id).icon
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setCategoryId(c.id)}
+                  aria-pressed={active}
+                  className={cx(
+                    'flex h-[72px] flex-col items-center justify-center gap-1 rounded-md px-1 transition-colors',
+                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
+                    active ? 'bg-ink-900 text-white' : 'bg-bg text-text-subtle active:bg-line',
+                  )}
+                >
+                  <Icon size={22} strokeWidth={2} className={active ? 'text-accent' : undefined} aria-hidden="true" />
+                  <span className="text-caption font-semibold leading-tight">{c.label}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
+
+        {/* Date */}
+        <div className="flex min-h-[54px] flex-col justify-center rounded-[18px] bg-bg px-4 py-1.5 focus-within:ring-2 focus-within:ring-ink-900/20">
+          <label htmlFor="expense-date" className="text-caption font-semibold text-text-subtle">ថ្ងៃ​ចំណាយ</label>
+          <input
+            id="expense-date"
+            type="date"
+            value={spentAt}
+            onChange={(e) => setSpentAt(e.target.value || todayISODate())}
+            className="w-full bg-transparent text-body font-semibold text-text outline-none"
+          />
+        </div>
+
+        {/* Note */}
+        <div className="flex min-h-[54px] flex-col justify-center rounded-[18px] bg-bg px-4 py-1.5 focus-within:ring-2 focus-within:ring-ink-900/20">
+          <label htmlFor="expense-note" className="text-caption font-semibold text-text-subtle">កំណត់​ចំណាំ (ស្រេចចិត្ត)</label>
+          <input
+            id="expense-note"
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="ឧ. ថ្លៃ​ដឹក​ទំនិញ"
+            className="w-full bg-transparent text-body text-text outline-none placeholder:text-text-muted"
+          />
+        </div>
+
+        {/* Delete (edit only) */}
+        {isEdit && (
+          confirmDel ? (
+            <div className="space-y-2.5 rounded-md bg-danger-bg p-3">
+              <p className="text-body-sm font-semibold text-danger">លុប​ការ​ចំណាយ​នេះ?</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex h-12 flex-1 items-center justify-center gap-2 rounded-md bg-danger text-body font-bold text-white active:brightness-95 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+                >
+                  {deleting ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Trash2 size={16} aria-hidden="true" />}
+                  បាទ/ចាស លុប
+                </button>
+                <Button variant="secondary" onClick={() => setConfirmDel(false)}>
+                  បោះបង់
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button variant="dangerSoft" fullWidth icon={<Trash2 size={16} />} onClick={() => setConfirmDel(true)}>
+              លុប​ការ​ចំណាយ​នេះ
+            </Button>
+          )
+        )}
       </div>
-    </div>
+    </Sheet>
   )
 }

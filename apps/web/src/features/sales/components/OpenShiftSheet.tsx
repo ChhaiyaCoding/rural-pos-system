@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Banknote, History } from 'lucide-react'
+import { Banknote, History } from 'lucide-react'
+import { Sheet } from '@/components/ui/Sheet'
+import { Button } from '@/components/ui/Button'
+import { cx } from '@/components/ui/cx'
 import { cashDrawerService } from '@/services/cashDrawer.service'
 import { formatKHR, toKHR } from '@/lib/money'
 import { StoreHistorySheet } from './StoreHistorySheet'
@@ -47,51 +50,40 @@ export function OpenShiftSheet({ cashierName, onOpened, onClose }: Props) {
   const dateStr = now.toLocaleDateString('km-KH', { weekday: 'short', day: 'numeric', month: 'short' })
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/70"
-      onClick={onClose}
-      aria-hidden="true"
-    >
-      <div
-        className="w-full md:max-w-md bg-white rounded-t-2xl md:rounded-2xl overflow-hidden shadow-pop animate-sheet-up"
-        onClick={e => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
+    <>
+      <Sheet
+        open
+        onClose={onClose}
+        title="បើកហាង"
+        subtitle={`${cashierName} · ${dateStr} · ${timeStr}`}
+        headerActions={
+          <Button variant="secondary" icon={<History size={18} strokeWidth={2.25} />} onClick={() => setShowHistory(true)}>
+            ប្រវត្តិ
+          </Button>
+        }
+        footer={
+          <Button
+            variant="primary"
+            size="xl"
+            fullWidth
+            disabled={saving}
+            onClick={handleOpen}
+            icon={<Banknote size={22} strokeWidth={2.25} />}
+          >
+            {saving ? 'កំពុងបើក…' : 'បើកហាង'}
+          </Button>
+        }
       >
-        {/* Header */}
-        <div className="bg-success-600 px-5 pt-5 pb-4 text-white">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <Banknote size={20} strokeWidth={2} />
-              <span className="text-[16px] font-bold">បើកហាង</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setShowHistory(true)}
-                className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-white/20 active:bg-white/30 text-[12px] font-semibold"
-              >
-                <History size={14} /> ប្រវត្តិ
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 active:bg-white/30"
-              >
-                <X size={15} />
-              </button>
-            </div>
-          </div>
-          <p className="text-[13px] opacity-80">{cashierName} · {dateStr} · {timeStr}</p>
-        </div>
-
-        <div className="px-5 py-5 space-y-5">
+        <div className="space-y-5 pt-1">
 
           {/* Opening cash input */}
           <div>
-            <p className="text-[12px] font-semibold text-slate-500 mb-2">ប្រាក់ក្នុងហ្គូពេលចាប់ផ្ដើម (រៀល)</p>
-            <div className="flex items-center border-2 border-success-300 rounded-2xl bg-success-50 overflow-hidden focus-within:border-success-500 transition-colors">
+            <label htmlFor="opening-cash" className="mb-2 block text-meta font-semibold text-text-subtle">
+              ប្រាក់ក្នុងហ្គូពេលចាប់ផ្ដើម (រៀល)
+            </label>
+            <div className="flex items-center rounded-[18px] bg-bg focus-within:ring-2 focus-within:ring-ink-900/20">
               <input
+                id="opening-cash"
                 type="number"
                 inputMode="numeric"
                 value={amount}
@@ -99,12 +91,12 @@ export function OpenShiftSheet({ cashierName, onOpened, onClose }: Props) {
                 onKeyDown={e => e.key === 'Enter' && handleOpen()}
                 placeholder="0"
                 autoFocus
-                className="flex-1 h-14 px-5 text-[24px] font-extrabold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none tabular-nums"
+                className="h-16 min-w-0 flex-1 bg-transparent px-5 text-amount font-bold tabular-nums text-text outline-none placeholder:text-text-muted"
               />
-              <span className="pr-5 text-[16px] font-bold text-success-600">៛</span>
+              <span className="pr-5 text-title-sm font-bold text-text-subtle">៛</span>
             </div>
             {parsedAmt > 0 && (
-              <p className="text-[11px] text-success-600 font-semibold mt-1.5">
+              <p className="mt-1.5 text-meta font-semibold text-success">
                 = {formatKHR(toKHR(parsedAmt) as KHR)}
               </p>
             )}
@@ -112,19 +104,19 @@ export function OpenShiftSheet({ cashierName, onOpened, onClose }: Props) {
 
           {/* Quick amounts */}
           <div>
-            <p className="text-[11px] text-slate-400 mb-2">ចំនួនរហ័ស</p>
+            <p className="mb-2 text-meta text-text-muted">ចំនួនរហ័ស</p>
             <div className="flex flex-wrap gap-2">
               {QUICK_AMTS.map(amt => (
                 <button
                   key={amt}
                   type="button"
                   onClick={() => setAmount(String(amt))}
-                  className={[
-                    'h-9 px-3 rounded-xl border text-[12px] font-bold transition-colors',
-                    amount === String(amt)
-                      ? 'bg-success-600 border-success-600 text-white'
-                      : 'bg-white border-slate-200 text-slate-700 active:bg-slate-50',
-                  ].join(' ')}
+                  aria-pressed={amount === String(amt)}
+                  className={cx(
+                    'h-12 rounded-sm px-3.5 text-body-sm font-bold tabular-nums transition-colors',
+                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
+                    amount === String(amt) ? 'bg-ink-900 text-white' : 'bg-bg text-text-subtle active:bg-line',
+                  )}
                 >
                   {amt === 0 ? '0 ៛' : formatKHR(toKHR(amt) as KHR)}
                 </button>
@@ -133,24 +125,13 @@ export function OpenShiftSheet({ cashierName, onOpened, onClose }: Props) {
           </div>
 
           {/* Info note */}
-          <p className="text-[11px] text-slate-400 bg-slate-50 rounded-xl px-3 py-2.5 leading-relaxed">
-            💡 ប្រាក់ដែលមានក្នុងហ្គូ <span className="font-semibold text-slate-600">មុន</span>ពេលចាប់ផ្ដើមលក់ថ្ងៃនេះ
+          <p className="rounded-md bg-surface-2 px-3.5 py-3 text-meta text-text-muted">
+            💡 ប្រាក់ដែលមានក្នុងហ្គូ <span className="font-semibold text-text">មុន</span>ពេលចាប់ផ្ដើមលក់ថ្ងៃនេះ
           </p>
-
-          {/* Confirm */}
-          <button
-            type="button"
-            disabled={saving}
-            onClick={handleOpen}
-            className="w-full h-14 rounded-2xl bg-success-600 text-white font-bold text-[16px] disabled:opacity-50 active:bg-success-700 transition-colors flex items-center justify-center gap-2"
-          >
-            <Banknote size={20} />
-            {saving ? 'កំពុងបើក…' : 'បើកហាង'}
-          </button>
         </div>
-      </div>
+      </Sheet>
 
       {showHistory && <StoreHistorySheet onClose={() => setShowHistory(false)} />}
-    </div>
+    </>
   )
 }
