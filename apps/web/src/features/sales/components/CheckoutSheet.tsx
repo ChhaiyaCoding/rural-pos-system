@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { X, Banknote, NotebookPen, Tag, Search, UserCheck, SplitSquareHorizontal, UserPlus, Check } from 'lucide-react'
+import { useState, useMemo, type ReactNode } from 'react'
+import { X, Banknote, NotebookPen, Tag, Search, UserCheck, SplitSquareHorizontal, UserPlus, Check, ChevronDown } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { useSaleStore } from '@/store/sale.store'
@@ -143,9 +143,9 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
       subtitle={`${count} មុខ`}
       footer={
         <div>
-          {/* Change due — always visible above the action (no scrolling needed) */}
-          {isCash && (
-            <div className="mb-2.5 flex items-center justify-between gap-3 rounded-md bg-success-bg px-4 py-2.5 text-success">
+          {/* Change (received ≥ due) or shortfall — always visible above the action */}
+          {isCash && (enough ? (
+            <div className="mb-2 flex min-h-11 items-center justify-between gap-3 rounded-md bg-success-bg px-4 py-1.5 text-success">
               <span className="text-body-sm font-semibold">ប្រាក់អាប់</span>
               <span className="flex items-baseline gap-2 tabular-nums">
                 <span className="text-title font-bold">
@@ -156,10 +156,22 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
                 </span>
               </span>
             </div>
-          )}
+          ) : (
+            <div role="status" className="mb-2 flex min-h-11 items-center justify-between gap-3 rounded-md bg-warn-bg px-4 py-1.5 text-warn">
+              <span className="text-body-sm font-semibold">នៅខ្វះ</span>
+              <span className="flex items-baseline gap-2 tabular-nums">
+                <span className="text-title font-bold">
+                  {formatKHR(subtractKHR(discountedTotal, tendered))}
+                </span>
+                <span className="text-body-sm font-semibold">
+                  {formatUSD(subtractKHR(discountedTotal, tendered))}
+                </span>
+              </span>
+            </div>
+          ))}
           <Button
             variant="dark"
-            size="xl"
+            size="lg"
             fullWidth
             disabled={(isCash && !enough) || (isPartial && !partialValid) || ((isDebt || isPartial) && !selectedCustomer)}
             onClick={() =>
@@ -175,11 +187,6 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
           >
             បញ្ចប់ការលក់
           </Button>
-          {isCash && !enough && (
-            <p className="mt-2 text-center text-meta font-semibold text-danger">
-              ប្រាក់ទទួលតិចជាងសរុប
-            </p>
-          )}
           {isPartial && !partialValid && partialCash !== '' && (
             <p className="mt-2 text-center text-meta font-semibold text-warn">
               វាយចំនួនប្រាក់ (ច្រើនជា 0 និងតិចជាសរុប)
@@ -193,46 +200,37 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
         </div>
       }
     >
-      <div className="pb-2 pt-1 md:grid md:grid-cols-2 md:items-start md:gap-4">
+      <div className="pt-1 md:grid md:grid-cols-2 md:items-start md:gap-4">
 
         {/* ── Left: amount due + items + discount ────────────── */}
-        <div className="space-y-3">
+        <div className="space-y-2.5">
 
-          {/* Payment type + amount due */}
-          <div className="rounded-lg bg-ink-900 p-4 text-white">
-            <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-accent text-ink-900" aria-hidden="true">
-                {isCash    ? <Banknote size={24} strokeWidth={2.25} />
-                : isPartial ? <SplitSquareHorizontal size={24} strokeWidth={2.25} />
-                : <NotebookPen size={24} strokeWidth={2.25} />}
-              </span>
-              <div className="min-w-0">
-                <p className="text-meta text-ink-300">របៀបទូទាត់</p>
-                <p className="text-body font-bold">{isCash ? 'សាច់ប្រាក់' : isPartial ? 'បង់ខ្លះ' : 'ជំពាក់'}</p>
-              </div>
-            </div>
-            <div className="mt-4 border-t border-ink-700 pt-3">
+          {/* Amount due + payment type */}
+          <div className="flex items-center gap-3 rounded-lg bg-ink-900 px-4 py-3 text-white">
+            <div className="min-w-0 flex-1">
               <p className="text-meta font-semibold text-ink-300">
-                {isDebt ? 'ចំនួនជំពាក់' : 'ត្រូវបង់'}
-                {discountAmount > 0 && (
-                  <span className="ml-2 tabular-nums line-through">{formatKHR(total)}</span>
-                )}
+                {isDebt ? 'ចំនួនជំពាក់' : 'ត្រូវបង់'} · <span className="tabular-nums">{formatUSD(discountedTotal)}</span>
               </p>
-              <MoneyText amount={discountedTotal} size="xl" tone="onDark" />
+              <MoneyText amount={discountedTotal} size="lg" tone="onDark" usd={false} />
               {discountAmount > 0 && (
-                <p className="mt-1 text-meta font-semibold tabular-nums text-accent">
-                  បញ្ចុះ −{formatKHR(discountAmount)}
+                <p className="text-meta font-semibold tabular-nums text-accent">
+                  <span className="text-ink-300 line-through">{formatKHR(total)}</span> · បញ្ចុះ −{formatKHR(discountAmount)}
                 </p>
               )}
             </div>
+            <span className="flex shrink-0 flex-col items-center gap-1">
+              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-accent text-ink-900" aria-hidden="true">
+                {isCash    ? <Banknote size={22} strokeWidth={2.25} />
+                : isPartial ? <SplitSquareHorizontal size={22} strokeWidth={2.25} />
+                : <NotebookPen size={22} strokeWidth={2.25} />}
+              </span>
+              <span className="text-caption font-semibold text-ink-300">{isCash ? 'សាច់ប្រាក់' : isPartial ? 'បង់ខ្លះ' : 'ជំពាក់'}</span>
+            </span>
           </div>
 
-          {/* Items list */}
-          <div className="rounded-lg bg-surface px-4 py-3">
-            <p className="text-meta font-semibold text-text-subtle">
-              បញ្ជីទំនិញ ({count})
-            </p>
-            <div className="divide-y divide-line">
+          {/* Items (one tappable summary row on phone) + discount toggle */}
+          <div className="flex items-start gap-2 md:block md:space-y-3">
+            <OrderItems count={count} total={total} className="min-w-0 flex-1">
               {cart.map((item) => (
                 <div key={item.product.id} className="flex items-center justify-between gap-3 py-2.5">
                   <span className="truncate text-body-sm text-text">
@@ -244,20 +242,21 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
                   </span>
                 </div>
               ))}
-            </div>
+            </OrderItems>
+            {!showDiscount && (
+              <button
+                type="button"
+                onClick={() => setShowDiscount(true)}
+                className="flex h-12 shrink-0 items-center gap-2 rounded-lg bg-surface px-4 text-body-sm font-semibold text-text transition-colors active:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900 md:w-full"
+              >
+                <Tag size={18} strokeWidth={2.25} aria-hidden="true" />
+                បញ្ចុះតម្លៃ
+              </button>
+            )}
           </div>
 
-          {/* Discount toggle + section */}
-          {!showDiscount ? (
-            <button
-              type="button"
-              onClick={() => setShowDiscount(true)}
-              className="flex h-12 w-full items-center gap-2 rounded-lg bg-surface px-4 text-body-sm font-semibold text-text transition-colors active:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
-            >
-              <Tag size={18} strokeWidth={2.25} aria-hidden="true" />
-              ដាក់បញ្ចុះតម្លៃ
-            </button>
-          ) : (
+          {/* Discount section */}
+          {showDiscount && (
             <div className="space-y-2.5 rounded-lg bg-surface p-4">
               <div className="flex items-center justify-between gap-2">
                 <p className="flex items-center gap-2 text-body-sm font-semibold text-text">
@@ -325,42 +324,32 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
         </div>
 
         {/* ── Right: amount received / customer ─────────────── */}
-        <div className="mt-3 space-y-3 md:mt-0">
+        <div className="mt-2.5 space-y-2.5 md:mt-0">
 
           {isCash && (
             /* ── CASH: amount tendered — typeable in ៛ or $ ─────── */
-            <div className="space-y-3 rounded-lg bg-ink-900 p-4 text-white">
+            <div className="space-y-2 rounded-lg bg-ink-900 p-3 text-white">
               <div className="flex items-center justify-between gap-2">
-                <label htmlFor="checkout-tender" className="text-body-sm font-semibold text-ink-300">
-                  ប្រាក់ទទួលពីអតិថិជន
+                <label htmlFor="checkout-tender" className="pl-1 text-body-sm font-semibold text-ink-300">
+                  ប្រាក់ទទួល
                 </label>
-                {tenderInput !== '' && (
-                  <button
-                    type="button"
-                    onClick={() => setTenderInput('')}
-                    className="h-12 rounded-sm px-3 text-meta font-semibold text-ink-300 transition-colors active:bg-ink-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                  >
-                    សម្អាត ×
-                  </button>
-                )}
+                {/* ៛ / $ toggle */}
+                <SegmentedControl
+                  tone="dark"
+                  className="w-[176px]"
+                  ariaLabel="រូបិយប័ណ្ណប្រាក់ទទួល"
+                  items={[
+                    { value: 'KHR', label: '៛ រៀល' },
+                    { value: 'USD', label: '$ ដុល្លារ' },
+                  ]}
+                  value={tenderCurrency}
+                  onChange={(cur) => { setTenderCurrency(cur); setTenderInput('') }}
+                />
               </div>
 
-              {/* ៛ / $ toggle */}
-              <SegmentedControl
-                tone="dark"
-                ariaLabel="រូបិយប័ណ្ណប្រាក់ទទួល"
-                items={[
-                  { value: 'KHR', label: '៛ រៀល' },
-                  { value: 'USD', label: '$ ដុល្លារ' },
-                ]}
-                value={tenderCurrency}
-                onChange={(cur) => { setTenderCurrency(cur); setTenderInput('') }}
-              />
-
-              <div className="flex items-center gap-2 rounded-[18px] bg-ink-800 px-4 focus-within:ring-2 focus-within:ring-accent/60">
-                <span className="shrink-0 text-title-sm font-bold text-ink-300">
-                  {tenderCurrency === 'USD' ? '$' : '៛'}
-                </span>
+              {/* Received amount: formatted display over a real, transparent input
+                  (keeps hardware keyboards + a11y; the state stays the raw string) */}
+              <div className="relative flex min-h-[72px] items-center gap-2 rounded-[18px] bg-ink-800 pl-1 pr-4 focus-within:ring-2 focus-within:ring-accent/60">
                 <input
                   id="checkout-tender"
                   type="number"
@@ -368,20 +357,35 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
                   value={tenderInput}
                   onChange={(e) => setTenderInput(e.target.value)}
                   placeholder="0"
-                  className="h-16 min-w-0 flex-1 bg-transparent text-right text-amount-lg font-bold tabular-nums text-white outline-none placeholder:text-ink-300"
+                  className="absolute inset-0 h-full w-full cursor-text rounded-[18px] opacity-0"
                 />
+                {tenderInput !== '' ? (
+                  <button
+                    type="button"
+                    onClick={() => setTenderInput('')}
+                    aria-label="សម្អាតប្រាក់ទទួល"
+                    className="relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-ink-300 transition-colors active:bg-ink-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  >
+                    <X size={20} strokeWidth={2.5} aria-hidden="true" />
+                  </button>
+                ) : (
+                  <span className="w-3 shrink-0" aria-hidden="true" />
+                )}
+                <div className="pointer-events-none min-w-0 flex-1 text-right" aria-hidden="true">
+                  <p className={cx('truncate text-amount-lg font-bold leading-tight tabular-nums', tenderInput === '' ? 'text-ink-300' : 'text-white')}>
+                    {tenderCurrency === 'USD' ? formatUSD(tendered) : formatKHR(tendered)}
+                  </p>
+                  <p className="text-meta font-semibold tabular-nums text-ink-300">
+                    {tendered > 0
+                      ? tenderCurrency === 'USD' ? `= ${formatKHR(tendered)}` : `≈ ${formatUSD(tendered)}`
+                      : '\u00a0'}
+                  </p>
+                </div>
               </div>
-              {tendered > 0 && (
-                <p className="text-right text-meta font-semibold tabular-nums text-ink-300">
-                  {tenderCurrency === 'USD'
-                    ? `= ${formatKHR(tendered)}`
-                    : `≈ ${formatUSD(tendered)}`}
-                </p>
-              )}
 
-              {/* Quick-cash — currency-aware */}
+              {/* Quick-cash — one horizontally scrolling row, currency-aware */}
               {tenderCurrency === 'KHR' ? (
-                <div className="grid grid-cols-3 gap-2">
+                <div className="-mx-3 flex gap-2 overflow-x-auto overscroll-x-contain px-3 no-scrollbar">
                   {quick.map((amt, i) => {
                     const selected = Number(tenderInput) === amt
                     return (
@@ -391,7 +395,7 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
                         onClick={() => { setTenderCurrency('KHR'); setTenderInput(String(amt)) }}
                         aria-pressed={selected}
                         className={cx(
-                          'h-12 rounded-sm text-body-sm font-bold tabular-nums transition-colors',
+                          'h-12 shrink-0 rounded-sm px-4 text-body-sm font-bold tabular-nums whitespace-nowrap transition-colors',
                           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
                           selected ? 'bg-accent text-ink-900' : 'bg-ink-800 text-white active:bg-ink-700',
                         )}
@@ -400,9 +404,10 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
                       </button>
                     )
                   })}
+                  <span className="w-1 shrink-0" aria-hidden="true" />
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-2">
+                <div className="-mx-3 flex gap-2 overflow-x-auto overscroll-x-contain px-3 no-scrollbar">
                   {USD_NOTES.map((usd) => {
                     const selected = Number(tenderInput) === usd
                     return (
@@ -412,48 +417,49 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
                         onClick={() => { setTenderCurrency('USD'); setTenderInput(String(usd)) }}
                         aria-pressed={selected}
                         className={cx(
-                          'flex h-14 flex-col items-center justify-center gap-0.5 rounded-sm transition-colors',
+                          'flex h-12 shrink-0 flex-col items-center justify-center rounded-sm px-3.5 transition-colors',
                           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
                           selected ? 'bg-accent text-ink-900' : 'bg-ink-800 text-white active:bg-ink-700',
                         )}
                       >
-                        <span className="text-body font-bold tabular-nums">${usd}</span>
-                        <span className={cx('text-caption font-semibold tabular-nums', selected ? 'text-ink-900' : 'text-ink-300')}>
+                        <span className="text-body-sm font-bold leading-tight tabular-nums">${usd}</span>
+                        <span className={cx('whitespace-nowrap text-caption font-semibold leading-tight tabular-nums', selected ? 'text-ink-900' : 'text-ink-300')}>
                           {formatKHR(toKHR(usd * exchangeRate))}
                         </span>
                       </button>
                     )
                   })}
+                  <span className="w-1 shrink-0" aria-hidden="true" />
                 </div>
               )}
 
-              <NumericPad tone="dark" value={tenderInput} onChange={setTenderInput} />
+              <NumericPad tone="dark" size="sm" value={tenderInput} onChange={setTenderInput} />
             </div>
           )}
 
           {isPartial && (
             <>
               {/* ── PARTIAL: cash portion paid now — payable in ៛ or $ ── */}
-              <div className="space-y-3 rounded-lg bg-ink-900 p-4 text-white">
-                <label htmlFor="checkout-partial" className="block text-body-sm font-semibold text-ink-300">
-                  បង់ឥឡូវ
-                </label>
+              <div className="space-y-2 rounded-lg bg-ink-900 p-3 text-white">
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="checkout-partial" className="pl-1 text-body-sm font-semibold text-ink-300">
+                    បង់ឥឡូវ
+                  </label>
+                  <SegmentedControl
+                    tone="dark"
+                    className="w-[176px]"
+                    ariaLabel="រូបិយប័ណ្ណប្រាក់បង់ឥឡូវ"
+                    items={[
+                      { value: 'KHR', label: '៛ រៀល' },
+                      { value: 'USD', label: '$ ដុល្លារ' },
+                    ]}
+                    value={partialCurrency}
+                    onChange={(cur) => { setPartialCurrency(cur); setPartialCash('') }}
+                  />
+                </div>
 
-                <SegmentedControl
-                  tone="dark"
-                  ariaLabel="រូបិយប័ណ្ណប្រាក់បង់ឥឡូវ"
-                  items={[
-                    { value: 'KHR', label: '៛ រៀល' },
-                    { value: 'USD', label: '$ ដុល្លារ' },
-                  ]}
-                  value={partialCurrency}
-                  onChange={(cur) => { setPartialCurrency(cur); setPartialCash('') }}
-                />
-
-                <div className="flex items-center gap-2 rounded-[18px] bg-ink-800 px-4 focus-within:ring-2 focus-within:ring-accent/60">
-                  <span className="shrink-0 text-title-sm font-bold text-ink-300">
-                    {partialCurrency === 'USD' ? '$' : '៛'}
-                  </span>
+                {/* Formatted display over a real, transparent input */}
+                <div className="relative flex min-h-[72px] items-center gap-2 rounded-[18px] bg-ink-800 pl-1 pr-4 focus-within:ring-2 focus-within:ring-accent/60">
                   <input
                     id="checkout-partial"
                     type="number"
@@ -462,17 +468,32 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
                     onChange={(e) => setPartialCash(e.target.value)}
                     placeholder="0"
                     autoFocus
-                    className="h-16 min-w-0 flex-1 bg-transparent text-right text-amount-lg font-bold tabular-nums text-white outline-none placeholder:text-ink-300"
+                    className="absolute inset-0 h-full w-full cursor-text rounded-[18px] opacity-0"
                   />
+                  {partialCash !== '' ? (
+                    <button
+                      type="button"
+                      onClick={() => setPartialCash('')}
+                      aria-label="សម្អាតប្រាក់បង់ឥឡូវ"
+                      className="relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-ink-300 transition-colors active:bg-ink-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    >
+                      <X size={20} strokeWidth={2.5} aria-hidden="true" />
+                    </button>
+                  ) : (
+                    <span className="w-3 shrink-0" aria-hidden="true" />
+                  )}
+                  <div className="pointer-events-none min-w-0 flex-1 text-right" aria-hidden="true">
+                    <p className={cx('truncate text-amount-lg font-bold leading-tight tabular-nums', partialCash === '' ? 'text-ink-300' : 'text-white')}>
+                      {partialCurrency === 'USD' ? formatUSD(toKHR(partialCashKhr)) : formatKHR(toKHR(partialCashKhr))}
+                    </p>
+                    <p className="text-meta font-semibold tabular-nums text-ink-300">
+                      {partialCurrency === 'USD' && partialCashAmt > 0 ? `= ${formatKHR(partialCashAmt)}` : '\u00a0'}
+                    </p>
+                  </div>
                 </div>
-                {partialCurrency === 'USD' && partialCashAmt > 0 && (
-                  <p className="text-right text-meta font-semibold tabular-nums text-ink-300">
-                    = {formatKHR(partialCashAmt)}
-                  </p>
-                )}
 
-                {/* Quick partial chips — currency-aware */}
-                <div className="flex flex-wrap gap-2">
+                {/* Quick partial chips — one horizontally scrolling row */}
+                <div className="-mx-3 flex gap-2 overflow-x-auto overscroll-x-contain px-3 no-scrollbar">
                   {partialCurrency === 'KHR'
                     ? DENOMS.filter(d => d < discountedTotal).slice(0, 5).map(amt => (
                         <button
@@ -481,7 +502,7 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
                           onClick={() => setPartialCash(String(amt))}
                           aria-pressed={Number(partialCash) === amt}
                           className={cx(
-                            'h-12 rounded-sm px-3 text-body-sm font-bold tabular-nums transition-colors',
+                            'h-12 shrink-0 whitespace-nowrap rounded-sm px-4 text-body-sm font-bold tabular-nums transition-colors',
                             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
                             Number(partialCash) === amt ? 'bg-accent text-ink-900' : 'bg-ink-800 text-white active:bg-ink-700',
                           )}
@@ -496,7 +517,7 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
                           onClick={() => setPartialCash(String(u))}
                           aria-pressed={Number(partialCash) === u}
                           className={cx(
-                            'h-12 rounded-sm px-4 text-body-sm font-bold tabular-nums transition-colors',
+                            'h-12 shrink-0 whitespace-nowrap rounded-sm px-4 text-body-sm font-bold tabular-nums transition-colors',
                             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
                             Number(partialCash) === u ? 'bg-accent text-ink-900' : 'bg-ink-800 text-white active:bg-ink-700',
                           )}
@@ -505,9 +526,10 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
                         </button>
                       ))
                   }
+                  <span className="w-1 shrink-0" aria-hidden="true" />
                 </div>
 
-                <NumericPad tone="dark" value={partialCash} onChange={setPartialCash} />
+                <NumericPad tone="dark" size="sm" value={partialCash} onChange={setPartialCash} />
               </div>
 
               {/* Remaining debt summary */}
@@ -688,5 +710,40 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
         </div>
       </div>
     </Sheet>
+  )
+}
+
+/* ── Order items: one tappable summary row on phone, always open on md+ ── */
+function OrderItems({
+  count, total, className, children,
+}: {
+  count: number
+  total: KHR
+  className?: string | undefined
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className={cx('rounded-lg bg-surface', className)}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex h-12 w-full items-center gap-2 rounded-lg px-4 text-left transition-colors active:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ink-900 md:hidden"
+      >
+        <span className="min-w-0 flex-1 truncate text-body-sm font-semibold text-text">
+          {count} មុខ · <span className="tabular-nums">{formatKHR(total)}</span>
+        </span>
+        <ChevronDown
+          size={20}
+          className={cx('shrink-0 text-text-muted transition-transform', open && 'rotate-180')}
+          aria-hidden="true"
+        />
+      </button>
+      <div className={cx('px-4 pb-1 md:block md:pb-1 md:pt-3', open ? 'block' : 'hidden')}>
+        <p className="hidden text-meta font-semibold text-text-subtle md:block">បញ្ជីទំនិញ ({count})</p>
+        <div className="divide-y divide-line border-t border-line md:border-t-0">{children}</div>
+      </div>
+    </div>
   )
 }

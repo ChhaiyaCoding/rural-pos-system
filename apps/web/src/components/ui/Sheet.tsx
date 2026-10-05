@@ -72,7 +72,13 @@ export function Sheet({
         )}
 
         {showHeader && (
-          <div className={cx('flex shrink-0 items-start gap-3 px-4 pb-3 md:px-6', full ? 'pt-3' : 'pt-1 md:pt-5')}>
+          <div
+            className={cx(
+              'flex shrink-0 items-start gap-3 px-4 pb-3 md:px-6',
+              // full-screen sheets: a hairline so scrolled content never looks like it runs under the title
+              full ? cx('border-b pt-3', dark ? 'border-ink-800' : 'border-line') : 'pt-1 md:pt-5',
+            )}
+          >
             <div className="min-w-0 flex-1 self-center">
               {title != null && <h2 className={cx('text-title-sm font-bold', dark ? 'text-white' : 'text-text')}>{title}</h2>}
               {subtitle != null && <p className={cx('text-meta', dark ? 'text-ink-300' : 'text-text-muted')}>{subtitle}</p>}
