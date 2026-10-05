@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useRef, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react'
-import { X, Phone, MapPin, ArrowUpRight, Banknote, Pencil, CheckCircle2, ChevronRight, ImageDown, Check, CalendarClock, Receipt, Trash2, Wallet, Plus } from 'lucide-react'
+import { X, Phone, MapPin, ArrowUpRight, Banknote, Pencil, CheckCircle2, ChevronLeft, ImageDown, Check, CalendarClock, Receipt, Trash2, Wallet, Plus } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { debtService, DEBT_METHODS, debtMethodLabel } from '@/services/debt.service'
@@ -13,6 +13,17 @@ import { useStoreProfile } from '@/store/storeProfile.store'
 import { CustomerEditSheet } from './CustomerEditSheet'
 import { ReprintReceipt } from '@/features/sales/components/ReprintReceipt'
 import { reconcileDebtItems, type DebtItem } from '../reconcile'
+import { Sheet } from '@/components/ui/Sheet'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { StatTile } from '@/components/ui/StatTile'
+import { MoneyText } from '@/components/ui/MoneyText'
+import { LetterAvatar } from '@/components/ui/LetterAvatar'
+import { Pill } from '@/components/ui/Pill'
+import { Input } from '@/components/ui/Input'
+import { cx } from '@/components/ui/cx'
 import type { Customer, Sale, DebtPaymentMethod } from '@/types'
 import type { TenantId, CustomerId, KHR, UUID } from '@/types/branded'
 
@@ -82,7 +93,7 @@ function SwipeRow({
   }
 
   return (
-    <div className="relative overflow-hidden bg-slate-50">
+    <div className="relative overflow-hidden rounded-lg bg-bg">
       {/* Reveal action — floating rounded button (matches the rounded-card design) */}
       <div
         className="absolute inset-y-0 right-0 flex items-center py-1.5 pr-3 pl-1"
@@ -93,10 +104,10 @@ function SwipeRow({
           disabled={voiding}
           onClick={onVoid}
           aria-label="លុបការសង"
-          className="w-full h-full rounded-xl bg-danger-600 text-white shadow-sm flex flex-col items-center justify-center gap-1 active:bg-danger-700 disabled:opacity-60 transition-colors"
+          className="w-full h-full rounded-md bg-danger text-white flex flex-col items-center justify-center gap-1 active:brightness-95 disabled:opacity-60 transition-[filter] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
         >
-          <Trash2 size={17} strokeWidth={2.25} />
-          <span className="text-[11px] font-bold leading-none">លុប</span>
+          <Trash2 size={18} strokeWidth={2.25} aria-hidden="true" />
+          <span className="text-caption font-bold leading-none">លុប</span>
         </button>
       </div>
 
@@ -112,7 +123,7 @@ function SwipeRow({
           transition: drag === 0 ? 'transform 0.2s ease' : 'none',
           touchAction: 'pan-y',
         }}
-        className="relative bg-white"
+        className="relative rounded-lg bg-surface"
       >
         {children}
       </div>
@@ -326,679 +337,535 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
 
   /* ─────────────────────────────────────────────────────── */
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/50"
-      onClick={onClose}
-      aria-hidden="true"
-    >
-      <div
-        className="w-full md:max-w-md bg-white rounded-t-2xl md:rounded-2xl max-h-[92dvh] flex flex-col shadow-pop animate-sheet-up"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
+    <>
+      <Sheet
+        open
+        onClose={onClose}
+        size="full"
+        tone="bg"
+        hideClose
+        ariaLabel="ព័ត៌មានអតិថិជន"
+        bodyClassName="pb-6"
+        footer={
+          <Button variant="dashed" size="lg" fullWidth icon={<Plus size={20} strokeWidth={2.5} />} onClick={openObForm}>
+            បន្ថែម​បំណុល
+          </Button>
+        }
       >
-        {/* ── Header ─────────────────────────────────── */}
-        <div className="shrink-0 flex items-center justify-between px-4 h-14 border-b border-slate-200">
-          <span className="text-[16px] font-bold text-slate-900">ព័ត៌មានអតិថិជន</span>
+        {/* ── Hero ─────────────────────────────────────── */}
+        <div className="rounded-b-2xl bg-ink-900 px-4 pb-5 pt-3 text-white md:px-6">
           <div className="flex items-center gap-2">
+            <IconButton aria-label="ត្រឡប់ក្រោយ" variant="onDark" onClick={onClose}>
+              <ChevronLeft size={22} strokeWidth={2.25} />
+            </IconButton>
+            <p className="min-w-0 flex-1 truncate text-body font-semibold text-ink-300">ព័ត៌មានអតិថិជន</p>
             {/* Share statement as image */}
-            <button
-              type="button"
+            <IconButton
+              aria-label={capturing ? 'កំពុងបង្កើតរូប…' : shareOk ? 'ចែករំលែករួចរាល់' : 'ចែករំលែកបំណុល'}
+              variant="onDark"
               onClick={handleShareStatement}
               disabled={capturing}
-              className={[
-                'h-9 px-3 flex items-center gap-1.5 rounded-full text-[12px] font-bold transition-colors',
-                shareOk
-                  ? 'bg-success-50 text-success-600'
-                  : 'bg-slate-100 text-slate-600 active:bg-slate-200',
-              ].join(' ')}
-              aria-label="ចែករំលែកបំណុល"
             >
               {capturing ? (
-                <span className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin inline-block" />
+                <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-ink-300 border-t-transparent" />
               ) : shareOk ? (
-                <Check size={14} strokeWidth={2.5} />
+                <Check size={20} strokeWidth={2.5} className="text-success-on-dark" />
               ) : (
-                <ImageDown size={14} strokeWidth={2.25} />
+                <ImageDown size={20} strokeWidth={2.25} />
               )}
-              {capturing ? '…' : shareOk ? 'រួចរាល់' : 'ចែករំលែក'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-primary-50 text-primary-600 active:bg-primary-100"
-              aria-label="កែប្រែ"
-            >
-              <Pencil size={15} strokeWidth={2.25} />
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 active:bg-slate-200"
-            >
-              <X size={17} />
-            </button>
+            </IconButton>
+            <IconButton aria-label="កែប្រែ" variant="onDark" onClick={() => setEditing(true)}>
+              <Pencil size={20} strokeWidth={2.25} />
+            </IconButton>
           </div>
-        </div>
 
-        {/* ── Scrollable body ─────────────────────────── */}
-        <div className="flex-1 overflow-y-auto min-h-0">
-
-          {/* ─ Profile card ──────────────────────────── */}
-          <div className="px-4 py-5 flex items-center gap-4 border-b border-slate-100">
-            <div className="shrink-0 w-16 h-16 rounded-full overflow-hidden border-2 border-slate-100 shadow-sm">
-              {live.imageUri ? (
-                <img src={live.imageUri} alt={live.nameKm} className="w-full h-full object-cover" />
-              ) : (
-                <div className={[
-                  'w-full h-full flex items-center justify-center text-[26px] font-bold',
-                  hasDebt ? 'bg-danger-100 text-danger-700' : 'bg-success-100 text-success-700',
-                ].join(' ')}>
-                  {initial}
-                </div>
-              )}
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <p className="text-[17px] font-bold text-slate-900">{live.nameKm}</p>
+          {/* Profile */}
+          <div className="mt-4 flex items-center gap-4">
+            <LetterAvatar
+              name={live.nameKm}
+              imageUri={live.imageUri}
+              status={dueInfo.status === 'overdue' ? 'overdue' : dueInfo.status === 'due-soon' ? 'dueToday' : 'neutral'}
+              size={60}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-title font-bold text-white">{live.nameKm}</p>
               {live.phone && (
-                <div className="flex items-center gap-1 mt-0.5">
-                  <Phone size={11} className="text-slate-400 shrink-0" />
-                  <span className="text-[12px] text-slate-400">{live.phone}</span>
-                </div>
+                <p className="mt-0.5 flex items-center gap-1.5 text-meta text-ink-300">
+                  <Phone size={14} className="shrink-0" aria-hidden="true" />
+                  <span className="tabular-nums">{live.phone}</span>
+                </p>
               )}
               {live.address && (
-                <div className="flex items-start gap-1 mt-0.5">
-                  <MapPin size={11} className="text-slate-400 shrink-0 mt-0.5" />
-                  <span className="text-[12px] text-slate-400 leading-snug">{live.address}</span>
-                </div>
+                <p className="mt-0.5 flex items-start gap-1.5 text-meta text-ink-300">
+                  <MapPin size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+                  <span>{live.address}</span>
+                </p>
               )}
             </div>
+          </div>
 
-            {/* Balance */}
-            <div className="shrink-0 text-right">
-              <p className="text-[11px] text-slate-400 mb-0.5">ជំពាក់សរុប</p>
-              <p className={[
-                'text-[20px] font-extrabold tabular-nums transition-all duration-500 leading-tight',
-                hasDebt ? 'text-danger-600' : 'text-success-600',
-              ].join(' ')}>
-                {formatKHR(live.debtBalance)}
-              </p>
-              <p className="text-[12px] font-bold text-primary-600 tabular-nums">
-                {formatUSD(live.debtBalance)}
-              </p>
+          {/* Balance */}
+          <div className="mt-4">
+            <p className="text-meta font-semibold text-ink-300">ជំពាក់សរុប</p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <MoneyText amount={live.debtBalance} size="xl" tone={hasDebt ? 'debtOnDark' : 'successOnDark'} />
+              {hasDebt && dueBadge && (
+                <Pill variant={dueInfo.status === 'overdue' ? 'dangerSolid' : dueInfo.status === 'due-soon' ? 'warnSolid' : 'success'}>
+                  {dueBadge.text}
+                </Pill>
+              )}
             </div>
           </div>
 
           {/* ─ Due date (repayment deadline) ─────────── */}
           {hasDebt && (
-            <div className="px-4 pt-4">
-              <div className={[
-                'rounded-2xl border p-4',
-                dueInfo.status === 'overdue'  ? 'border-danger-200 bg-danger-50'
-                : dueInfo.status === 'due-soon' ? 'border-warning-200 bg-warning-50'
-                : 'border-slate-200 bg-white',
-              ].join(' ')}>
-                <div className="flex items-center justify-between mb-2.5">
-                  <p className="text-[12px] font-bold text-slate-500 flex items-center gap-1.5">
-                    <CalendarClock size={14} strokeWidth={2.25} /> ថ្ងៃកំណត់សង
-                  </p>
-                  {dueBadge && (
-                    <span className={['text-[11px] font-bold px-2 py-0.5 rounded-full', dueBadge.cls].join(' ')}>
-                      {dueBadge.text}
-                    </span>
-                  )}
-                </div>
-
-                {/* Date picker + clear */}
-                <div className="flex items-center gap-2">
-                  <input
-                    type="date"
-                    value={live.dueDate ?? ''}
-                    onChange={(e) => handleSetDue(e.target.value || null)}
-                    className="flex-1 h-11 px-3 rounded-xl border border-slate-200 bg-white text-[14px] font-semibold text-slate-800 focus:outline-none focus:border-primary-500"
-                  />
-                  {live.dueDate && (
-                    <button
-                      type="button"
-                      onClick={() => handleSetDue(null)}
-                      aria-label="លុបថ្ងៃកំណត់"
-                      className="shrink-0 w-11 h-11 rounded-xl border border-slate-200 bg-white text-slate-400 flex items-center justify-center active:bg-slate-100"
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
-                </div>
-
-                {/* Status detail */}
-                {live.dueDate ? (
-                  <p className="mt-2 text-[12px] tabular-nums">
-                    <span className={[
+            <div className="mt-4 rounded-lg bg-ink-800 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="customer-due" className="flex items-center gap-1.5 text-meta font-semibold text-ink-300">
+                  <CalendarClock size={16} strokeWidth={2.25} aria-hidden="true" /> ថ្ងៃកំណត់សង
+                </label>
+                {live.dueDate && (
+                  <p className="text-meta tabular-nums">
+                    <span className={cx(
                       'font-bold',
-                      dueInfo.status === 'overdue' ? 'text-danger-700'
-                      : dueInfo.status === 'due-soon' ? 'text-warning-700'
-                      : 'text-slate-600',
-                    ].join(' ')}>
+                      dueInfo.status === 'overdue' ? 'text-debt-on-dark'
+                      : dueInfo.status === 'due-soon' ? 'text-accent'
+                      : 'text-white',
+                    )}>
                       {dueText}
                     </span>
                     {dueInfo.daysPostponed > 0 && (
-                      <span className="text-slate-500"> · បានពន្យា {dueInfo.daysPostponed} ថ្ងៃ</span>
+                      <span className="text-ink-300"> · បានពន្យា {dueInfo.daysPostponed} ថ្ងៃ</span>
                     )}
                   </p>
-                ) : (
-                  <p className="mt-2 text-[11px] text-slate-400">
-                    មិនទាន់កំណត់ថ្ងៃសង — ជ្រើសថ្ងៃ ឬ ប្រើប៊ូតុងខាងក្រោម
-                  </p>
                 )}
+              </div>
 
-                {/* Quick postpone */}
-                <div className="flex gap-2 mt-2.5">
-                  {[7, 15, 30].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => handleSetDue(addDaysISODate(live.dueDate || todayISODate(), n))}
-                      className="flex-1 h-9 rounded-lg border border-slate-200 bg-white text-[12px] font-semibold text-slate-600 active:bg-slate-50"
-                    >
-                      +{n} ថ្ងៃ
-                    </button>
-                  ))}
-                </div>
+              {/* Date picker + clear */}
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  id="customer-due"
+                  type="date"
+                  value={live.dueDate ?? ''}
+                  onChange={(e) => handleSetDue(e.target.value || null)}
+                  className="h-12 min-w-0 flex-1 rounded-sm bg-ink-700 px-3 text-body font-semibold text-white outline-none [color-scheme:dark] focus:ring-2 focus:ring-accent/60"
+                />
+                {live.dueDate && (
+                  <button
+                    type="button"
+                    onClick={() => handleSetDue(null)}
+                    aria-label="លុបថ្ងៃកំណត់"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-sm bg-ink-700 text-ink-300 transition-colors active:bg-ink-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  >
+                    <X size={18} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+              {!live.dueDate && (
+                <p className="mt-2 text-caption text-ink-300">
+                  មិនទាន់កំណត់ថ្ងៃសង — ជ្រើសថ្ងៃ ឬ ប្រើប៊ូតុងខាងក្រោម
+                </p>
+              )}
+
+              {/* Quick postpone */}
+              <div className="mt-3 flex items-center gap-2">
+                <span className="shrink-0 text-meta font-semibold text-white">ពន្យារថ្ងៃសង</span>
+                {[7, 15, 30].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => handleSetDue(addDaysISODate(live.dueDate || todayISODate(), n))}
+                    className="h-12 min-w-0 flex-1 rounded-sm bg-ink-700 text-body-sm font-bold tabular-nums text-white transition-colors active:bg-ink-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  >
+                    +{n} ថ្ងៃ
+                  </button>
+                ))}
               </div>
             </div>
           )}
+        </div>
+
+        <div className="space-y-3 px-4 pt-4 md:px-6">
 
           {/* ─ Success banner ────────────────────────── */}
           {paySuccess && (
-            <div
-              className="mx-4 mt-4 rounded-2xl border border-success-200 bg-success-50 px-4 py-3.5 flex items-center gap-3"
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 rounded-lg bg-success-bg px-4 py-3.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-success"
               onClick={dismissSuccess}
             >
-              <div className="shrink-0 w-10 h-10 rounded-full bg-success-500 text-white flex items-center justify-center">
-                <CheckCircle2 size={20} strokeWidth={2.5} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-bold text-success-800">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success text-white" aria-hidden="true">
+                <CheckCircle2 size={22} strokeWidth={2.5} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-body-sm font-bold text-success">
                   {paySuccess.after === 0 ? '🎉 សំណូលអស់ហើយ!' : 'ទទួលប្រាក់ជោគជ័យ'}
-                </p>
-                <p className="text-[12px] text-success-600 mt-0.5 tabular-nums">
+                </span>
+                <span className="mt-0.5 block text-meta tabular-nums text-success">
                   ទទួល {formatKHR(paySuccess.paid)}
                   {paySuccess.after > 0 && (
                     <> · នៅជំពាក់ <span className="font-bold">{formatKHR(paySuccess.after)}</span></>
                   )}
-                </p>
-              </div>
-              <X size={14} className="shrink-0 text-success-400" />
-            </div>
+                </span>
+              </span>
+              <X size={18} className="shrink-0 text-success" aria-hidden="true" />
+            </button>
           )}
 
           {/* ─ Paid-in-full state ────────────────────── */}
           {!hasDebt && txns.length > 0 && !paySuccess && (
-            <div className="mx-4 mt-4 rounded-2xl border border-success-200 bg-success-50 px-4 py-3 flex items-center gap-3">
-              <span className="text-[24px]">✅</span>
-              <p className="text-[13px] font-bold text-success-700">អតិថិជននេះបំណុលអស់ហើយ</p>
-            </div>
-          )}
-
-          {/* ─ Receive payment button ────────────────── */}
-          {hasDebt && !showPay && (
-            <div className="px-4 mt-4">
-              <button
-                type="button"
-                onClick={() => { setShowPay(true); setShowOb(false) }}
-                className="w-full h-13 rounded-2xl bg-success-600 text-white font-bold text-[15px] flex items-center justify-center gap-2.5 active:bg-success-700 transition-colors py-3.5"
-              >
-                <Banknote size={20} strokeWidth={2} />
-                ទទួលប្រាក់បំណុល
-                <ChevronRight size={16} className="opacity-70" />
-              </button>
-            </div>
-          )}
-
-          {/* ─ Add manual debt (one entry) ───────────── */}
-          {!showOb && !showPay && (
-            <div className="px-4 mt-3">
-              <button
-                type="button"
-                onClick={openObForm}
-                className="w-full h-12 rounded-2xl border border-warning-100 bg-warning-50 text-warning-700 font-bold text-[14px] flex items-center justify-center gap-2 active:bg-warning-100 transition-colors"
-              >
-                <Plus size={18} strokeWidth={2.5} />
-                បន្ថែម​បំណុល
-              </button>
-            </div>
-          )}
-
-          {/* ─ Manual debt form ──────────────────────── */}
-          {showOb && (
-            <div className="mx-4 mt-4 rounded-2xl border border-warning-100 bg-warning-50 px-4 py-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[12px] font-bold text-warning-700 flex items-center gap-1.5">
-                  <Plus size={14} strokeWidth={2.5} /> បន្ថែម​បំណុល (មិន​មែន​ពី​ការ​លក់)
-                </p>
-                <div className="flex items-center rounded-lg border border-warning-100 bg-white overflow-hidden">
-                  {(['KHR', 'USD'] as const).map((cur) => (
-                    <button
-                      key={cur}
-                      type="button"
-                      onClick={() => { setObCurrency(cur); setObAmount('') }}
-                      className={[
-                        'min-h-0 min-w-0 h-7 px-3.5 text-[13px] font-bold tabular-nums transition-colors',
-                        obCurrency === cur ? 'bg-warning-600 text-white' : 'text-warning-700 active:bg-warning-50',
-                      ].join(' ')}
-                    >
-                      {cur === 'KHR' ? '៛' : '$'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <div className="flex-1 flex items-center border border-warning-100 rounded-xl bg-white overflow-hidden">
-                  <span className="pl-4 text-[15px] font-bold text-slate-400 shrink-0">{obCurrency === 'USD' ? '$' : '៛'}</span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    value={obAmount}
-                    onChange={(e) => setObAmount(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddDebt()}
-                    placeholder="0"
-                    autoFocus
-                    className="flex-1 h-12 px-3 text-[18px] font-bold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none min-w-0"
-                  />
-                </div>
-                <button
-                  type="button"
-                  disabled={!canAddOb}
-                  onClick={handleAddDebt}
-                  className="h-12 px-4 rounded-xl bg-warning-600 text-white font-bold text-[14px] disabled:opacity-40 active:bg-warning-700 transition-colors whitespace-nowrap"
-                >
-                  {savingOb ? '…' : 'បញ្ជាក់'}
-                </button>
-                <button
-                  type="button"
-                  onClick={closeObForm}
-                  className="h-12 w-12 rounded-xl border border-slate-200 bg-white text-slate-500 flex items-center justify-center active:bg-slate-100"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              {obKhr > 0 && (
-                <p className="mt-1.5 text-right text-[12px] font-bold text-primary-600 tabular-nums">
-                  {obCurrency === 'USD' ? `= ${formatKHR(toKHR(obKhr))}` : `≈ ${formatUSD(toKHR(obKhr))}`}
-                </p>
-              )}
-
-              {/* Date the debt was incurred (default today; pick a past date for old debt) */}
-              <div className="mt-3">
-                <p className="text-[11px] font-bold text-warning-700 mb-1.5 flex items-center gap-1.5">
-                  <CalendarClock size={13} strokeWidth={2.25} /> ថ្ងៃ​ជំពាក់
-                </p>
-                <input
-                  type="date"
-                  value={obDate}
-                  max={todayISODate()}
-                  onChange={(e) => setObDate(e.target.value)}
-                  className="w-full h-11 px-3 rounded-xl border border-warning-100 bg-white text-[14px] font-semibold text-slate-800 focus:outline-none focus:border-warning-500"
-                />
-              </div>
-
-              <input
-                type="text"
-                value={obNote}
-                onChange={(e) => setObNote(e.target.value)}
-                placeholder="ឧ. ឲ្យ​ខ្ចី​សាច់ប្រាក់ / បំណុលចាស់ (ស្រេចចិត្ត)"
-                className="w-full h-10 mt-3 rounded-lg border border-warning-100 bg-white px-3 text-[13px] placeholder:text-slate-300 focus:outline-none focus:border-warning-500"
-              />
-            </div>
-          )}
-
-          {/* ─ Payment picker — pay one invoice in full ─────── */}
-          {showPay && (
-            <div className="mx-4 mt-4 rounded-2xl border border-success-200 bg-success-50 px-4 py-4">
-
-              {/* Header */}
-              <div className="flex items-center justify-between mb-0.5">
-                <p className="text-[12px] font-bold text-success-700">ទទួលប្រាក់បំណុល</p>
-                <button
-                  type="button"
-                  onClick={() => setShowPay(false)}
-                  className="w-8 h-8 -mr-1 rounded-lg text-slate-400 flex items-center justify-center active:bg-slate-100"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-              <p className="text-[11px] text-slate-500 mb-3">ជ្រើស​វិក្កយបត្រ​ដើម្បី​សង — សង​ពេញ​ម្ដង​មួយ</p>
-
-              {/* Payment method */}
-              <div className="mb-3">
-                <p className="text-[11px] font-bold text-success-700 mb-1.5">វិធីសាស្ត្រ​ទទួល</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {DEBT_METHODS.map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => setPayMethod(m.id)}
-                      className={[
-                        'h-10 rounded-lg border text-[12px] font-bold flex items-center justify-center gap-1 transition-colors',
-                        payMethod === m.id ? 'border-success-600 bg-success-600 text-white' : 'bg-white border-success-200 text-success-700 active:bg-success-100',
-                      ].join(' ')}
-                    >
-                      <span>{m.emoji}</span> {m.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Note */}
-              <input
-                type="text"
-                value={payNote}
-                onChange={(e) => setPayNote(e.target.value)}
-                placeholder="កំណត់​ចំណាំ (ស្រេចចិត្ត)"
-                className="w-full h-10 mb-3 rounded-lg border border-success-200 bg-white px-3 text-[13px] placeholder:text-slate-300 focus:outline-none focus:border-success-500"
-              />
-
-              {/* Open invoices — each settled in full by one payment */}
-              <p className="text-[11px] font-bold text-success-700 mb-1.5">វិក្កយបត្រ​ដែល​ជំពាក់</p>
-              <div className="space-y-2">
-                {openItems.map((item) => {
-                  const label = item.kind === 'sale'
-                    ? `#${item.sale?.receiptNumber || item.id.slice(0, 8).toUpperCase()}`
-                    : 'បំណុល'
-                  return (
-                    <div key={item.id} className="flex items-center gap-3 rounded-xl border border-success-200 bg-white px-3 py-2.5">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-bold text-slate-800 truncate">{label}</p>
-                        <p className="text-[10px] text-slate-400">{formatDateKm(item.createdAt)}</p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-[13px] font-extrabold text-slate-900 tabular-nums leading-tight">{formatKHR(toKHR(item.currentRemaining))}</p>
-                        <p className="text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(toKHR(item.currentRemaining))}</p>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={paying}
-                        onClick={() => setPendingPay(item)}
-                        className="h-9 px-3.5 rounded-lg bg-success-600 text-white font-bold text-[12px] disabled:opacity-40 active:bg-success-700 transition-colors whitespace-nowrap"
-                      >
-                        សង​ពេញ
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
+            <div className="flex items-center gap-3 rounded-lg bg-success-bg px-4 py-3 text-success">
+              <CheckCircle2 size={22} strokeWidth={2.25} aria-hidden="true" />
+              <p className="text-body-sm font-bold">អតិថិជននេះបំណុលអស់ហើយ</p>
             </div>
           )}
 
           {/* ─ Debt summary ──────────────────────────── */}
-          <div className="px-4 mt-4">
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-card p-4">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">សង្ខេបបំណុល</p>
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <p className="text-[10px] text-slate-400 mb-0.5">បំណុលដើម</p>
-                  <p className="text-[14px] font-extrabold text-slate-900 tabular-nums">{formatKHR(totalCharged)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-slate-400 mb-0.5">បានសង</p>
-                  <p className="text-[14px] font-extrabold text-success-700 tabular-nums">{formatKHR(totalPaid)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-slate-400 mb-0.5">នៅសល់</p>
-                  <p className={['text-[14px] font-extrabold tabular-nums', hasDebt ? 'text-danger-600' : 'text-success-600'].join(' ')}>{formatKHR(live.debtBalance)}</p>
-                </div>
-              </div>
-            </div>
+          <div className="grid grid-cols-3 gap-2">
+            <StatTile label="បំណុលដើម" value={formatKHR(totalCharged)} />
+            <StatTile label="បានសង" dot="bg-success" value={formatKHR(totalPaid)} />
+            <StatTile label="នៅសល់" dot={hasDebt ? 'bg-debt' : 'bg-success'} value={formatKHR(live.debtBalance)} />
           </div>
 
-          {/* ─ Debt items (invoices + opening balances) ── */}
-          <div className="mt-4">
-            <div className="px-4 pb-2 flex items-center justify-between">
-              <p className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">វិក្កយបត្រ & បំណុលចាស់</p>
-              {debtItems.length > 0 && <p className="text-[11px] text-slate-400">{debtItems.length}</p>}
-            </div>
-            {debtItems.length === 0 ? (
-              <p className="px-4 py-4 text-center text-[12px] text-slate-400">គ្មាន​បំណុល​ជំពាក់</p>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {debtItems.map((item) => {
-                  const settledOff = item.currentRemaining === 0
-                  const remainBadge = settledOff ? (
-                    <p className="text-[10px] font-semibold text-success-600 tabular-nums">✓ សងរួច</p>
-                  ) : item.currentRemaining < item.orig ? (
-                    <p className="text-[10px] text-danger-500 tabular-nums">នៅខ្វះ {formatKHR(toKHR(item.currentRemaining))}</p>
-                  ) : null
+          <DetailTabs
+            invoiceCount={debtItems.length}
+            paymentCount={payments.length}
+            invoices={
+              /* ─ Debt items (invoices + opening balances) ── */
+              debtItems.length === 0 ? (
+                <p className="py-6 text-center text-meta text-text-muted">គ្មាន​បំណុល​ជំពាក់</p>
+              ) : (
+                <div className="space-y-2">
+                  {debtItems.map((item) => {
+                    const settledOff = item.currentRemaining === 0
+                    const remainBadge = !settledOff && item.currentRemaining < item.orig ? (
+                      <span className="mt-0.5 block text-caption font-semibold tabular-nums text-debt">
+                        នៅខ្វះ {formatKHR(toKHR(item.currentRemaining))}
+                      </span>
+                    ) : null
+                    const trailing = settledOff ? (
+                      <span className="flex shrink-0 items-center gap-1 text-meta font-bold text-success">
+                        <CheckCircle2 size={18} strokeWidth={2.25} aria-hidden="true" /> សងរួច
+                      </span>
+                    ) : (
+                      <Button variant="primary" disabled={paying} onClick={() => setPendingPay(item)} className="shrink-0">
+                        សង​ពេញ
+                      </Button>
+                    )
 
-                  /* Manual debt row (not from a sale) */
-                  if (item.kind === 'opening') {
-                    const manualLabel = 'បំណុល'
-                    const rowContent = (
-                      <div className="w-full flex items-center gap-3 px-4 py-3">
-                        <div className={[
-                          'shrink-0 w-9 h-9 rounded-full flex items-center justify-center',
-                          settledOff ? 'bg-success-100' : 'bg-warning-100',
-                        ].join(' ')}>
-                          <Wallet size={16} className={settledOff ? 'text-success-600' : 'text-warning-600'} />
+                    /* Manual debt row (not from a sale) */
+                    if (item.kind === 'opening') {
+                      const manualLabel = 'បំណុល'
+                      const rowContent = (
+                        <div className={cx('flex w-full items-center gap-3 rounded-lg py-3 pl-4 pr-3', settledOff ? 'bg-surface-2' : 'bg-surface')}>
+                          <span
+                            className={cx('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', settledOff ? 'bg-success-bg text-success' : 'bg-warn-bg text-warn')}
+                            aria-hidden="true"
+                          >
+                            <Wallet size={18} />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className={cx('block text-body-sm font-bold tabular-nums', settledOff ? 'text-text-muted' : 'text-text')}>
+                              {formatKHR(toKHR(item.orig))}
+                            </span>
+                            <span className="block truncate text-meta text-text-muted">
+                              {manualLabel} · {formatDateKm(item.createdAt)}
+                              {item.note && !['បំណុល', 'បំណុលថ្មី', 'បំណុលចាស់'].includes(item.note) ? <> · {item.note}</> : null}
+                            </span>
+                            {remainBadge}
+                          </span>
+                          {trailing}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-bold text-slate-800 truncate">{manualLabel}</p>
-                          <p className="text-[11px] text-slate-400 truncate">
-                            {formatDateKm(item.createdAt)}
-                            {item.note && !['បំណុល', 'បំណុលថ្មី', 'បំណុលចាស់'].includes(item.note) ? <> · {item.note}</> : null}
-                          </p>
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <p className="text-[13px] font-bold text-slate-900 tabular-nums">{formatKHR(toKHR(item.orig))}</p>
-                          {remainBadge}
-                        </div>
+                      )
+                      /* Deletable only while untouched by payments (keeps the balance math clean) */
+                      const deletable = item.currentRemaining === item.orig
+                      if (!deletable) return <div key={item.id}>{rowContent}</div>
+                      return (
+                        <SwipeRow
+                          key={item.id}
+                          open={openVoidId === item.id}
+                          onOpen={() => setOpenVoidId(item.id)}
+                          onClose={() => setOpenVoidId((cur) => (cur === item.id ? null : cur))}
+                          onVoid={() => setPendingVoid({ id: item.id, amount: toKHR(item.orig) as KHR, kind: 'opening' })}
+                          voiding={false}
+                        >
+                          {rowContent}
+                        </SwipeRow>
+                      )
+                    }
+
+                    /* Sale invoice row */
+                    const sale = item.sale as Sale
+                    const isPartial = sale.paymentType === 'partial'
+                    return (
+                      <div key={item.id} className={cx('flex items-center gap-2 rounded-lg pr-3', settledOff ? 'bg-surface-2' : 'bg-surface')}>
+                        <button
+                          type="button"
+                          onClick={() => setReprintSale(sale)}
+                          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg py-3 pl-4 text-left transition-colors active:bg-bg focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ink-900"
+                        >
+                          <span
+                            className={cx('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', settledOff ? 'bg-success-bg text-success' : 'bg-bg text-text-subtle')}
+                            aria-hidden="true"
+                          >
+                            <Receipt size={18} />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className={cx('block text-body-sm font-bold tabular-nums', settledOff ? 'text-text-muted' : 'text-text')}>
+                              {formatKHR(sale.totalAmount)}
+                            </span>
+                            <span className="block truncate text-meta tabular-nums text-text-muted">
+                              #{sale.receiptNumber || String(sale.id).slice(0, 8).toUpperCase()} · {formatDateKm(sale.createdAt)} ·{' '}
+                              <span className={settledOff ? 'font-semibold text-text-muted line-through' : isPartial ? 'font-semibold text-warn' : 'font-semibold text-debt'}>
+                                {isPartial ? 'បង់ខ្លះ' : 'ជំពាក់'}
+                              </span>
+                            </span>
+                            {!settledOff && item.currentRemaining < sale.totalAmount && (
+                              <span className="mt-0.5 block text-caption font-semibold tabular-nums text-debt">
+                                នៅខ្វះ {formatKHR(toKHR(item.currentRemaining))}
+                              </span>
+                            )}
+                          </span>
+                        </button>
+                        {trailing}
                       </div>
                     )
-                    /* Deletable only while untouched by payments (keeps the balance math clean) */
-                    const deletable = item.currentRemaining === item.orig
-                    if (!deletable) return <div key={item.id}>{rowContent}</div>
-                    return (
+                  })}
+                </div>
+              )
+            }
+            history={
+              /* ─ Payment history ───────────────────────── */
+              payments.length === 0 ? (
+                <p className="py-6 text-center text-meta text-text-muted">មិន​ទាន់​មាន​ការ​ទទួល​ប្រាក់</p>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    {payments.map((txn) => (
                       <SwipeRow
-                        key={item.id}
-                        open={openVoidId === item.id}
-                        onOpen={() => setOpenVoidId(item.id)}
-                        onClose={() => setOpenVoidId((cur) => (cur === item.id ? null : cur))}
-                        onVoid={() => setPendingVoid({ id: item.id, amount: toKHR(item.orig) as KHR, kind: 'opening' })}
+                        key={txn.id}
+                        open={openVoidId === txn.id}
+                        onOpen={() => setOpenVoidId(txn.id)}
+                        onClose={() => setOpenVoidId((cur) => (cur === txn.id ? null : cur))}
+                        onVoid={() => setPendingVoid({ id: txn.id, amount: txn.amount, kind: 'payment' })}
                         voiding={false}
                       >
-                        {rowContent}
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success-bg text-success" aria-hidden="true">
+                            <ArrowUpRight size={18} />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-body-sm font-semibold text-text">ទទួល​ប្រាក់ · {debtMethodLabel(txn.method)}</p>
+                            <p className="truncate text-meta text-text-muted">
+                              {formatDateTimeKm(txn.createdAt)}{txn.note && <> · {txn.note}</>}
+                            </p>
+                          </div>
+                          <p className="shrink-0 text-body-sm font-bold tabular-nums text-success">−{formatKHR(txn.amount)}</p>
+                        </div>
                       </SwipeRow>
-                    )
-                  }
-
-                  /* Sale invoice row */
-                  const sale = item.sale as Sale
-                  const isPartial = sale.paymentType === 'partial'
-                  return (
-                    <button key={item.id} type="button" onClick={() => setReprintSale(sale)} className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-slate-50 transition-colors">
-                      <div className={[
-                        'shrink-0 w-9 h-9 rounded-full flex items-center justify-center',
-                        settledOff ? 'bg-success-100' : 'bg-slate-100',
-                      ].join(' ')}>
-                        <Receipt size={16} className={settledOff ? 'text-success-600' : 'text-slate-500'} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold text-slate-800 tabular-nums truncate">#{sale.receiptNumber || String(sale.id).slice(0, 8).toUpperCase()}</p>
-                        <p className="text-[11px] text-slate-400">
-                          {formatDateKm(sale.createdAt)} · <span className={settledOff ? 'text-slate-400 font-semibold line-through' : isPartial ? 'text-warning-600 font-semibold' : 'text-danger-600 font-semibold'}>{isPartial ? 'ផ្នែក' : 'ជំពាក់'}</span>
-                        </p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-[13px] font-bold text-slate-900 tabular-nums">{formatKHR(sale.totalAmount)}</p>
-                        {remainBadge}
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* ─ Payment history ───────────────────────── */}
-          <div className="mt-4 pb-6">
-            <div className="px-4 pb-2 flex items-center justify-between">
-              <p className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">ប្រវត្តិ​ទទួល​ប្រាក់</p>
-              {payments.length > 0 && <p className="text-[11px] text-slate-400">{payments.length} ដង</p>}
-            </div>
-            {payments.length === 0 ? (
-              <p className="px-4 py-4 text-center text-[12px] text-slate-400">មិន​ទាន់​មាន​ការ​ទទួល​ប្រាក់</p>
-            ) : (
-              <>
-              <div className="divide-y divide-slate-100">
-                {payments.map((txn) => (
-                  <SwipeRow
-                    key={txn.id}
-                    open={openVoidId === txn.id}
-                    onOpen={() => setOpenVoidId(txn.id)}
-                    onClose={() => setOpenVoidId((cur) => (cur === txn.id ? null : cur))}
-                    onVoid={() => setPendingVoid({ id: txn.id, amount: txn.amount, kind: 'payment' })}
-                    voiding={false}
-                  >
-                    <div className="flex items-center gap-3 px-4 py-3">
-                      <div className="shrink-0 w-9 h-9 rounded-full bg-success-100 flex items-center justify-center">
-                        <ArrowUpRight size={16} className="text-success-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-slate-800">ទទួល​ប្រាក់ · {debtMethodLabel(txn.method)}</p>
-                        <p className="text-[11px] text-slate-400">
-                          {formatDateTimeKm(txn.createdAt)}{txn.note && <> · {txn.note}</>}
-                        </p>
-                      </div>
-                      <p className="text-[14px] font-bold text-success-600 tabular-nums shrink-0">−{formatKHR(txn.amount)}</p>
-                    </div>
-                  </SwipeRow>
-                ))}
-              </div>
-              {payments.length > 0 && (
-                <p className="px-4 pt-2 text-[10px] text-slate-300 text-center">← អូស​ឆ្វេង​ដើម្បី​លុប​ការ​សង</p>
-              )}
-              </>
-            )}
-          </div>
-
+                    ))}
+                  </div>
+                  {payments.length > 0 && (
+                    <p className="pt-2 text-center text-caption text-text-muted">← អូស​ឆ្វេង​ដើម្បី​លុប​ការ​សង</p>
+                  )}
+                </>
+              )
+            }
+          />
         </div>
-      </div>
+      </Sheet>
 
       {/* ── Hidden statement card — captured by html2canvas ─── */}
-      <div
-        ref={statementRef}
-        className="absolute -left-[9999px] top-0 w-[360px] bg-white"
-        aria-hidden="true"
-      >
-        {/* Header */}
-        <div className="bg-primary-600 px-5 py-4 text-white">
-          <p className="text-[13px] font-bold opacity-80">
-            {storeName || 'ហាងលក់ទំនិញ'}
-          </p>
-          {receiptShowPhone && storePhone && (
-            <p className="text-[11px] opacity-60 mt-0.5">📞 {storePhone}</p>
-          )}
-          <p className="text-[10px] opacity-50 mt-1">
-            បង្កើតថ្ងៃ: {formatDateTimeKm(nowISO())}
-          </p>
-        </div>
-
-        {/* Title */}
-        <div className="px-5 py-3 border-b border-slate-200 bg-slate-50">
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-            សេចក្ដីសង្ខេបបំណុល
-          </p>
-        </div>
-
-        {/* Customer info */}
-        <div className="px-5 py-4 flex items-center gap-3 border-b border-slate-100">
-          <div className={[
-            'w-12 h-12 rounded-full flex items-center justify-center text-[20px] font-bold shrink-0',
-            live.debtBalance > 0 ? 'bg-danger-100 text-danger-700' : 'bg-success-100 text-success-700',
-          ].join(' ')}>
-            {live.nameKm.charAt(0)}
+      <div className="fixed left-0 top-0" aria-hidden="true">
+        <div
+          ref={statementRef}
+          className="absolute -left-[9999px] top-0 w-[360px] bg-white leading-[1.5]"
+        >
+          {/* Header */}
+          <div className="bg-ink-900 px-5 py-4 text-white">
+            <p className="text-meta font-bold leading-[1.5] text-white">
+              {storeName || 'ហាងលក់ទំនិញ'}
+            </p>
+            {receiptShowPhone && storePhone && (
+              <p className="mt-0.5 text-caption leading-[1.5] text-ink-300">📞 {storePhone}</p>
+            )}
+            <p className="mt-1 text-caption leading-[1.5] text-ink-300">
+              បង្កើតថ្ងៃ: {formatDateTimeKm(nowISO())}
+            </p>
           </div>
-          <div className="flex-1">
-            <p className="text-[16px] font-extrabold text-slate-900">{live.nameKm}</p>
-            {live.phone && <p className="text-[12px] text-slate-400 mt-0.5">📞 {live.phone}</p>}
+
+          {/* Title */}
+          <div className="border-b border-line bg-surface-2 px-5 py-3">
+            <p className="text-caption font-bold uppercase leading-[1.5] tracking-widest text-text-subtle">
+              សេចក្ដីសង្ខេបបំណុល
+            </p>
           </div>
-          <div className="text-right">
-            <p className="text-[10px] text-slate-400">ជំពាក់សរុប</p>
-            <p className={[
-              'text-[22px] font-extrabold tabular-nums leading-tight',
-              live.debtBalance > 0 ? 'text-danger-600' : 'text-success-600',
+
+          {/* Customer info */}
+          <div className="flex items-center gap-3 border-b border-line px-5 py-4">
+            <div className={[
+              'flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-title-sm font-bold leading-[1.5]',
+              live.debtBalance > 0 ? 'bg-debt-bg text-debt' : 'bg-success-bg text-success',
             ].join(' ')}>
-              {formatKHR(live.debtBalance)}
-            </p>
-            <p className="text-[12px] font-bold text-primary-600 tabular-nums">
-              {formatUSD(live.debtBalance)}
+              {live.nameKm.charAt(0)}
+            </div>
+            <div className="flex-1">
+              <p className="text-body font-bold leading-[1.5] text-text">{live.nameKm}</p>
+              {live.phone && <p className="mt-0.5 text-meta leading-[1.5] text-text-muted">📞 {live.phone}</p>}
+            </div>
+            <div className="text-right">
+              <p className="text-caption leading-[1.5] text-text-muted">ជំពាក់សរុប</p>
+              <p className={[
+                'text-title font-bold tabular-nums leading-[1.5]',
+                live.debtBalance > 0 ? 'text-debt' : 'text-success',
+              ].join(' ')}>
+                {formatKHR(live.debtBalance)}
+              </p>
+              <p className="text-meta font-bold tabular-nums leading-[1.5] text-text-subtle">
+                {formatUSD(live.debtBalance)}
+              </p>
+            </div>
+          </div>
+
+          {/* Transactions */}
+          <div className="px-5 pb-1 pt-3">
+            <p className="mb-2 text-caption font-bold uppercase leading-[1.5] tracking-widest text-text-subtle">
+              ប្រវត្តិប្រតិបត្តិការ
             </p>
           </div>
-        </div>
-
-        {/* Transactions */}
-        <div className="px-5 pt-3 pb-1">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-            ប្រវត្តិប្រតិបត្តិការ
-          </p>
-        </div>
-        <div className="divide-y divide-slate-100">
-          {txnsWithBalance.slice(0, 10).map((txn) => {
-            const isPay = txn.type === 'payment'
-            return (
-              <div key={txn.id} className="flex items-center gap-3 px-5 py-2.5">
-                <div className={[
-                  'w-7 h-7 rounded-full flex items-center justify-center text-[12px] shrink-0',
-                  isPay ? 'bg-success-100 text-success-600' : 'bg-danger-100 text-danger-600',
-                ].join(' ')}>
-                  {isPay ? '↑' : '↓'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold text-slate-800">
-                    {isPay ? 'ទទួលប្រាក់' : 'ជំពាក់ (ការលក់)'}
-                  </p>
-                  <p className="text-[10px] text-slate-400">{formatDateTimeKm(txn.createdAt)}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className={[
-                    'text-[13px] font-bold tabular-nums',
-                    isPay ? 'text-success-600' : 'text-danger-600',
+          <div className="divide-y divide-line">
+            {txnsWithBalance.slice(0, 10).map((txn) => {
+              const isPay = txn.type === 'payment'
+              return (
+                <div key={txn.id} className="flex items-center gap-3 px-5 py-2.5">
+                  <div className={[
+                    'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-meta leading-[1.5]',
+                    isPay ? 'bg-success-bg text-success' : 'bg-debt-bg text-debt',
                   ].join(' ')}>
-                    {isPay ? '−' : '+'}{formatKHR(txn.amount)}
-                  </p>
-                  <p className="text-[10px] text-slate-400 tabular-nums">
-                    នៅ {formatKHR(txn.runningBalance)}
-                  </p>
+                    {isPay ? '↑' : '↓'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-meta font-semibold leading-[1.5] text-text">
+                      {isPay ? 'ទទួលប្រាក់' : 'ជំពាក់ (ការលក់)'}
+                    </p>
+                    <p className="text-caption leading-[1.5] text-text-muted">{formatDateTimeKm(txn.createdAt)}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className={[
+                      'text-meta font-bold tabular-nums leading-[1.5]',
+                      isPay ? 'text-success' : 'text-debt',
+                    ].join(' ')}>
+                      {isPay ? '−' : '+'}{formatKHR(txn.amount)}
+                    </p>
+                    <p className="text-caption tabular-nums leading-[1.5] text-text-muted">
+                      នៅ {formatKHR(txn.runningBalance)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )
-          })}
-          {txnsWithBalance.length > 10 && (
-            <p className="px-5 py-2 text-[11px] text-slate-400 text-center">
-              + {txnsWithBalance.length - 10} ប្រតិបត្តិការ​ទៀត
-            </p>
-          )}
-        </div>
+              )
+            })}
+            {txnsWithBalance.length > 10 && (
+              <p className="px-5 py-2 text-center text-caption leading-[1.5] text-text-muted">
+                + {txnsWithBalance.length - 10} ប្រតិបត្តិការ​ទៀត
+              </p>
+            )}
+          </div>
 
-        {/* Footer */}
-        <div className="px-5 py-4 border-t-2 border-slate-800 mt-2">
-          <div className="flex justify-between items-center">
-            <p className="text-[12px] font-bold text-slate-600">នៅជំពាក់ (ចុងក្រោយ)</p>
-            <p className={[
-              'text-[18px] font-extrabold tabular-nums text-right leading-tight',
-              live.debtBalance > 0 ? 'text-danger-600' : 'text-success-600',
-            ].join(' ')}>
-              {live.debtBalance > 0
-                ? <>{formatKHR(live.debtBalance)}<span className="block text-[12px] text-primary-600">{formatUSD(live.debtBalance)}</span></>
-                : '✅ អស់ហើយ'}
+          {/* Footer */}
+          <div className="mt-2 border-t-2 border-ink-900 px-5 py-4">
+            <div className="flex items-center justify-between">
+              <p className="text-meta font-bold leading-[1.5] text-text-subtle">នៅជំពាក់ (ចុងក្រោយ)</p>
+              <p className={[
+                'text-right text-title-sm font-bold tabular-nums leading-[1.5]',
+                live.debtBalance > 0 ? 'text-debt' : 'text-success',
+              ].join(' ')}>
+                {live.debtBalance > 0
+                  ? <>{formatKHR(live.debtBalance)}<span className="block text-meta leading-[1.5] text-text-subtle">{formatUSD(live.debtBalance)}</span></>
+                  : '✅ អស់ហើយ'}
+              </p>
+            </div>
+            <p className="mt-2 text-center text-caption leading-[1.5] text-text-muted">
+              {storeName || 'POS ហាង'} · បង្កើតដោយ Rural POS
             </p>
           </div>
-          <p className="text-[10px] text-slate-300 mt-2 text-center">
-            {storeName || 'POS ហាង'} · បង្កើតដោយ Rural POS
-          </p>
         </div>
       </div>
+
+      {/* ─ Manual debt form (new debt now, or old/opening balance) ─ */}
+      <Sheet
+        open={showOb}
+        onClose={closeObForm}
+        layer="top"
+        title="បន្ថែម​បំណុល"
+        subtitle="មិន​មែន​ពី​ការ​លក់"
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" size="lg" onClick={closeObForm}>
+              បោះបង់
+            </Button>
+            <Button variant="primary" size="lg" fullWidth className="flex-1" disabled={!canAddOb} onClick={handleAddDebt}>
+              {savingOb ? '…' : 'បញ្ជាក់'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3 pt-1">
+          <SegmentedControl
+            ariaLabel="រូបិយប័ណ្ណបំណុល"
+            items={[
+              { value: 'KHR', label: '៛ រៀល' },
+              { value: 'USD', label: '$ ដុល្លារ' },
+            ]}
+            value={obCurrency}
+            onChange={(cur) => { setObCurrency(cur); setObAmount('') }}
+          />
+
+          <div>
+            <div className="flex items-center gap-2 rounded-[18px] bg-bg px-4 focus-within:ring-2 focus-within:ring-ink-900/20">
+              <span className="shrink-0 text-title-sm font-bold text-text-subtle">{obCurrency === 'USD' ? '$' : '៛'}</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={obAmount}
+                onChange={(e) => setObAmount(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddDebt()}
+                placeholder="0"
+                aria-label="ចំនួនបំណុល"
+                autoFocus
+                className="h-16 min-w-0 flex-1 bg-transparent text-right text-amount font-bold tabular-nums text-text outline-none placeholder:text-text-muted"
+              />
+            </div>
+            {obKhr > 0 && (
+              <p className="mt-1.5 px-1 text-right text-meta font-semibold tabular-nums text-text-subtle">
+                {obCurrency === 'USD' ? `= ${formatKHR(toKHR(obKhr))}` : `≈ ${formatUSD(toKHR(obKhr))}`}
+              </p>
+            )}
+          </div>
+
+          {/* Date the debt was incurred (default today; pick a past date for old debt) */}
+          <div className="flex min-h-[54px] flex-col justify-center rounded-[18px] bg-bg px-4 py-1.5 focus-within:ring-2 focus-within:ring-ink-900/20">
+            <label htmlFor="ob-date" className="flex items-center gap-1.5 text-caption font-semibold text-text-subtle">
+              <CalendarClock size={14} strokeWidth={2.25} aria-hidden="true" /> ថ្ងៃ​ជំពាក់
+            </label>
+            <input
+              id="ob-date"
+              type="date"
+              value={obDate}
+              max={todayISODate()}
+              onChange={(e) => setObDate(e.target.value)}
+              className="w-full bg-transparent text-body font-semibold text-text outline-none"
+            />
+          </div>
+
+          <Input
+            label="កំណត់​ចំណាំ"
+            type="text"
+            value={obNote}
+            onChange={(e) => setObNote(e.target.value)}
+            placeholder="ឧ. ឲ្យ​ខ្ចី​សាច់ប្រាក់ / បំណុលចាស់ (ស្រេចចិត្ត)"
+          />
+        </div>
+      </Sheet>
 
       {/* Edit sheet on top */}
       {editing && (
@@ -1015,102 +882,108 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
       )}
 
       {/* Payment confirmation — guard against an accidental "សង​ពេញ" tap */}
-      {pendingPay && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 px-6"
-          onClick={() => { if (!paying) setPendingPay(null) }}
-          aria-hidden="true"
-        >
-          <div
-            className="w-full max-w-xs bg-white rounded-2xl shadow-pop p-5 animate-sheet-up"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="w-12 h-12 rounded-full bg-success-100 text-success-600 flex items-center justify-center mx-auto mb-3">
-              <Banknote size={22} strokeWidth={2.25} />
-            </div>
-            <p className="text-[15px] font-bold text-slate-900 text-center">
-              បញ្ជាក់​ការ​សង​ពេញ?
-            </p>
-            <p className="text-[13px] text-slate-500 text-center mt-1.5 leading-relaxed">
+      <ConfirmDialog
+        open={!!pendingPay}
+        tone="success"
+        icon={<Banknote size={26} strokeWidth={2.25} />}
+        title="បញ្ជាក់​ការ​សង​ពេញ?"
+        message={pendingPay && (
+          <>
+            <p>
               វិក្កយបត្រ{' '}
-              <span className="font-bold text-slate-700">
+              <span className="font-bold text-text">
                 {pendingPay.kind === 'sale' ? `#${pendingPay.sale?.receiptNumber || pendingPay.id.slice(0, 8).toUpperCase()}` : 'បំណុល'}
               </span>{' '}
               នឹង​ត្រូវ​សង​ពេញ{' '}
-              <span className="font-bold text-success-700 tabular-nums">{formatKHR(toKHR(pendingPay.currentRemaining))}</span>{' '}
+              <span className="font-bold tabular-nums text-success">{formatKHR(toKHR(pendingPay.currentRemaining))}</span>{' '}
               ({debtMethodLabel(payMethod)})។
             </p>
-            <div className="flex gap-2.5 mt-4">
-              <button
-                type="button"
-                onClick={() => setPendingPay(null)}
-                disabled={paying}
-                className="flex-1 h-11 rounded-xl border border-slate-200 text-slate-600 font-semibold text-[14px] disabled:opacity-50 active:bg-slate-50 transition-colors"
-              >
-                បោះបង់
-              </button>
-              <button
-                type="button"
-                onClick={() => handlePayInvoice(pendingPay)}
-                disabled={paying}
-                className="flex-1 h-11 rounded-xl bg-success-600 text-white font-bold text-[14px] disabled:opacity-50 active:bg-success-700 transition-colors"
-              >
-                {paying ? 'កំពុង​សង…' : 'បាទ/ចាស សង'}
-              </button>
+
+            {/* Payment method */}
+            <div className="mt-4 text-left">
+              <p className="mb-1.5 text-meta font-semibold text-text-subtle">វិធីសាស្ត្រ​ទទួល</p>
+              <div className="grid grid-cols-3 gap-2">
+                {DEBT_METHODS.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setPayMethod(m.id)}
+                    aria-pressed={payMethod === m.id}
+                    className={cx(
+                      'flex h-12 items-center justify-center gap-1 rounded-sm text-meta font-bold transition-colors',
+                      'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
+                      payMethod === m.id ? 'bg-ink-900 text-white' : 'bg-bg text-text active:bg-line',
+                    )}
+                  >
+                    <span aria-hidden="true">{m.emoji}</span> {m.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Note */}
+              <input
+                type="text"
+                value={payNote}
+                onChange={(e) => setPayNote(e.target.value)}
+                placeholder="កំណត់​ចំណាំ (ស្រេចចិត្ត)"
+                aria-label="កំណត់​ចំណាំ"
+                className="mt-2 h-12 w-full rounded-sm bg-bg px-3 text-body text-text outline-none placeholder:text-text-muted focus:ring-2 focus:ring-ink-900/20"
+              />
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+        confirmLabel="បាទ/ចាស សង"
+        busyLabel="កំពុង​សង…"
+        busy={paying}
+        onConfirm={() => { if (pendingPay) handlePayInvoice(pendingPay) }}
+        onCancel={() => setPendingPay(null)}
+      />
 
       {/* Void confirmation — payment or opening balance */}
-      {pendingVoid && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 px-6"
-          onClick={() => { if (!voiding) { setPendingVoid(null); setOpenVoidId(null) } }}
-          aria-hidden="true"
-        >
-          <div
-            className="w-full max-w-xs bg-white rounded-2xl shadow-pop p-5 animate-sheet-up"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="w-12 h-12 rounded-full bg-danger-100 text-danger-600 flex items-center justify-center mx-auto mb-3">
-              <Trash2 size={22} strokeWidth={2.25} />
-            </div>
-            <p className="text-[15px] font-bold text-slate-900 text-center">
-              {pendingVoid.kind === 'payment' ? 'លុប​ការ​ទទួល​ប្រាក់​នេះ?' : 'លុប​បំណុលចាស់​នេះ?'}
-            </p>
-            <p className="text-[13px] text-slate-500 text-center mt-1.5 leading-relaxed">
-              {pendingVoid.kind === 'payment' ? (
-                <>លុយ <span className="font-bold text-danger-600 tabular-nums">{formatKHR(pendingVoid.amount)}</span> នឹង​ត្រឡប់​ចូល​បំណុល​អតិថិជន​វិញ ហើយ​កំណត់ត្រា​ការ​សង​នេះ​នឹង​ត្រូវ​លុប។</>
-              ) : (
-                <>បំណុល <span className="font-bold text-danger-600 tabular-nums">{formatKHR(pendingVoid.amount)}</span> នឹង​ត្រូវ​ដក​ចេញ​ពី​សមតុល្យ​អតិថិជន។ កំណត់ត្រា​បំណុលចាស់​នេះ​នឹង​ត្រូវ​លុប។</>
-              )}
-            </p>
-            <div className="flex gap-2.5 mt-4">
-              <button
-                type="button"
-                onClick={() => { setPendingVoid(null); setOpenVoidId(null) }}
-                disabled={voiding}
-                className="flex-1 h-11 rounded-xl border border-slate-200 text-slate-600 font-semibold text-[14px] disabled:opacity-50 active:bg-slate-50 transition-colors"
-              >
-                បោះបង់
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmVoid}
-                disabled={voiding}
-                className="flex-1 h-11 rounded-xl bg-danger-600 text-white font-bold text-[14px] disabled:opacity-50 active:bg-danger-700 transition-colors"
-              >
-                {voiding ? 'កំពុង​លុប…' : 'បាទ/ចាស លុប'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!pendingVoid}
+        tone="danger"
+        icon={<Trash2 size={26} strokeWidth={2.25} />}
+        title={pendingVoid?.kind === 'payment' ? 'លុប​ការ​ទទួល​ប្រាក់​នេះ?' : 'លុប​បំណុលចាស់​នេះ?'}
+        message={pendingVoid && (
+          pendingVoid.kind === 'payment' ? (
+            <>លុយ <span className="font-bold tabular-nums text-danger">{formatKHR(pendingVoid.amount)}</span> នឹង​ត្រឡប់​ចូល​បំណុល​អតិថិជន​វិញ ហើយ​កំណត់ត្រា​ការ​សង​នេះ​នឹង​ត្រូវ​លុប។</>
+          ) : (
+            <>បំណុល <span className="font-bold tabular-nums text-danger">{formatKHR(pendingVoid.amount)}</span> នឹង​ត្រូវ​ដក​ចេញ​ពី​សមតុល្យ​អតិថិជន។ កំណត់ត្រា​បំណុលចាស់​នេះ​នឹង​ត្រូវ​លុប។</>
+          )
+        )}
+        confirmLabel="បាទ/ចាស លុប"
+        busyLabel="កំពុង​លុប…"
+        busy={voiding}
+        onConfirm={handleConfirmVoid}
+        onCancel={() => { setPendingVoid(null); setOpenVoidId(null) }}
+      />
+    </>
+  )
+}
+
+/* ── Invoices / payment-history switch (UI state only) ───── */
+function DetailTabs({
+  invoiceCount, paymentCount, invoices, history,
+}: {
+  invoiceCount: number
+  paymentCount: number
+  invoices: ReactNode
+  history: ReactNode
+}) {
+  const [tab, setTab] = useState<'invoices' | 'history'>('invoices')
+  return (
+    <div className="space-y-3">
+      <SegmentedControl
+        ariaLabel="វិក្កយបត្រ ឬ ប្រវត្តិបង់ប្រាក់"
+        items={[
+          { value: 'invoices', label: `វិក្កយបត្រ${invoiceCount > 0 ? ` (${invoiceCount})` : ''}` },
+          { value: 'history',  label: `ប្រវត្តិបង់ប្រាក់${paymentCount > 0 ? ` (${paymentCount})` : ''}` },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
+      {tab === 'invoices' ? invoices : history}
     </div>
   )
 }

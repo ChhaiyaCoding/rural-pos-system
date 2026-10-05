@@ -1,13 +1,21 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { X, Banknote, NotebookPen, Tag, Search, UserCheck, SplitSquareHorizontal, UserPlus } from 'lucide-react'
+import { X, Banknote, NotebookPen, Tag, Search, UserCheck, SplitSquareHorizontal, UserPlus, Check } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
 import { useSaleStore } from '@/store/sale.store'
 import { customerService } from '@/services/customer.service'
-import { formatKHR, formatUSD, subtractKHR, multiplyKHR, toKHR } from '@/lib/money'
+import { formatKHR, formatUSD, subtractKHR, multiplyKHR, toKHR, addKHR } from '@/lib/money'
 import { useStoreProfile } from '@/store/storeProfile.store'
+import { Sheet } from '@/components/ui/Sheet'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { MoneyText } from '@/components/ui/MoneyText'
+import { NumericPad } from '@/components/ui/NumericPad'
+import { LetterAvatar } from '@/components/ui/LetterAvatar'
+import { cx } from '@/components/ui/cx'
 import type { KHR } from '@/types'
 import type { Customer } from '@/types'
 import type { TenantId, CustomerId } from '@/types/branded'
@@ -126,717 +134,33 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
   /* ─────────────────────────────────────────────────────────── */
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/50"
-      onClick={onClose}
-      aria-hidden="true"
-    >
-      <div
-        className="w-full md:max-w-md bg-white rounded-t-2xl md:rounded-2xl max-h-[92dvh] flex flex-col shadow-pop animate-sheet-up"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        {/* ── Header ─────────────────────────────────────────── */}
-        <div className="shrink-0 flex items-center justify-between px-4 h-14 border-b border-slate-200">
-          <div className="flex items-center gap-2">
-            <span className={[
-              'flex items-center justify-center w-8 h-8 rounded-lg',
-              isCash    ? 'bg-success-100 text-success-700'
-              : isPartial ? 'bg-warning-100 text-warning-700'
-              : 'bg-slate-100 text-slate-700',
-            ].join(' ')}>
-              {isCash    ? <Banknote size={18} strokeWidth={2.25} />
-              : isPartial ? <SplitSquareHorizontal size={18} strokeWidth={2.25} />
-              : <NotebookPen size={18} strokeWidth={2.25} />}
-            </span>
-            <span className="text-[16px] font-bold text-slate-900">
-              {isCash ? 'ទូទាត់សាច់ប្រាក់' : isPartial ? 'ទូទាត់ផ្នែក + ជំពាក់' : 'ជំពាក់ — បង់ក្រោយ'}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="បិទ"
-            className="min-h-0 min-w-0 w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 active:bg-slate-200"
-          >
-            <X size={17} />
-          </button>
-        </div>
-
-        {/* ── Scrollable body ────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto min-h-0">
-
-          {/* Items list */}
-          <div className="px-4 pt-3">
-            <p className="text-[12px] font-semibold text-slate-400 uppercase tracking-wide mb-1">
-              បញ្ជីទំនិញ ({count})
-            </p>
-          </div>
-          <div className="px-4 divide-y divide-slate-100">
-            {cart.map((item) => (
-              <div key={item.product.id} className="flex items-center justify-between gap-3 py-2.5">
-                <span className="text-[13px] text-slate-600 truncate">
-                  {item.product.nameKm}
-                  <span className="text-slate-400 tabular-nums"> × {item.qty}</span>
-                </span>
-                <span className="text-[13px] font-semibold text-slate-900 tabular-nums shrink-0">
-                  {formatKHR(multiplyKHR(item.unitPrice, item.qty))}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* ── Subtotal row ─────────────────────────────────── */}
-          <div className="px-4 pt-3 mt-1 border-t border-slate-200">
-            <div className="flex items-baseline justify-between">
-              <span className="text-[13px] font-medium text-slate-500">
-                {discountAmount > 0 ? 'សរុបរង' : 'សរុបទឹកប្រាក់'}
-              </span>
-              <span className={[
-                'tabular-nums leading-none tracking-tight',
-                discountAmount > 0
-                  ? 'text-[18px] font-bold text-slate-400 line-through'
-                  : 'text-[26px] font-extrabold text-slate-900',
-              ].join(' ')}>
-                {formatKHR(total)}
-              </span>
-            </div>
-
-            {/* Discounted total — shows when discount > 0 */}
-            {discountAmount > 0 && (
-              <div className="flex items-baseline justify-between mt-1.5">
-                <span className="text-[12px] text-danger-600 font-semibold">
-                  បញ្ចុះ −{formatKHR(discountAmount)}
-                </span>
-                <span className="text-[26px] font-extrabold text-slate-900 tabular-nums tracking-tight">
-                  {formatKHR(discountedTotal)}
-                </span>
-              </div>
-            )}
-            {/* USD equivalent of amount due */}
-            <p className="text-right text-[13px] font-bold text-primary-600 tabular-nums mt-0.5">
-              {formatUSD(discountedTotal)}
-            </p>
-          </div>
-
-          {/* ── Discount toggle + section ─────────────────────── */}
-          <div className="px-4 pt-2 pb-3">
-            {!showDiscount ? (
-              <button
-                type="button"
-                onClick={() => setShowDiscount(true)}
-                className="min-h-0 flex items-center gap-1.5 text-[12px] font-semibold text-primary-600 active:text-primary-700 py-1"
-              >
-                <Tag size={13} strokeWidth={2.25} />
-                ដាក់បញ្ចុះតម្លៃ
-              </button>
-            ) : (
-              <div className="space-y-2.5 border-t border-slate-100 pt-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-[12px] font-semibold text-slate-500 flex items-center gap-1.5">
-                    <Tag size={13} strokeWidth={2.25} />
-                    បញ្ចុះតម្លៃ (រៀល)
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => { setShowDiscount(false); applyDiscount(toKHR(0)) }}
-                    className="min-h-0 min-w-0 text-[11px] text-slate-400 active:text-slate-600"
-                  >
-                    លុបចោល ×
-                  </button>
-                </div>
-
-                {/* Preset discount chips */}
-                <div className="flex gap-2">
-                  {DISCOUNT_CHIPS.map((chip) => {
-                    const val = toKHR(chip)
-                    const active = discountAmount === val
-                    return (
-                      <button
-                        key={chip}
-                        type="button"
-                        onClick={() => applyDiscount(val)}
-                        className={[
-                          'flex-1 h-10 rounded-lg border text-[12px] font-bold tabular-nums transition-colors min-h-0',
-                          active
-                            ? 'border-primary-500 bg-primary-50 text-primary-700'
-                            : 'border-slate-200 text-slate-600 active:bg-slate-50',
-                        ].join(' ')}
-                      >
-                        {formatKHR(val)}
-                      </button>
-                    )
-                  })}
-                </div>
-
-                {/* Free-form discount input */}
-                <div className="relative flex items-center border border-slate-200 rounded-xl overflow-hidden bg-white">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    value={discountInput}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      setDiscountInput(val)
-                      const num = parseInt(val, 10)
-                      applyDiscount(isNaN(num) || num < 0 ? toKHR(0) : toKHR(num))
-                    }}
-                    placeholder="ឬវាយតម្លៃផ្ទាល់…"
-                    className="flex-1 h-11 px-4 text-[14px] font-semibold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none"
-                  />
-                  <span className="pr-3 text-[13px] text-slate-400 shrink-0">៛</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ── Payment-specific section ─────────────────────── */}
-          {isCash ? (
-            <div className="px-4 pb-3 space-y-3 border-t border-slate-100 pt-3">
-              {/* Amount tendered — typeable in ៛ or $ */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-[12px] font-medium text-slate-500">
-                    ប្រាក់ទទួលពីអតិថិជន
-                  </p>
-                  <div className="flex items-center gap-2">
-                    {/* ៛ / $ toggle */}
-                    <div className="flex items-center rounded-lg border border-slate-200 bg-white overflow-hidden">
-                      {(['KHR', 'USD'] as const).map((cur) => (
-                        <button
-                          key={cur}
-                          type="button"
-                          onClick={() => { setTenderCurrency(cur); setTenderInput('') }}
-                          className={[
-                            'min-h-0 min-w-0 h-7 px-3 text-[13px] font-bold tabular-nums transition-colors',
-                            tenderCurrency === cur ? 'bg-primary-600 text-white' : 'text-slate-500 active:bg-slate-50',
-                          ].join(' ')}
-                        >
-                          {cur === 'KHR' ? '៛' : '$'}
-                        </button>
-                      ))}
-                    </div>
-                    {tenderInput !== '' && (
-                      <button
-                        type="button"
-                        onClick={() => setTenderInput('')}
-                        className="min-h-0 min-w-0 text-[11px] text-slate-400 active:text-slate-600"
-                      >
-                        សម្អាត ×
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center rounded-xl border border-slate-200 bg-white overflow-hidden focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/15">
-                  <span className="pl-4 text-[16px] font-bold text-slate-400 shrink-0">
-                    {tenderCurrency === 'USD' ? '$' : '៛'}
-                  </span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    value={tenderInput}
-                    onChange={(e) => setTenderInput(e.target.value)}
-                    placeholder="0"
-                    className="flex-1 h-12 px-3 text-right text-[24px] font-extrabold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none tabular-nums min-w-0"
-                  />
-                </div>
-                {tendered > 0 && (
-                  <p className="text-right text-[12px] font-bold text-primary-600 tabular-nums mt-1">
-                    {tenderCurrency === 'USD'
-                      ? `= ${formatKHR(tendered)}`
-                      : `≈ ${formatUSD(tendered)}`}
-                  </p>
-                )}
-              </div>
-
-              {/* Quick-cash — currency-aware */}
-              {tenderCurrency === 'KHR' ? (
-                <div>
-                  <p className="text-[11px] font-semibold text-slate-400 mb-1.5">ប្រាក់រៀល</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {quick.map((amt, i) => {
-                      const selected = Number(tenderInput) === amt
-                      return (
-                        <button
-                          key={amt}
-                          type="button"
-                          onClick={() => { setTenderCurrency('KHR'); setTenderInput(String(amt)) }}
-                          className={[
-                            'h-11 rounded-lg border text-[13px] font-bold tabular-nums transition-colors',
-                            selected
-                              ? 'border-primary-500 bg-primary-50 text-primary-700'
-                              : 'border-slate-200 text-slate-700 active:bg-slate-50',
-                          ].join(' ')}
-                        >
-                          {i === 0 ? 'ប្រាក់គត់' : formatKHR(amt)}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-[11px] font-semibold text-slate-400 mb-1.5">ប្រាក់ដុល្លារ ($)</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {USD_NOTES.map((usd) => {
-                      const selected = Number(tenderInput) === usd
-                      return (
-                        <button
-                          key={usd}
-                          type="button"
-                          onClick={() => { setTenderCurrency('USD'); setTenderInput(String(usd)) }}
-                          className={[
-                            'h-12 rounded-lg border transition-colors flex flex-col items-center justify-center leading-none gap-0.5',
-                            selected
-                              ? 'border-primary-500 bg-primary-50 text-primary-700'
-                              : 'border-slate-200 text-slate-700 active:bg-slate-50',
-                          ].join(' ')}
-                        >
-                          <span className="text-[14px] font-bold tabular-nums">${usd}</span>
-                          <span className="text-[9px] font-semibold text-slate-400 tabular-nums">{formatKHR(toKHR(usd * exchangeRate))}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-            </div>
-          ) : isPartial ? (
-            /* ── PARTIAL PAYMENT ─────────────────────────────── */
-            <div className="px-4 pb-3 space-y-3 border-t border-slate-100 pt-3">
-
-              {/* Cash portion input — payable in ៛ or $ */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-[12px] font-semibold text-slate-500">💵 ប្រាក់ទូទាត់ឥឡូវ</p>
-                  <div className="flex items-center rounded-lg border border-warning-300 bg-white overflow-hidden">
-                    {(['KHR', 'USD'] as const).map((cur) => (
-                      <button
-                        key={cur}
-                        type="button"
-                        onClick={() => { setPartialCurrency(cur); setPartialCash('') }}
-                        className={[
-                          'min-h-0 min-w-0 h-7 px-3 text-[13px] font-bold tabular-nums transition-colors',
-                          partialCurrency === cur ? 'bg-warning-500 text-white' : 'text-warning-700 active:bg-warning-50',
-                        ].join(' ')}
-                      >
-                        {cur === 'KHR' ? '៛' : '$'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center border border-warning-300 rounded-xl overflow-hidden bg-white focus-within:border-warning-500 focus-within:ring-2 focus-within:ring-warning-400/20">
-                  <span className="pl-4 text-[15px] font-bold text-slate-400 shrink-0">
-                    {partialCurrency === 'USD' ? '$' : '៛'}
-                  </span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    value={partialCash}
-                    onChange={(e) => setPartialCash(e.target.value)}
-                    placeholder="0"
-                    autoFocus
-                    className="flex-1 h-12 px-3 text-[18px] font-bold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none min-w-0"
-                  />
-                </div>
-                {partialCurrency === 'USD' && partialCashAmt > 0 && (
-                  <p className="text-right text-[12px] font-bold text-primary-600 tabular-nums mt-1">
-                    = {formatKHR(partialCashAmt)}
-                  </p>
-                )}
-                {/* Quick partial chips — currency-aware */}
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  {partialCurrency === 'KHR'
-                    ? DENOMS.filter(d => d < discountedTotal).slice(0, 5).map(amt => (
-                        <button
-                          key={amt}
-                          type="button"
-                          onClick={() => setPartialCash(String(amt))}
-                          className={[
-                            'h-8 px-2.5 rounded-lg border text-[11px] font-semibold tabular-nums transition-colors',
-                            Number(partialCash) === amt
-                              ? 'border-warning-400 bg-warning-50 text-warning-700'
-                              : 'border-slate-200 text-slate-600 active:bg-slate-50',
-                          ].join(' ')}
-                        >
-                          {formatKHR(toKHR(amt))}
-                        </button>
-                      ))
-                    : USD_NOTES.filter(u => u * exchangeRate < discountedTotal).map(u => (
-                        <button
-                          key={u}
-                          type="button"
-                          onClick={() => setPartialCash(String(u))}
-                          className={[
-                            'h-8 px-2.5 rounded-lg border text-[11px] font-semibold tabular-nums transition-colors',
-                            Number(partialCash) === u
-                              ? 'border-warning-400 bg-warning-50 text-warning-700'
-                              : 'border-slate-200 text-slate-600 active:bg-slate-50',
-                          ].join(' ')}
-                        >
-                          ${u}
-                        </button>
-                      ))
-                  }
-                </div>
-              </div>
-
-              {/* Remaining debt summary */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-warning-50 border border-warning-100 px-3 py-2.5">
-                  <p className="text-[10px] font-semibold text-warning-600 mb-0.5">ទូទាត់ឥឡូវ</p>
-                  <p className="text-[16px] font-extrabold text-warning-800 tabular-nums">
-                    {formatKHR(partialCashAmt)}
-                  </p>
-                </div>
-                <div className="rounded-xl bg-danger-50 border border-danger-100 px-3 py-2.5">
-                  <p className="text-[10px] font-semibold text-danger-600 mb-0.5">នៅជំពាក់</p>
-                  <p className="text-[16px] font-extrabold text-danger-700 tabular-nums">
-                    {formatKHR(partialDebtAmt)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Customer selector (same as debt mode) */}
-              <div>
-                <p className="text-[12px] font-semibold text-slate-500 mb-1.5">
-                  អតិថិជន​ដែល​ជំពាក់ <span className="text-danger-500">*</span>
-                </p>
-                {selectedCustomer ? (
-                  <div className="flex items-center justify-between rounded-xl border border-primary-300 bg-primary-50 px-3 py-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-primary-200 text-primary-700 flex items-center justify-center text-[13px] font-bold shrink-0">
-                        {selectedCustomer.nameKm.charAt(0)}
-                      </div>
-                      <p className="text-[13px] font-bold text-slate-900">{selectedCustomer.nameKm}</p>
-                    </div>
-                    <button type="button" onClick={() => setSelectedCustomer(null)}
-                      className="shrink-0 w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center">
-                      <X size={13} strokeWidth={2.5} />
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    {/* Search bar + quick-add button */}
-                    <div className="flex gap-2 mb-1.5">
-                      <div className="relative flex-1">
-                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                        <input
-                          type="text"
-                          value={customerSearch}
-                          onChange={(e) => { setCustomerSearch(e.target.value); setShowAddCustomer(false) }}
-                          placeholder="ស្វែងរកឈ្មោះ..."
-                          className="w-full h-10 pl-8 pr-3 rounded-xl border border-slate-200 text-[13px] placeholder:text-slate-400 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400/20"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => { setShowAddCustomer(v => !v); setCustomerSearch('') }}
-                        className={[
-                          'shrink-0 w-10 h-10 rounded-xl border flex items-center justify-center transition-colors',
-                          showAddCustomer
-                            ? 'border-primary-500 bg-primary-50 text-primary-700'
-                            : 'border-slate-200 bg-white text-slate-500 active:bg-slate-50',
-                        ].join(' ')}
-                        aria-label="បន្ថែមអតិថិជនថ្មី"
-                      >
-                        <UserPlus size={16} strokeWidth={2.25} />
-                      </button>
-                    </div>
-
-                    {/* Quick-add form */}
-                    {showAddCustomer && (
-                      <div className="mb-2 p-3 rounded-xl border border-primary-200 bg-primary-50 space-y-2">
-                        <p className="text-[11px] font-bold text-primary-700 flex items-center gap-1">
-                          <UserPlus size={11} /> អតិថិជនថ្មី
-                        </p>
-                        <input
-                          type="text"
-                          value={newName}
-                          onChange={e => setNewName(e.target.value)}
-                          placeholder="ឈ្មោះ *"
-                          autoFocus
-                          className="w-full h-9 px-3 rounded-lg border border-primary-200 bg-white text-[13px] placeholder:text-slate-300 focus:outline-none focus:border-primary-400"
-                        />
-                        <input
-                          type="tel"
-                          inputMode="numeric"
-                          value={newPhone}
-                          onChange={e => setNewPhone(e.target.value)}
-                          placeholder="លេខទូរស័ព្ទ (ស្រេចចិត្ត)"
-                          className="w-full h-9 px-3 rounded-lg border border-primary-200 bg-white text-[13px] placeholder:text-slate-300 focus:outline-none focus:border-primary-400"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={handleQuickAdd}
-                            disabled={!newName.trim() || addingCustomer}
-                            className="flex-1 h-9 rounded-lg bg-primary-600 text-white font-bold text-[12px] disabled:opacity-50 active:bg-primary-700 transition-colors"
-                          >
-                            {addingCustomer ? '…' : '+ បន្ថែម'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => { setShowAddCustomer(false); setNewName(''); setNewPhone('') }}
-                            className="px-3 h-9 rounded-lg border border-slate-200 text-slate-500 text-[12px] active:bg-slate-50"
-                          >
-                            បោះបង់
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="max-h-36 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100 bg-white">
-                      {allCustomers.length === 0 ? (
-                        <p className="px-3 py-4 text-center text-[12px] text-slate-400">
-                          ចុច <span className="text-primary-600 font-bold">+</span> ដើម្បីបន្ថែមអតិថិជន
-                        </p>
-                      ) : filteredCustomers.length === 0 ? (
-                        <p className="px-3 py-3 text-center text-[12px] text-slate-400">
-                          រកមិនឃើញ «{customerSearch}»
-                        </p>
-                      ) : (
-                        filteredCustomers.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => { setSelectedCustomer(c); setCustomerSearch('') }}
-                            className="w-full flex items-center justify-between px-3 py-2.5 active:bg-primary-50 transition-colors text-left"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className={[
-                                'shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold',
-                                (c.debtBalance as number) > 0
-                                  ? 'bg-danger-100 text-danger-700'
-                                  : 'bg-slate-100 text-slate-500',
-                              ].join(' ')}>
-                                {c.nameKm.charAt(0)}
-                              </div>
-                              <span className="text-[13px] font-semibold text-slate-800 truncate">{c.nameKm}</span>
-                            </div>
-                            {(c.debtBalance as number) > 0 ? (
-                              <span className="text-[11px] font-semibold text-danger-600 tabular-nums shrink-0 ml-2">
-                                {formatKHR(c.debtBalance)}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-success-600 shrink-0 ml-2">✓</span>
-                            )}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {discountAmount > 0 && (
-                <p className="text-[11px] text-success-600 font-medium">
-                  ✓ ទទួលបានបញ្ចុះតម្លៃ {formatKHR(discountAmount)}
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="px-4 pb-3 space-y-3 border-t border-slate-100 pt-3">
-
-              {/* Debt amount */}
-              <div className="flex items-center justify-between rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
-                <span className="text-[13px] font-medium text-slate-500">ចំនួនជំពាក់</span>
-                <div className="text-right">
-                  <span className="block text-[22px] font-extrabold text-slate-900 tabular-nums leading-tight">
-                    {formatKHR(discountedTotal)}
-                  </span>
-                  <span className="block text-[12px] font-bold text-primary-600 tabular-nums">
-                    {formatUSD(discountedTotal)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Customer picker */}
-              <div>
-                <p className="text-[12px] font-semibold text-slate-500 mb-1.5">
-                  អតិថិជន​ដែល​ជំពាក់ <span className="text-danger-500">*</span>
-                </p>
-
-                {selectedCustomer ? (
-                  /* Selected customer chip */
-                  <div className="flex items-center justify-between rounded-xl border border-primary-300 bg-primary-50 px-3 py-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-full bg-primary-200 text-primary-700 flex items-center justify-center text-[14px] font-bold shrink-0">
-                        {selectedCustomer.nameKm.charAt(0)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[14px] font-bold text-slate-900 leading-tight">
-                          {selectedCustomer.nameKm}
-                        </p>
-                        {selectedCustomer.phone && (
-                          <p className="text-[11px] text-slate-400">{selectedCustomer.phone}</p>
-                        )}
-                        {(selectedCustomer.debtBalance as number) > 0 && (
-                          <p className="text-[10px] text-danger-600 font-semibold">
-                            ជំពាក់ {formatKHR(selectedCustomer.debtBalance)} រួចហើយ
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedCustomer(null)}
-                      className="shrink-0 w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center active:bg-slate-300"
-                    >
-                      <X size={13} strokeWidth={2.5} />
-                    </button>
-                  </div>
-                ) : (
-                  /* Search + list */
-                  <div>
-                    {/* Search bar + quick-add button */}
-                    <div className="flex gap-2 mb-1.5">
-                      <div className="relative flex-1">
-                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                        <input
-                          type="text"
-                          value={customerSearch}
-                          onChange={(e) => { setCustomerSearch(e.target.value); setShowAddCustomer(false) }}
-                          placeholder="ស្វែងរកឈ្មោះ..."
-                          className="w-full h-10 pl-8 pr-3 rounded-xl border border-slate-200 text-[13px] placeholder:text-slate-400 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400/20"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => { setShowAddCustomer(v => !v); setCustomerSearch('') }}
-                        className={[
-                          'shrink-0 w-10 h-10 rounded-xl border flex items-center justify-center transition-colors',
-                          showAddCustomer
-                            ? 'border-primary-500 bg-primary-50 text-primary-700'
-                            : 'border-slate-200 bg-white text-slate-500 active:bg-slate-50',
-                        ].join(' ')}
-                        aria-label="បន្ថែមអតិថិជនថ្មី"
-                      >
-                        <UserPlus size={16} strokeWidth={2.25} />
-                      </button>
-                    </div>
-
-                    {/* Quick-add form */}
-                    {showAddCustomer && (
-                      <div className="mb-2 p-3 rounded-xl border border-primary-200 bg-primary-50 space-y-2">
-                        <p className="text-[11px] font-bold text-primary-700 flex items-center gap-1">
-                          <UserPlus size={11} /> អតិថិជនថ្មី
-                        </p>
-                        <input
-                          type="text"
-                          value={newName}
-                          onChange={e => setNewName(e.target.value)}
-                          placeholder="ឈ្មោះ *"
-                          autoFocus
-                          className="w-full h-9 px-3 rounded-lg border border-primary-200 bg-white text-[13px] placeholder:text-slate-300 focus:outline-none focus:border-primary-400"
-                        />
-                        <input
-                          type="tel"
-                          inputMode="numeric"
-                          value={newPhone}
-                          onChange={e => setNewPhone(e.target.value)}
-                          placeholder="លេខទូរស័ព្ទ (ស្រេចចិត្ត)"
-                          className="w-full h-9 px-3 rounded-lg border border-primary-200 bg-white text-[13px] placeholder:text-slate-300 focus:outline-none focus:border-primary-400"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={handleQuickAdd}
-                            disabled={!newName.trim() || addingCustomer}
-                            className="flex-1 h-9 rounded-lg bg-primary-600 text-white font-bold text-[12px] disabled:opacity-50 active:bg-primary-700 transition-colors"
-                          >
-                            {addingCustomer ? '…' : '+ បន្ថែម'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => { setShowAddCustomer(false); setNewName(''); setNewPhone('') }}
-                            className="px-3 h-9 rounded-lg border border-slate-200 text-slate-500 text-[12px] active:bg-slate-50"
-                          >
-                            បោះបង់
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="max-h-36 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100 bg-white">
-                      {allCustomers.length === 0 ? (
-                        <p className="px-3 py-4 text-center text-[12px] text-slate-400">
-                          ចុច <span className="text-primary-600 font-bold">+</span> ដើម្បីបន្ថែមអតិថិជន
-                        </p>
-                      ) : filteredCustomers.length === 0 ? (
-                        <p className="px-3 py-3 text-center text-[12px] text-slate-400">
-                          រកមិនឃើញ «{customerSearch}»
-                        </p>
-                      ) : (
-                        filteredCustomers.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => { setSelectedCustomer(c); setCustomerSearch('') }}
-                            className="w-full flex items-center justify-between px-3 py-2.5 active:bg-primary-50 transition-colors text-left"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className={[
-                                'shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold',
-                                (c.debtBalance as number) > 0
-                                  ? 'bg-danger-100 text-danger-700'
-                                  : 'bg-slate-100 text-slate-500',
-                              ].join(' ')}>
-                                {c.nameKm.charAt(0)}
-                              </div>
-                              <span className="text-[13px] font-semibold text-slate-800 truncate">{c.nameKm}</span>
-                            </div>
-                            {(c.debtBalance as number) > 0 ? (
-                              <span className="text-[11px] font-semibold text-danger-600 tabular-nums shrink-0 ml-2">
-                                {formatKHR(c.debtBalance)}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-success-600 shrink-0 ml-2">✓</span>
-                            )}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {discountAmount > 0 && (
-                <p className="text-[11px] text-success-600 font-medium">
-                  ✓ ទទួលបានបញ្ចុះតម្លៃ {formatKHR(discountAmount)}
-                </p>
-              )}
-
-              {!selectedCustomer && (
-                <div className="flex items-start gap-1.5 text-[11px] text-slate-400">
-                  <UserCheck size={13} className="shrink-0 mt-0.5" />
-                  <span>ជ្រើសអតិថិជន ដើម្បីផ្ទេរបំណុលទៅប្រវត្តិរបស់គាត់ដោយស្វ័យប្រវត្តិ</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* ── Confirm footer ─────────────────────────────────── */}
-        <div className="shrink-0 border-t border-slate-200 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <Sheet
+      open
+      onClose={onClose}
+      size="full"
+      tone="bg"
+      title={isCash ? 'ទូទាត់សាច់ប្រាក់' : isPartial ? 'បង់ខ្លះ + ជំពាក់' : 'ជំពាក់ — បង់ក្រោយ'}
+      subtitle={`${count} មុខ`}
+      footer={
+        <div>
           {/* Change due — always visible above the action (no scrolling needed) */}
           {isCash && (
-            <div className="flex items-center justify-between rounded-xl bg-success-50 px-4 py-2.5 mb-2.5">
-              <span className="text-[13px] font-medium text-success-700">ប្រាក់អាប់</span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-[20px] font-extrabold text-success-700 tabular-nums leading-none">
+            <div className="mb-2.5 flex items-center justify-between gap-3 rounded-md bg-success-bg px-4 py-2.5 text-success">
+              <span className="text-body-sm font-semibold">ប្រាក់អាប់</span>
+              <span className="flex items-baseline gap-2 tabular-nums">
+                <span className="text-title font-bold">
                   {formatKHR(change > 0 ? change : toKHR(0))}
                 </span>
-                <span className="text-[12px] font-bold text-success-600 tabular-nums">
+                <span className="text-body-sm font-semibold">
                   {formatUSD(change > 0 ? change : toKHR(0))}
                 </span>
-              </div>
+              </span>
             </div>
           )}
-          <button
-            type="button"
+          <Button
+            variant="dark"
+            size="xl"
+            fullWidth
             disabled={(isCash && !enough) || (isPartial && !partialValid) || ((isDebt || isPartial) && !selectedCustomer)}
             onClick={() =>
               onConfirm({
@@ -847,37 +171,522 @@ export function CheckoutSheet({ type, onClose, onConfirm }: CheckoutSheetProps) 
                 partialDebt:  isPartial ? partialDebtAmt : null,
               })
             }
-            className={[
-              'w-full h-14 rounded-xl flex items-center justify-center gap-2 font-bold text-[16px]',
-              'transition-all active:scale-[0.99]',
-              isCash    ? 'bg-success-600 text-white active:bg-success-700 shadow-lg shadow-success-600/25'
-              : isPartial ? 'bg-warning-600 text-white active:bg-warning-700 shadow-lg shadow-warning-600/25'
-              : 'bg-slate-900 text-white active:bg-slate-800',
-              'disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none',
-            ].join(' ')}
+            icon={<Check size={22} strokeWidth={2.75} className="text-accent" />}
           >
-            {isCash    ? <Banknote size={20} strokeWidth={2.25} />
-            : isPartial ? <SplitSquareHorizontal size={20} strokeWidth={2.25} />
-            : <NotebookPen size={20} strokeWidth={2.25} />}
-            {isCash ? 'បញ្ជាក់ការទូទាត់' : isPartial ? 'ទូទាត់ + ជំពាក់' : 'កត់ត្រាបំណុល'}
-          </button>
+            បញ្ចប់ការលក់
+          </Button>
           {isCash && !enough && (
-            <p className="text-center text-[11px] text-danger-600 mt-2">
+            <p className="mt-2 text-center text-meta font-semibold text-danger">
               ប្រាក់ទទួលតិចជាងសរុប
             </p>
           )}
           {isPartial && !partialValid && partialCash !== '' && (
-            <p className="text-center text-[11px] text-warning-600 mt-2">
+            <p className="mt-2 text-center text-meta font-semibold text-warn">
               វាយចំនួនប្រាក់ (ច្រើនជា 0 និងតិចជាសរុប)
             </p>
           )}
           {(isDebt || isPartial) && !selectedCustomer && (
-            <p className="text-center text-[11px] text-danger-600 mt-2">
+            <p className="mt-2 text-center text-meta font-semibold text-danger">
               សូម​ជ្រើស​អតិថិជន​សិន (ឬ​បង្កើត​ថ្មី) ទើប​កត់​បំណុល​បាន
             </p>
           )}
         </div>
+      }
+    >
+      <div className="pb-2 pt-1 md:grid md:grid-cols-2 md:items-start md:gap-4">
+
+        {/* ── Left: amount due + items + discount ────────────── */}
+        <div className="space-y-3">
+
+          {/* Payment type + amount due */}
+          <div className="rounded-lg bg-ink-900 p-4 text-white">
+            <div className="flex items-center gap-3">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-accent text-ink-900" aria-hidden="true">
+                {isCash    ? <Banknote size={24} strokeWidth={2.25} />
+                : isPartial ? <SplitSquareHorizontal size={24} strokeWidth={2.25} />
+                : <NotebookPen size={24} strokeWidth={2.25} />}
+              </span>
+              <div className="min-w-0">
+                <p className="text-meta text-ink-300">របៀបទូទាត់</p>
+                <p className="text-body font-bold">{isCash ? 'សាច់ប្រាក់' : isPartial ? 'បង់ខ្លះ' : 'ជំពាក់'}</p>
+              </div>
+            </div>
+            <div className="mt-4 border-t border-ink-700 pt-3">
+              <p className="text-meta font-semibold text-ink-300">
+                {isDebt ? 'ចំនួនជំពាក់' : 'ត្រូវបង់'}
+                {discountAmount > 0 && (
+                  <span className="ml-2 tabular-nums line-through">{formatKHR(total)}</span>
+                )}
+              </p>
+              <MoneyText amount={discountedTotal} size="xl" tone="onDark" />
+              {discountAmount > 0 && (
+                <p className="mt-1 text-meta font-semibold tabular-nums text-accent">
+                  បញ្ចុះ −{formatKHR(discountAmount)}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Items list */}
+          <div className="rounded-lg bg-surface px-4 py-3">
+            <p className="text-meta font-semibold text-text-subtle">
+              បញ្ជីទំនិញ ({count})
+            </p>
+            <div className="divide-y divide-line">
+              {cart.map((item) => (
+                <div key={item.product.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <span className="truncate text-body-sm text-text">
+                    {item.product.nameKm}
+                    <span className="tabular-nums text-text-muted"> × {item.qty}</span>
+                  </span>
+                  <span className="shrink-0 text-body-sm font-semibold tabular-nums text-text">
+                    {formatKHR(multiplyKHR(item.unitPrice, item.qty))}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Discount toggle + section */}
+          {!showDiscount ? (
+            <button
+              type="button"
+              onClick={() => setShowDiscount(true)}
+              className="flex h-12 w-full items-center gap-2 rounded-lg bg-surface px-4 text-body-sm font-semibold text-text transition-colors active:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
+            >
+              <Tag size={18} strokeWidth={2.25} aria-hidden="true" />
+              ដាក់បញ្ចុះតម្លៃ
+            </button>
+          ) : (
+            <div className="space-y-2.5 rounded-lg bg-surface p-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="flex items-center gap-2 text-body-sm font-semibold text-text">
+                  <Tag size={18} strokeWidth={2.25} aria-hidden="true" />
+                  បញ្ចុះតម្លៃ (រៀល)
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setShowDiscount(false); applyDiscount(toKHR(0)) }}
+                  className="h-12 rounded-sm px-3 text-meta font-semibold text-text-subtle transition-colors active:bg-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
+                >
+                  លុបចោល ×
+                </button>
+              </div>
+
+              {/* Preset discount chips */}
+              <div className="grid grid-cols-4 gap-2">
+                {DISCOUNT_CHIPS.map((chip) => {
+                  const val = toKHR(chip)
+                  const active = discountAmount === val
+                  return (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => applyDiscount(val)}
+                      aria-pressed={active}
+                      className={cx(
+                        'h-12 rounded-sm text-meta font-bold tabular-nums transition-colors',
+                        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
+                        active ? 'bg-ink-900 text-white' : 'bg-bg text-text active:bg-line',
+                      )}
+                    >
+                      {formatKHR(val)}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Free-form discount input */}
+              <div className="flex min-h-12 items-center rounded-[18px] bg-bg px-4 focus-within:ring-2 focus-within:ring-ink-900/20">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={discountInput}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setDiscountInput(val)
+                    const num = parseInt(val, 10)
+                    applyDiscount(isNaN(num) || num < 0 ? toKHR(0) : toKHR(num))
+                  }}
+                  placeholder="ឬវាយតម្លៃផ្ទាល់…"
+                  aria-label="បញ្ចុះតម្លៃ (រៀល)"
+                  className="h-12 min-w-0 flex-1 bg-transparent text-body font-semibold text-text outline-none placeholder:font-normal placeholder:text-text-muted"
+                />
+                <span className="shrink-0 text-body font-bold text-text-subtle">៛</span>
+              </div>
+            </div>
+          )}
+
+          {discountAmount > 0 && (isDebt || isPartial) && (
+            <p className="px-1 text-meta font-semibold text-success">
+              ✓ ទទួលបានបញ្ចុះតម្លៃ {formatKHR(discountAmount)}
+            </p>
+          )}
+        </div>
+
+        {/* ── Right: amount received / customer ─────────────── */}
+        <div className="mt-3 space-y-3 md:mt-0">
+
+          {isCash && (
+            /* ── CASH: amount tendered — typeable in ៛ or $ ─────── */
+            <div className="space-y-3 rounded-lg bg-ink-900 p-4 text-white">
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="checkout-tender" className="text-body-sm font-semibold text-ink-300">
+                  ប្រាក់ទទួលពីអតិថិជន
+                </label>
+                {tenderInput !== '' && (
+                  <button
+                    type="button"
+                    onClick={() => setTenderInput('')}
+                    className="h-12 rounded-sm px-3 text-meta font-semibold text-ink-300 transition-colors active:bg-ink-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  >
+                    សម្អាត ×
+                  </button>
+                )}
+              </div>
+
+              {/* ៛ / $ toggle */}
+              <SegmentedControl
+                tone="dark"
+                ariaLabel="រូបិយប័ណ្ណប្រាក់ទទួល"
+                items={[
+                  { value: 'KHR', label: '៛ រៀល' },
+                  { value: 'USD', label: '$ ដុល្លារ' },
+                ]}
+                value={tenderCurrency}
+                onChange={(cur) => { setTenderCurrency(cur); setTenderInput('') }}
+              />
+
+              <div className="flex items-center gap-2 rounded-[18px] bg-ink-800 px-4 focus-within:ring-2 focus-within:ring-accent/60">
+                <span className="shrink-0 text-title-sm font-bold text-ink-300">
+                  {tenderCurrency === 'USD' ? '$' : '៛'}
+                </span>
+                <input
+                  id="checkout-tender"
+                  type="number"
+                  inputMode={tenderCurrency === 'USD' ? 'decimal' : 'none'}
+                  value={tenderInput}
+                  onChange={(e) => setTenderInput(e.target.value)}
+                  placeholder="0"
+                  className="h-16 min-w-0 flex-1 bg-transparent text-right text-amount-lg font-bold tabular-nums text-white outline-none placeholder:text-ink-300"
+                />
+              </div>
+              {tendered > 0 && (
+                <p className="text-right text-meta font-semibold tabular-nums text-ink-300">
+                  {tenderCurrency === 'USD'
+                    ? `= ${formatKHR(tendered)}`
+                    : `≈ ${formatUSD(tendered)}`}
+                </p>
+              )}
+
+              {/* Quick-cash — currency-aware */}
+              {tenderCurrency === 'KHR' ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {quick.map((amt, i) => {
+                    const selected = Number(tenderInput) === amt
+                    return (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => { setTenderCurrency('KHR'); setTenderInput(String(amt)) }}
+                        aria-pressed={selected}
+                        className={cx(
+                          'h-12 rounded-sm text-body-sm font-bold tabular-nums transition-colors',
+                          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+                          selected ? 'bg-accent text-ink-900' : 'bg-ink-800 text-white active:bg-ink-700',
+                        )}
+                      >
+                        {i === 0 ? 'ប្រាក់គត់' : formatKHR(amt)}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {USD_NOTES.map((usd) => {
+                    const selected = Number(tenderInput) === usd
+                    return (
+                      <button
+                        key={usd}
+                        type="button"
+                        onClick={() => { setTenderCurrency('USD'); setTenderInput(String(usd)) }}
+                        aria-pressed={selected}
+                        className={cx(
+                          'flex h-14 flex-col items-center justify-center gap-0.5 rounded-sm transition-colors',
+                          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+                          selected ? 'bg-accent text-ink-900' : 'bg-ink-800 text-white active:bg-ink-700',
+                        )}
+                      >
+                        <span className="text-body font-bold tabular-nums">${usd}</span>
+                        <span className={cx('text-caption font-semibold tabular-nums', selected ? 'text-ink-900' : 'text-ink-300')}>
+                          {formatKHR(toKHR(usd * exchangeRate))}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              <NumericPad tone="dark" value={tenderInput} onChange={setTenderInput} />
+            </div>
+          )}
+
+          {isPartial && (
+            <>
+              {/* ── PARTIAL: cash portion paid now — payable in ៛ or $ ── */}
+              <div className="space-y-3 rounded-lg bg-ink-900 p-4 text-white">
+                <label htmlFor="checkout-partial" className="block text-body-sm font-semibold text-ink-300">
+                  បង់ឥឡូវ
+                </label>
+
+                <SegmentedControl
+                  tone="dark"
+                  ariaLabel="រូបិយប័ណ្ណប្រាក់បង់ឥឡូវ"
+                  items={[
+                    { value: 'KHR', label: '៛ រៀល' },
+                    { value: 'USD', label: '$ ដុល្លារ' },
+                  ]}
+                  value={partialCurrency}
+                  onChange={(cur) => { setPartialCurrency(cur); setPartialCash('') }}
+                />
+
+                <div className="flex items-center gap-2 rounded-[18px] bg-ink-800 px-4 focus-within:ring-2 focus-within:ring-accent/60">
+                  <span className="shrink-0 text-title-sm font-bold text-ink-300">
+                    {partialCurrency === 'USD' ? '$' : '៛'}
+                  </span>
+                  <input
+                    id="checkout-partial"
+                    type="number"
+                    inputMode={partialCurrency === 'USD' ? 'decimal' : 'none'}
+                    value={partialCash}
+                    onChange={(e) => setPartialCash(e.target.value)}
+                    placeholder="0"
+                    autoFocus
+                    className="h-16 min-w-0 flex-1 bg-transparent text-right text-amount-lg font-bold tabular-nums text-white outline-none placeholder:text-ink-300"
+                  />
+                </div>
+                {partialCurrency === 'USD' && partialCashAmt > 0 && (
+                  <p className="text-right text-meta font-semibold tabular-nums text-ink-300">
+                    = {formatKHR(partialCashAmt)}
+                  </p>
+                )}
+
+                {/* Quick partial chips — currency-aware */}
+                <div className="flex flex-wrap gap-2">
+                  {partialCurrency === 'KHR'
+                    ? DENOMS.filter(d => d < discountedTotal).slice(0, 5).map(amt => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setPartialCash(String(amt))}
+                          aria-pressed={Number(partialCash) === amt}
+                          className={cx(
+                            'h-12 rounded-sm px-3 text-body-sm font-bold tabular-nums transition-colors',
+                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+                            Number(partialCash) === amt ? 'bg-accent text-ink-900' : 'bg-ink-800 text-white active:bg-ink-700',
+                          )}
+                        >
+                          {formatKHR(toKHR(amt))}
+                        </button>
+                      ))
+                    : USD_NOTES.filter(u => u * exchangeRate < discountedTotal).map(u => (
+                        <button
+                          key={u}
+                          type="button"
+                          onClick={() => setPartialCash(String(u))}
+                          aria-pressed={Number(partialCash) === u}
+                          className={cx(
+                            'h-12 rounded-sm px-4 text-body-sm font-bold tabular-nums transition-colors',
+                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+                            Number(partialCash) === u ? 'bg-accent text-ink-900' : 'bg-ink-800 text-white active:bg-ink-700',
+                          )}
+                        >
+                          ${u}
+                        </button>
+                      ))
+                  }
+                </div>
+
+                <NumericPad tone="dark" value={partialCash} onChange={setPartialCash} />
+              </div>
+
+              {/* Remaining debt summary */}
+              <div className="divide-y divide-warn/20 rounded-lg bg-warn-bg px-4 text-warn">
+                <div className="flex items-center justify-between gap-3 py-2.5">
+                  <span className="text-body-sm font-semibold">ទូទាត់ឥឡូវ</span>
+                  <span className="text-body font-bold tabular-nums">{formatKHR(partialCashAmt)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3 py-2.5">
+                  <span className="text-body-sm font-semibold">នៅជំពាក់</span>
+                  <span className="text-title-sm font-bold tabular-nums">{formatKHR(partialDebtAmt)}</span>
+                </div>
+                {selectedCustomer && (
+                  <div className="flex items-center justify-between gap-3 py-2.5">
+                    <span className="text-body-sm font-semibold">ជំពាក់សរុបថ្មី</span>
+                    <span className="text-body font-bold tabular-nums">
+                      {formatKHR(addKHR(selectedCustomer.debtBalance, partialDebtAmt))}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {(isDebt || isPartial) && (
+            /* ── Customer picker (debt + partial) ─────────────── */
+            <div className="rounded-lg bg-surface p-4">
+              <p className="mb-2 text-body-sm font-semibold text-text">
+                អតិថិជន​ដែល​ជំពាក់ <span className="text-danger">*</span>
+              </p>
+
+              {selectedCustomer ? (
+                /* Selected customer card */
+                <div className="flex items-center gap-3 rounded-md bg-bg p-3">
+                  <LetterAvatar
+                    name={selectedCustomer.nameKm}
+                    status={(selectedCustomer.debtBalance as number) > 0 ? 'overdue' : 'neutral'}
+                    size={48}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-body font-bold text-text">
+                      {selectedCustomer.nameKm}
+                    </p>
+                    {selectedCustomer.phone && (
+                      <p className="text-meta text-text-muted">{selectedCustomer.phone}</p>
+                    )}
+                    {(selectedCustomer.debtBalance as number) > 0 && (
+                      <p className="text-meta font-semibold tabular-nums text-debt">
+                        ជំពាក់ស្រាប់ {formatKHR(selectedCustomer.debtBalance)}
+                      </p>
+                    )}
+                  </div>
+                  <IconButton aria-label="ដកអតិថិជនចេញ" variant="light" onClick={() => setSelectedCustomer(null)}>
+                    <X size={20} strokeWidth={2.25} />
+                  </IconButton>
+                </div>
+              ) : (
+                /* Search + list */
+                <div>
+                  {/* Search bar + quick-add button */}
+                  <div className="mb-2 flex gap-2">
+                    <div className="flex h-12 min-w-0 flex-1 items-center gap-2 rounded-md bg-bg px-3 focus-within:ring-2 focus-within:ring-ink-900/20">
+                      <Search size={18} className="shrink-0 text-text-muted" aria-hidden="true" />
+                      <input
+                        type="text"
+                        value={customerSearch}
+                        onChange={(e) => { setCustomerSearch(e.target.value); setShowAddCustomer(false) }}
+                        placeholder="ស្វែងរកឈ្មោះ..."
+                        aria-label="ស្វែងរកអតិថិជន"
+                        className="h-full min-w-0 flex-1 bg-transparent text-body text-text outline-none placeholder:text-text-muted"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setShowAddCustomer(v => !v); setCustomerSearch('') }}
+                      aria-pressed={showAddCustomer}
+                      className={cx(
+                        'flex h-12 w-12 shrink-0 items-center justify-center rounded-md transition-colors',
+                        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
+                        showAddCustomer ? 'bg-ink-900 text-white' : 'bg-bg text-text active:bg-line',
+                      )}
+                      aria-label="បន្ថែមអតិថិជនថ្មី"
+                    >
+                      <UserPlus size={20} strokeWidth={2.25} aria-hidden="true" />
+                    </button>
+                  </div>
+
+                  {/* Quick-add form */}
+                  {showAddCustomer && (
+                    <div className="mb-2 space-y-2 rounded-md bg-bg p-3">
+                      <p className="flex items-center gap-1.5 text-meta font-bold text-text">
+                        <UserPlus size={16} aria-hidden="true" /> អតិថិជនថ្មី
+                      </p>
+                      <input
+                        type="text"
+                        value={newName}
+                        onChange={e => setNewName(e.target.value)}
+                        placeholder="ឈ្មោះ *"
+                        aria-label="ឈ្មោះ"
+                        autoFocus
+                        className="h-12 w-full rounded-sm bg-surface px-3 text-body text-text outline-none placeholder:text-text-muted focus:ring-2 focus:ring-ink-900/20"
+                      />
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={newPhone}
+                        onChange={e => setNewPhone(e.target.value)}
+                        placeholder="លេខទូរស័ព្ទ (ស្រេចចិត្ត)"
+                        aria-label="លេខទូរស័ព្ទ"
+                        className="h-12 w-full rounded-sm bg-surface px-3 text-body text-text outline-none placeholder:text-text-muted focus:ring-2 focus:ring-ink-900/20"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          variant="dark"
+                          className="flex-1"
+                          onClick={handleQuickAdd}
+                          disabled={!newName.trim() || addingCustomer}
+                        >
+                          {addingCustomer ? '…' : '+ បន្ថែម'}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => { setShowAddCustomer(false); setNewName(''); setNewPhone('') }}
+                        >
+                          បោះបង់
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="max-h-60 divide-y divide-line overflow-y-auto rounded-md bg-bg">
+                    {allCustomers.length === 0 ? (
+                      <p className="px-3 py-4 text-center text-meta text-text-muted">
+                        ចុច <span className="font-bold text-text">+</span> ដើម្បីបន្ថែមអតិថិជន
+                      </p>
+                    ) : filteredCustomers.length === 0 ? (
+                      <p className="px-3 py-3 text-center text-meta text-text-muted">
+                        រកមិនឃើញ «{customerSearch}»
+                      </p>
+                    ) : (
+                      filteredCustomers.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => { setSelectedCustomer(c); setCustomerSearch('') }}
+                          className="flex min-h-14 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors active:bg-line focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ink-900"
+                        >
+                          <span className="flex min-w-0 items-center gap-3">
+                            <LetterAvatar
+                              name={c.nameKm}
+                              status={(c.debtBalance as number) > 0 ? 'overdue' : 'neutral'}
+                              size={40}
+                            />
+                            <span className="truncate text-body-sm font-semibold text-text">{c.nameKm}</span>
+                          </span>
+                          {(c.debtBalance as number) > 0 ? (
+                            <span className="shrink-0 text-meta font-semibold tabular-nums text-debt">
+                              {formatKHR(c.debtBalance)}
+                            </span>
+                          ) : (
+                            <span className="shrink-0 text-meta font-bold text-success" aria-hidden="true">✓</span>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {isDebt && !selectedCustomer && (
+                <div className="mt-2 flex items-start gap-2 text-meta text-text-muted">
+                  <UserCheck size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+                  <span>ជ្រើសអតិថិជន ដើម្បីផ្ទេរបំណុលទៅប្រវត្តិរបស់គាត់ដោយស្វ័យប្រវត្តិ</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </Sheet>
   )
 }

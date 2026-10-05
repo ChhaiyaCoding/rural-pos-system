@@ -65,9 +65,10 @@ export function ReportExportSheet({
       <head>
         <title>របាយការណ៍ ${periodLabel}</title>
         <meta charset="utf-8" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&display=swap" />
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: 'Khmer OS', 'Noto Sans Khmer', sans-serif; padding: 24px; color: #0F1B2D; }
+          body { font-family: 'Kantumruy Pro', 'Khmer OS', 'Noto Sans Khmer', sans-serif; line-height: 1.5; padding: 24px; color: #0F1B2D; }
           .card { max-width: 360px; margin: 0 auto; }
           .header { text-align: center; border-bottom: 2px solid #E2E6EC; padding-bottom: 16px; margin-bottom: 16px; }
           .store { font-size: 20px; font-weight: 800; }
@@ -225,21 +226,21 @@ export function ReportExportSheet({
   /* ─────────────────────────────────────────────────── */
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/70"
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-ink-900/60"
       onClick={onClose}
       aria-hidden="true"
     >
       <div
-        className="w-full md:max-w-md bg-white rounded-t-2xl md:rounded-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-pop animate-sheet-up"
+        className="w-full md:max-w-md bg-surface rounded-t-2xl md:rounded-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-pop animate-sheet-up"
         onClick={e => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
         {/* Header */}
-        <div className="shrink-0 flex items-center justify-between px-4 h-14 border-b border-slate-100">
-          <span className="text-[15px] font-bold text-slate-900">📤 Export របាយការណ៍</span>
+        <div className="shrink-0 flex items-center justify-between px-4 h-14 border-b border-line">
+          <span className="text-body-sm font-bold text-text">📤 Export របាយការណ៍</span>
           <button type="button" onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 active:bg-slate-200">
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-2 text-text-muted active:bg-line">
             <X size={16} />
           </button>
         </div>
@@ -248,105 +249,105 @@ export function ReportExportSheet({
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
 
           {/* Report preview card */}
-          <div ref={cardRef} className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+          <div ref={cardRef} className="rounded-2xl border border-line bg-surface overflow-hidden shadow-sm">
 
             {/* Card header */}
-            <div className="bg-primary-600 px-5 py-4 text-white text-center">
-              <p className="text-[18px] font-extrabold">{storeName}</p>
-              <p className="text-[13px] opacity-80 mt-0.5">របាយការណ៍ {periodLabel}</p>
-              <p className="text-[11px] opacity-60 mt-0.5">{dateRange}</p>
+            <div className="bg-ink-900 px-5 py-4 text-white text-center">
+              <p className="text-title-sm font-extrabold">{storeName}</p>
+              <p className="text-meta opacity-80 mt-0.5">របាយការណ៍ {periodLabel}</p>
+              <p className="text-caption opacity-60 mt-0.5">{dateRange}</p>
             </div>
 
             {/* Revenue */}
-            <div className="px-5 py-4 border-b border-slate-100 text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">ចំណូលសរុប</p>
-              <p className="text-[32px] font-extrabold text-slate-900 tabular-nums">{formatKHR(totalRevenue)}</p>
-              <p className="text-[14px] font-bold text-primary-600 tabular-nums">{formatUSD(totalRevenue)}</p>
-              <p className="text-[12px] text-slate-400 mt-0.5">{salesCount} ការលក់</p>
+            <div className="px-5 py-4 border-b border-line text-center">
+              <p className="text-caption font-bold text-text-muted uppercase tracking-wider mb-1">ចំណូលសរុប</p>
+              <p className="text-amount font-extrabold text-text tabular-nums">{formatKHR(totalRevenue)}</p>
+              <p className="text-body-sm font-bold text-text-subtle tabular-nums">{formatUSD(totalRevenue)}</p>
+              <p className="text-caption text-text-muted mt-0.5">{salesCount} ការលក់</p>
             </div>
 
             {/* Profit summary: revenue / expenses cards + net profit */}
-            <div className="px-5 py-4 border-b border-slate-100">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">ចំណេញ​សុទ្ធ</p>
+            <div className="px-5 py-4 border-b border-line">
+              <p className="text-caption font-bold text-text-muted uppercase tracking-wider mb-2.5">ចំណេញ​សុទ្ធ</p>
               <div className="grid grid-cols-2 gap-2.5">
-                <div className="rounded-xl bg-success-50 border border-success-100 px-3 py-2.5">
-                  <p className="text-[10px] font-semibold text-success-600 mb-0.5">ចំណូល</p>
-                  <p className="text-[15px] font-extrabold text-success-800 tabular-nums leading-tight">{formatKHR(totalRevenue)}</p>
-                  <p className="text-[11px] font-bold text-primary-600 tabular-nums">{formatUSD(totalRevenue)}</p>
+                <div className="rounded-xl bg-success-bg border border-success-bg px-3 py-2.5">
+                  <p className="text-caption font-semibold text-success mb-0.5">ចំណូល</p>
+                  <p className="text-body-sm font-extrabold text-success tabular-nums leading-tight">{formatKHR(totalRevenue)}</p>
+                  <p className="text-caption font-bold text-text-subtle tabular-nums">{formatUSD(totalRevenue)}</p>
                 </div>
-                <div className="rounded-xl bg-danger-50 border border-danger-100 px-3 py-2.5">
-                  <p className="text-[10px] font-semibold text-danger-600 mb-0.5">ចំណាយ</p>
-                  <p className="text-[15px] font-extrabold text-danger-700 tabular-nums leading-tight">{formatKHR(totalExpenses)}</p>
-                  <p className="text-[11px] font-bold text-primary-600 tabular-nums">{formatUSD(totalExpenses)}</p>
+                <div className="rounded-xl bg-debt-bg border border-debt-bg px-3 py-2.5">
+                  <p className="text-caption font-semibold text-debt mb-0.5">ចំណាយ</p>
+                  <p className="text-body-sm font-extrabold text-debt tabular-nums leading-tight">{formatKHR(totalExpenses)}</p>
+                  <p className="text-caption font-bold text-text-subtle tabular-nums">{formatUSD(totalExpenses)}</p>
                 </div>
               </div>
-              <div className="mt-3 flex items-baseline justify-between border-t border-slate-100 pt-3">
-                <span className="text-[13px] font-bold text-slate-500">ចំណេញ​សុទ្ធ</span>
+              <div className="mt-3 flex items-baseline justify-between border-t border-line pt-3">
+                <span className="text-meta font-bold text-text-muted">ចំណេញ​សុទ្ធ</span>
                 <div className="text-right">
-                  <span className={['block text-[20px] font-extrabold tabular-nums leading-tight', (netProfit as number) >= 0 ? 'text-success-700' : 'text-danger-700'].join(' ')}>{formatKHR(netProfit)}</span>
-                  <span className="block text-[12px] font-bold text-primary-600 tabular-nums">{formatUSD(netProfit)}</span>
+                  <span className={['block text-title font-extrabold tabular-nums leading-tight', (netProfit as number) >= 0 ? 'text-success' : 'text-danger'].join(' ')}>{formatKHR(netProfit)}</span>
+                  <span className="block text-caption font-bold text-text-subtle tabular-nums">{formatUSD(netProfit)}</span>
                 </div>
               </div>
             </div>
 
             {/* Expense breakdown by category */}
             {expenseByCat.length > 0 && (
-              <div className="px-5 py-3 border-b border-slate-100 space-y-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ចំណាយ​តាម​ប្រភេទ</p>
+              <div className="px-5 py-3 border-b border-line space-y-2">
+                <p className="text-caption font-bold text-text-muted uppercase tracking-wider">ចំណាយ​តាម​ប្រភេទ</p>
                 {expenseByCat.map(([cat, amt]) => (
                   <div key={cat} className="flex items-center justify-between">
-                    <span className="text-[12px] font-semibold text-slate-700">{expenseCategoryEmoji(cat)} {expenseCategoryLabel(cat)}</span>
-                    <span className="text-[12px] font-bold text-danger-600 tabular-nums">{formatKHR(amt as KHR)}</span>
+                    <span className="text-caption font-semibold text-text-subtle">{expenseCategoryEmoji(cat)} {expenseCategoryLabel(cat)}</span>
+                    <span className="text-caption font-bold text-debt tabular-nums">{formatKHR(amt as KHR)}</span>
                   </div>
                 ))}
               </div>
             )}
 
             {/* Payment breakdown */}
-            <div className="px-5 py-3 border-b border-slate-100 space-y-2">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">របៀបទូទាត់</p>
+            <div className="px-5 py-3 border-b border-line space-y-2">
+              <p className="text-caption font-bold text-text-muted uppercase tracking-wider">របៀបទូទាត់</p>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-[16px]">💵</span>
-                  <span className="text-[13px] font-semibold text-slate-700">សាច់ប្រាក់</span>
-                  <span className="text-[11px] text-slate-400">{cashCount} ដង</span>
+                  <span className="text-body">💵</span>
+                  <span className="text-meta font-semibold text-text-subtle">សាច់ប្រាក់</span>
+                  <span className="text-caption text-text-muted">{cashCount} ដង</span>
                 </div>
                 <span className="text-right">
-                  <span className="block text-[14px] font-bold text-success-700 tabular-nums">{formatKHR(cashAmount)}</span>
-                  <span className="block text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(cashAmount)}</span>
+                  <span className="block text-body-sm font-bold text-success tabular-nums">{formatKHR(cashAmount)}</span>
+                  <span className="block text-caption font-bold text-text-subtle tabular-nums">{formatUSD(cashAmount)}</span>
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-[16px]">📒</span>
-                  <span className="text-[13px] font-semibold text-slate-700">ជំពាក់</span>
-                  <span className="text-[11px] text-slate-400">{debtCount} ដង</span>
+                  <span className="text-body">📒</span>
+                  <span className="text-meta font-semibold text-text-subtle">ជំពាក់</span>
+                  <span className="text-caption text-text-muted">{debtCount} ដង</span>
                 </div>
                 <span className="text-right">
-                  <span className="block text-[14px] font-bold text-danger-600 tabular-nums">{formatKHR(debtAmount)}</span>
-                  <span className="block text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(debtAmount)}</span>
+                  <span className="block text-body-sm font-bold text-debt tabular-nums">{formatKHR(debtAmount)}</span>
+                  <span className="block text-caption font-bold text-text-subtle tabular-nums">{formatUSD(debtAmount)}</span>
                 </span>
               </div>
             </div>
 
             {/* Top products */}
             {topProducts.length > 0 && (
-              <div className="px-5 py-3 border-b border-slate-100 space-y-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ទំនិញលក់ច្រើន</p>
+              <div className="px-5 py-3 border-b border-line space-y-2">
+                <p className="text-caption font-bold text-text-muted uppercase tracking-wider">ទំនិញលក់ច្រើន</p>
                 {topProducts.slice(0, 5).map((p, i) => (
                   <div key={p.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className={[
-                        'shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black',
+                        'shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-caption font-black',
                         i === 0 ? 'bg-accent text-ink-900' : i === 1 ? 'bg-line-strong text-ink-900' : i === 2 ? 'bg-tint-5 text-tint-5-ink' : 'bg-line text-text-muted',
                       ].join(' ')}>
                         {i + 1}
                       </span>
-                      <span className="text-[12px] font-semibold text-slate-700 truncate">{p.name}</span>
+                      <span className="text-caption font-semibold text-text-subtle truncate">{p.name}</span>
                     </div>
                     <span className="text-right shrink-0 ml-2">
-                      <span className="block text-[12px] font-bold text-slate-700 tabular-nums">{formatKHR(p.revenue as KHR)}</span>
-                      <span className="block text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(p.revenue as KHR)}</span>
+                      <span className="block text-caption font-bold text-text-subtle tabular-nums">{formatKHR(p.revenue as KHR)}</span>
+                      <span className="block text-caption font-bold text-text-subtle tabular-nums">{formatUSD(p.revenue as KHR)}</span>
                     </span>
                   </div>
                 ))}
@@ -355,15 +356,15 @@ export function ReportExportSheet({
 
             {/* Debt summary */}
             {debtorCount > 0 && (
-              <div className="px-5 py-3 border-b border-slate-100">
+              <div className="px-5 py-3 border-b border-line">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[12px] font-bold text-danger-700">👥 បំណុលអតិថិជន</p>
-                    <p className="text-[10px] text-slate-400">{debtorCount} នាក់ជំពាក់</p>
+                    <p className="text-caption font-bold text-debt">👥 បំណុលអតិថិជន</p>
+                    <p className="text-caption text-text-muted">{debtorCount} នាក់ជំពាក់</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[16px] font-extrabold text-danger-700 tabular-nums">{formatKHR(totalDebt)}</p>
-                    <p className="text-[11px] font-bold text-primary-600 tabular-nums">{formatUSD(totalDebt)}</p>
+                    <p className="text-body font-extrabold text-debt tabular-nums">{formatKHR(totalDebt)}</p>
+                    <p className="text-caption font-bold text-text-subtle tabular-nums">{formatUSD(totalDebt)}</p>
                   </div>
                 </div>
               </div>
@@ -371,7 +372,7 @@ export function ReportExportSheet({
 
             {/* Footer */}
             <div className="px-5 py-3 text-center">
-              <p className="text-[10px] text-slate-400">ថ្ងៃទី {today} · Rural POS System</p>
+              <p className="text-caption text-text-muted">ថ្ងៃទី {today} · Rural POS System</p>
             </div>
           </div>
 
@@ -380,7 +381,7 @@ export function ReportExportSheet({
             <button
               type="button"
               onClick={handlePrint}
-              className="h-13 py-3.5 rounded-2xl bg-slate-800 text-white font-bold text-[14px] flex items-center justify-center gap-2 active:bg-slate-900 transition-colors"
+              className="h-13 py-3.5 rounded-2xl bg-ink-800 text-white font-bold text-body-sm flex items-center justify-center gap-2 active:bg-ink-900 transition-colors"
             >
               <Printer size={18} strokeWidth={2} />
               Print
@@ -388,7 +389,7 @@ export function ReportExportSheet({
             <button
               type="button"
               onClick={handleShare}
-              className="h-13 py-3.5 rounded-2xl bg-primary-600 text-white font-bold text-[14px] flex items-center justify-center gap-2 active:bg-primary-700 transition-colors"
+              className="h-13 py-3.5 rounded-2xl bg-ink-900 text-white font-bold text-body-sm flex items-center justify-center gap-2 active:bg-ink-800 transition-colors"
             >
               <Share2 size={18} strokeWidth={2} />
               Share
@@ -396,10 +397,10 @@ export function ReportExportSheet({
           </div>
 
           {/* Screenshot tip */}
-          <div className="flex items-start gap-2.5 bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-200">
-            <CheckCircle2 size={15} className="text-primary-500 shrink-0 mt-0.5" />
-            <p className="text-[11px] text-slate-500 leading-relaxed">
-              <span className="font-semibold text-slate-700">Tip:</span> ថតរូបអេក្រង់ (Screenshot) Report Card ខាងលើ → ផ្ញើ WhatsApp / Telegram បានភ្លាម!
+          <div className="flex items-start gap-2.5 bg-surface-2 rounded-xl px-3 py-2.5 border border-line">
+            <CheckCircle2 size={15} className="text-text-subtle shrink-0 mt-0.5" />
+            <p className="text-caption text-text-muted leading-relaxed">
+              <span className="font-semibold text-text-subtle">Tip:</span> ថតរូបអេក្រង់ (Screenshot) Report Card ខាងលើ → ផ្ញើ WhatsApp / Telegram បានភ្លាម!
             </p>
           </div>
         </div>

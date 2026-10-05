@@ -1,14 +1,24 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Trash2, Camera, ChevronDown, ChevronUp, ScanLine, CheckCircle2, AlertCircle, History, Pencil, Plus, Check } from 'lucide-react'
+import {
+  X, Trash2, Camera, ChevronDown, ChevronUp, ScanLine, CheckCircle2, AlertCircle, History, Pencil, Plus, Check,
+  Image as ImageIcon,
+} from 'lucide-react'
 import { productService } from '@/services/product.service'
 import { db } from '@/db'
-import { toKHR, formatKHR, getExchangeRate } from '@/lib/money'
+import { toKHR, formatKHR, formatUSD, getExchangeRate } from '@/lib/money'
 import { useUnitStore } from '@/store/unit.store'
 import { useCategoryStore } from '@/store/category.store'
 import { BarcodeScanMini } from './BarcodeScanMini'
 import { StockHistorySheet } from './StockHistorySheet'
+import { Sheet } from '@/components/ui/Sheet'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { ProductThumb } from '@/components/ui/ProductThumb'
+import { Pill } from '@/components/ui/Pill'
+import { cx } from '@/components/ui/cx'
 import type { Product } from '@/types'
 import type { TenantId, ProductId } from '@/types/branded'
 
@@ -292,141 +302,144 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/50"
-      onClick={onClose}
-      aria-hidden="true"
-    >
-      <div
-        className="w-full md:max-w-md bg-white rounded-t-2xl md:rounded-2xl max-h-[92dvh] flex flex-col shadow-pop animate-sheet-up"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        {/* Header */}
-        <div className="shrink-0 flex items-center justify-between px-4 h-14 border-b border-slate-200">
-          <span className="text-[16px] font-bold text-slate-900">
-            {isEdit ? 'កែប្រែទំនិញ' : 'បន្ថែមទំនិញថ្មី'}
-          </span>
-          <div className="flex items-center gap-2">
+    <>
+      <Sheet
+        open
+        onClose={onClose}
+        title={isEdit ? 'កែប្រែទំនិញ' : 'បន្ថែមទំនិញថ្មី'}
+        footer={
+          <div className="flex gap-2">
             {/* Stock history — edit mode only */}
             {isEdit && (
+              <Button
+                variant="secondary"
+                size="lg"
+                icon={<History size={20} strokeWidth={2.25} />}
+                onClick={() => setShowHistory(true)}
+              >
+                ស្តុក
+              </Button>
+            )}
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              className="flex-1"
+              disabled={!canSave || saving}
+              onClick={handleSave}
+              icon={<Check size={20} strokeWidth={2.5} />}
+            >
+              {saving ? 'កំពុងរក្សាទុក…' : isEdit ? 'រក្សាទុកការកែ' : 'បន្ថែមទំនិញ'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-5 pt-1">
+
+          {/* ── Hero: photo + name / category / barcode / stock status ── */}
+          <div className="flex items-center gap-4 rounded-lg bg-ink-900 p-4 text-white">
+            <div className="relative shrink-0">
+              <ProductThumb
+                product={{ id: product?.id ?? ('new' as ProductId), nameKm: name.trim() || '?', emoji, imageUri: imageUri || null }}
+                size={84}
+              />
               <button
                 type="button"
-                onClick={() => setShowHistory(true)}
-                className="min-h-0 min-w-0 h-9 px-3 flex items-center gap-1.5 rounded-full bg-primary-50 text-primary-700 text-[12px] font-bold active:bg-primary-100 transition-colors"
-                aria-label="ប្រវត្តិស្តុក"
+                onClick={() => cameraInputRef.current?.click()}
+                className="absolute -bottom-3 -right-3 flex h-12 w-12 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+                aria-label="ថតរូប"
               >
-                <History size={14} strokeWidth={2.25} />
-                ប្រវត្តិ
+                <span className="flex h-10 w-10 items-center justify-center rounded-full border-[3px] border-ink-900 bg-accent text-ink-900">
+                  <Camera size={18} strokeWidth={2.25} aria-hidden="true" />
+                </span>
               </button>
-            )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="min-h-0 min-w-0 w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 active:bg-slate-200"
-            >
-              <X size={17} />
-            </button>
-          </div>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-5">
-
-          {/* Image / Emoji section */}
-          <div>
-            <p className="text-[12px] font-semibold text-slate-500 mb-2">រូបទំនិញ</p>
-
-            <div className="flex items-start gap-3">
-              {/* Preview */}
-              <div className="shrink-0 w-[72px] h-[72px] rounded-xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
-                {imageUri ? (
-                  <img src={imageUri} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-[36px] leading-none">{emoji}</span>
-                )}
-              </div>
-
-              {/* Buttons */}
-              <div className="flex-1 space-y-2">
-                {/* Two-button row: Camera | Gallery */}
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="h-9 rounded-xl border border-primary-200 bg-primary-50 text-[12px] font-semibold text-primary-700 flex items-center justify-center gap-1.5 active:bg-primary-100 transition-colors"
-                  >
-                    <Camera size={14} strokeWidth={2.25} />
-                    ថតរូប
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="h-9 rounded-xl border border-slate-200 bg-white text-[12px] font-semibold text-slate-600 flex items-center justify-center gap-1.5 active:bg-slate-50 transition-colors"
-                  >
-                    🖼️ ជ្រើសរូប
-                  </button>
-                </div>
-                {/* Camera input — opens rear camera directly */}
-                <input
-                  ref={cameraInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={handleImagePick}
-                />
-                {/* Gallery input — photo library picker */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImagePick}
-                />
-
-                <button
-                  type="button"
-                  onClick={() => setShowEmoji(!showEmoji)}
-                  className={[
-                    'w-full h-9 rounded-xl border text-[13px] font-medium flex items-center justify-center gap-1.5 transition-colors',
-                    showEmoji
-                      ? 'border-primary-400 bg-primary-50 text-primary-700'
-                      : 'border-slate-200 text-slate-600 active:bg-slate-50',
-                  ].join(' ')}
-                >
-                  <span>😊</span>
-                  ជ្រើស Emoji
-                  {showEmoji ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                </button>
-
-                {imageUri && (
-                  <button
-                    type="button"
-                    onClick={() => { setImageUri(''); setShowEmoji(true) }}
-                    className="w-full h-8 rounded-xl text-[12px] font-medium text-danger-600 active:bg-danger-50 transition-colors"
-                  >
-                    ✕ លុបរូប
-                  </button>
-                )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className={cx('truncate text-title-sm font-bold', name.trim() ? 'text-white' : 'text-ink-300')}>
+                {name.trim() || 'ឈ្មោះទំនិញ'}
+              </p>
+              <p className="truncate text-meta text-ink-300">
+                {categories.find((c) => c.id === categoryId)?.label ?? categoryId}
+                {barcode.trim() && <> · <span className="font-mono">{barcode.trim()}</span></>}
+              </p>
+              <div className="mt-2">
+                {(Number(stockQty) || 0) === 0
+                  ? <Pill variant="danger">អស់ស្តុក</Pill>
+                  : (Number(stockQty) || 0) <= (Number(lowStock) || 5)
+                    ? <Pill variant="warn">ជិតអស់ · {Number(stockQty) || 0} {unit}</Pill>
+                    : <Pill variant="success">មានស្តុក · {Number(stockQty) || 0} {unit}</Pill>}
               </div>
             </div>
+          </div>
+
+          {/* Photo / emoji actions */}
+          <div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex h-12 items-center gap-2 rounded-md bg-bg px-4 text-body-sm font-semibold text-text transition-colors active:bg-line focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
+              >
+                <ImageIcon size={18} strokeWidth={2.25} aria-hidden="true" />
+                ជ្រើសរូប
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowEmoji(!showEmoji)}
+                aria-expanded={showEmoji}
+                className={cx(
+                  'flex h-12 items-center gap-2 rounded-md px-4 text-body-sm font-semibold transition-colors',
+                  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
+                  showEmoji ? 'bg-ink-900 text-white' : 'bg-bg text-text active:bg-line',
+                )}
+              >
+                <span aria-hidden="true">😊</span>
+                ជ្រើស Emoji
+                {showEmoji ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
+              </button>
+              {imageUri && (
+                <button
+                  type="button"
+                  onClick={() => { setImageUri(''); setShowEmoji(true) }}
+                  className="flex h-12 items-center gap-2 rounded-md bg-danger-bg px-4 text-body-sm font-semibold text-danger transition-colors active:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+                >
+                  <X size={16} strokeWidth={2.5} aria-hidden="true" />
+                  លុបរូប
+                </button>
+              )}
+            </div>
+            {/* Camera input — opens rear camera directly */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleImagePick}
+            />
+            {/* Gallery input — photo library picker */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImagePick}
+            />
 
             {/* Emoji grid */}
             {showEmoji && (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(48px,1fr))] gap-1.5">
                 {EMOJIS.map((e) => (
                   <button
                     key={e}
                     type="button"
                     onClick={() => setEmoji(e)}
-                    className={[
-                      'w-10 h-10 rounded-xl text-[22px] flex items-center justify-center border transition-colors',
-                      emoji === e && !imageUri
-                        ? 'border-primary-500 bg-primary-50'
-                        : 'border-slate-200 active:bg-slate-50',
-                    ].join(' ')}
+                    aria-pressed={emoji === e && !imageUri}
+                    className={cx(
+                      'flex h-12 items-center justify-center rounded-sm text-title transition-colors',
+                      'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ink-900',
+                      emoji === e && !imageUri ? 'bg-accent' : 'bg-bg active:bg-line',
+                    )}
                   >
                     {e}
                   </button>
@@ -436,62 +449,64 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
           </div>
 
           {/* Name — Khmer and/or English in one box */}
-          <div>
-            <p className="text-[12px] font-semibold text-slate-500 mb-1.5">ឈ្មោះទំនិញ *</p>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="ឧ. អង្ករ ២គីឡូ / Rice 2kg"
-              className="w-full h-12 rounded-xl border border-slate-200 px-4 text-[15px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
-            />
-            <p className="text-[10px] text-slate-400 mt-1">អាចសរសេរខ្មែរ និង English ជាមួយគ្នាបាន</p>
-          </div>
+          <Input
+            label="ឈ្មោះទំនិញ *"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="ឧ. អង្ករ ២គីឡូ / Rice 2kg"
+            hint="អាចសរសេរខ្មែរ និង English ជាមួយគ្នាបាន"
+          />
 
           {/* Barcode */}
           <div>
-            <p className="text-[12px] font-semibold text-slate-500 mb-1.5">
-              Barcode <span className="text-slate-300 font-normal">(ស្រេចចិត្ត)</span>
-            </p>
             <div className="flex gap-2">
-              <div className={[
-                'flex-1 flex items-center border rounded-xl overflow-hidden transition-colors',
-                barcodeStatus === 'ok'  ? 'border-success-400 bg-success-50'
-                : barcodeStatus === 'dup' ? 'border-danger-400 bg-danger-50'
-                : 'border-slate-200',
-              ].join(' ')}>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={barcode}
-                  onChange={e => setBarcode(e.target.value)}
-                  placeholder="ឧ. 8851234567890"
-                  className="flex-1 h-12 px-4 text-[14px] font-mono text-slate-900 placeholder:text-slate-300 bg-transparent outline-none"
-                />
+              <div
+                className={cx(
+                  'flex min-h-[54px] min-w-0 flex-1 items-center gap-2 rounded-[18px] px-4 transition-shadow focus-within:ring-2 focus-within:ring-ink-900/20',
+                  barcodeStatus === 'ok'  ? 'bg-success-bg'
+                  : barcodeStatus === 'dup' ? 'bg-danger-bg'
+                  : 'bg-bg',
+                )}
+              >
+                <div className="flex min-w-0 flex-1 flex-col py-1.5">
+                  <label htmlFor="product-barcode" className="text-caption font-semibold text-text-subtle">
+                    Barcode <span className="font-normal">(ស្រេចចិត្ត)</span>
+                  </label>
+                  <input
+                    id="product-barcode"
+                    type="text"
+                    inputMode="numeric"
+                    value={barcode}
+                    onChange={e => setBarcode(e.target.value)}
+                    placeholder="ឧ. 8851234567890"
+                    className="w-full min-w-0 bg-transparent font-mono text-body font-semibold text-text outline-none placeholder:font-normal placeholder:text-text-muted"
+                  />
+                </div>
                 {barcodeStatus === 'ok' && (
-                  <CheckCircle2 size={16} className="text-success-500 mr-3 shrink-0" />
+                  <CheckCircle2 size={20} className="shrink-0 text-success" aria-hidden="true" />
                 )}
                 {barcodeStatus === 'dup' && (
-                  <AlertCircle size={16} className="text-danger-500 mr-3 shrink-0" />
+                  <AlertCircle size={20} className="shrink-0 text-danger" aria-hidden="true" />
                 )}
               </div>
               {/* Scan button */}
               <button
                 type="button"
                 onClick={() => setShowScanner(true)}
-                className="shrink-0 w-12 h-12 flex items-center justify-center rounded-xl bg-slate-800 text-white active:bg-slate-700 transition-colors"
+                className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-[18px] bg-ink-900 text-accent transition-colors active:bg-ink-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
                 aria-label="ស្កែន Barcode"
               >
-                <ScanLine size={20} strokeWidth={2.25} />
+                <ScanLine size={22} strokeWidth={2.25} aria-hidden="true" />
               </button>
             </div>
             {barcodeStatus === 'dup' && (
-              <p className="mt-1 text-[11px] text-danger-600 font-semibold">
+              <p className="mt-1 px-1 text-meta font-semibold text-danger">
                 ⚠ Barcode នេះមានស្រាប់ក្នុងទំនិញផ្សេងហើយ
               </p>
             )}
             {barcodeStatus === 'ok' && (
-              <p className="mt-1 text-[11px] text-success-600 font-semibold">
+              <p className="mt-1 px-1 text-meta font-semibold text-success">
                 ✓ Barcode ល្អ — អាចប្រើបាន
               </p>
             )}
@@ -499,16 +514,16 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
 
           {/* Category — selectable + manageable (add / rename / delete) */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-[12px] font-semibold text-slate-500">ប្រភេទ</p>
+            <div className="mb-1.5 flex items-center justify-between">
+              <p className="text-meta font-semibold text-text-subtle">ប្រភេទ</p>
               <button
                 type="button"
                 onClick={() => { setManageCats((v) => !v); setEditingCat(null) }}
-                className="min-h-0 min-w-0 flex items-center gap-1 text-[11px] font-semibold text-primary-600 active:text-primary-700 px-1 py-0.5"
+                className="flex h-12 items-center gap-1.5 rounded-sm px-3 text-meta font-semibold text-text transition-colors active:bg-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
               >
                 {manageCats
-                  ? <><Check size={12} strokeWidth={2.5} /> រួចរាល់</>
-                  : <><Pencil size={11} strokeWidth={2.25} /> កែ</>}
+                  ? <><Check size={16} strokeWidth={2.5} aria-hidden="true" /> រួចរាល់</>
+                  : <><Pencil size={16} strokeWidth={2.25} aria-hidden="true" /> កែ</>}
               </button>
             </div>
 
@@ -523,30 +538,33 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
                       value={editCatValue}
                       onChange={(e) => setEditCatValue(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') commitRenameCat() }}
-                      className="h-9 w-28 px-2 rounded-xl border border-primary-400 text-[12px] font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-primary-400/20"
+                      aria-label="ឈ្មោះប្រភេទ"
+                      className="h-12 w-32 rounded-sm bg-bg px-3 text-body-sm font-semibold text-text outline-none ring-2 ring-ink-900/20"
                     />
                     <button
                       type="button"
                       onClick={commitRenameCat}
-                      className="min-h-0 min-w-0 w-9 h-9 flex items-center justify-center rounded-xl bg-primary-600 text-white active:bg-primary-700"
+                      className="flex h-12 w-12 items-center justify-center rounded-sm bg-ink-900 text-white active:bg-ink-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
                       aria-label="រក្សាទុក"
                     >
-                      <Check size={15} strokeWidth={2.5} />
+                      <Check size={18} strokeWidth={2.5} aria-hidden="true" />
                     </button>
                   </div>
                 ) : (
-                  <div key={cat.id} className="relative">
+                  <div key={cat.id} className={cx('flex items-center rounded-sm', manageCats && 'bg-bg')}>
                     <button
                       type="button"
                       onClick={() => (manageCats ? startRenameCat(cat.id) : setCategoryId(cat.id))}
-                      className={[
-                        'h-9 px-3 rounded-xl border text-[12px] font-semibold transition-colors',
+                      aria-pressed={manageCats ? undefined : categoryId === cat.id}
+                      className={cx(
+                        'h-12 rounded-sm px-4 text-body-sm font-semibold transition-colors',
+                        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
                         manageCats
-                          ? 'border-slate-300 bg-white text-slate-700 active:bg-slate-50'
+                          ? 'text-text active:bg-line'
                           : categoryId === cat.id
-                            ? 'border-primary-500 bg-primary-50 text-primary-700'
-                            : 'border-slate-200 text-slate-600 active:bg-slate-50',
-                      ].join(' ')}
+                            ? 'bg-ink-900 text-white'
+                            : 'bg-bg text-text-subtle active:bg-line',
+                      )}
                     >
                       {cat.label}
                     </button>
@@ -554,10 +572,10 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
                       <button
                         type="button"
                         onClick={() => handleRemoveCat(cat.id)}
-                        className="min-h-0 min-w-0 absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-danger-500 text-white flex items-center justify-center shadow-sm"
+                        className="flex h-12 w-10 items-center justify-center rounded-sm text-danger active:bg-danger-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
                         aria-label={`លុប ${cat.label}`}
                       >
-                        <X size={9} strokeWidth={3} />
+                        <X size={16} strokeWidth={2.75} aria-hidden="true" />
                       </button>
                     )}
                   </div>
@@ -566,45 +584,46 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
             </div>
 
             {manageCats && (
-              <p className="text-[10px] text-slate-400 mt-1.5">
+              <p className="mt-1.5 text-caption text-text-muted">
                 ចុច​ប្រភេទ​ដើម្បី​កែ​ឈ្មោះ · ចុច × ដើម្បី​លុប
               </p>
             )}
 
             {/* Add new category */}
-            <div className="flex gap-2 mt-2">
+            <div className="mt-2 flex gap-2">
               <input
                 type="text"
                 value={newCat}
                 onChange={(e) => setNewCat(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCat() } }}
                 placeholder="បន្ថែម​ប្រភេទ​ថ្មី…"
-                className="flex-1 h-10 rounded-xl border border-slate-200 px-3 text-[14px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500 min-w-0"
+                aria-label="បន្ថែម​ប្រភេទ​ថ្មី"
+                className="h-12 min-w-0 flex-1 rounded-sm bg-bg px-4 text-body-sm text-text outline-none placeholder:text-text-muted focus:ring-2 focus:ring-ink-900/20"
               />
-              <button
-                type="button"
+              <Button
+                variant="dark"
                 onClick={handleAddCat}
                 disabled={!newCat.trim()}
-                className="shrink-0 h-10 px-3.5 rounded-xl bg-primary-600 text-white text-[13px] font-bold flex items-center gap-1 disabled:opacity-40 active:bg-primary-700 transition-colors"
+                icon={<Plus size={18} strokeWidth={2.5} />}
+                className="shrink-0"
               >
-                <Plus size={15} strokeWidth={2.5} />
                 បន្ថែម
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Unit — selectable + manageable (add / rename / delete) */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-[12px] font-semibold text-slate-500">ឯកតា</p>
+            <div className="mb-1.5 flex items-center justify-between">
+              <p className="text-meta font-semibold text-text-subtle">ឯកតា</p>
               <button
                 type="button"
                 onClick={() => { setManageUnits((v) => !v); setEditingUnit(null) }}
-                className="min-h-0 min-w-0 flex items-center gap-1 text-[11px] font-semibold text-primary-600 active:text-primary-700 px-1 py-0.5"
+                className="flex h-12 items-center gap-1.5 rounded-sm px-3 text-meta font-semibold text-text transition-colors active:bg-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
               >
                 {manageUnits
-                  ? <><Check size={12} strokeWidth={2.5} /> រួចរាល់</>
-                  : <><Pencil size={11} strokeWidth={2.25} /> កែ</>}
+                  ? <><Check size={16} strokeWidth={2.5} aria-hidden="true" /> រួចរាល់</>
+                  : <><Pencil size={16} strokeWidth={2.25} aria-hidden="true" /> កែ</>}
               </button>
             </div>
 
@@ -619,30 +638,33 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
                       value={editUnitValue}
                       onChange={(e) => setEditUnitValue(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') commitRenameUnit() }}
-                      className="h-9 w-24 px-2 rounded-lg border border-primary-400 text-[13px] font-medium text-slate-900 outline-none focus:ring-2 focus:ring-primary-400/20"
+                      aria-label="ឈ្មោះឯកតា"
+                      className="h-12 w-28 rounded-sm bg-bg px-3 text-body-sm font-semibold text-text outline-none ring-2 ring-ink-900/20"
                     />
                     <button
                       type="button"
                       onClick={commitRenameUnit}
-                      className="min-h-0 min-w-0 w-9 h-9 flex items-center justify-center rounded-lg bg-primary-600 text-white active:bg-primary-700"
+                      className="flex h-12 w-12 items-center justify-center rounded-sm bg-ink-900 text-white active:bg-ink-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
                       aria-label="រក្សាទុក"
                     >
-                      <Check size={15} strokeWidth={2.5} />
+                      <Check size={18} strokeWidth={2.5} aria-hidden="true" />
                     </button>
                   </div>
                 ) : (
-                  <div key={u} className="relative">
+                  <div key={u} className={cx('flex items-center rounded-sm', manageUnits && 'bg-bg')}>
                     <button
                       type="button"
                       onClick={() => (manageUnits ? startRenameUnit(u) : setUnit(u))}
-                      className={[
-                        'h-9 px-3 rounded-lg border text-[13px] font-medium transition-colors',
+                      aria-pressed={manageUnits ? undefined : unit === u}
+                      className={cx(
+                        'h-12 rounded-sm px-4 text-body-sm font-semibold transition-colors',
+                        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
                         manageUnits
-                          ? 'border-slate-300 bg-white text-slate-700 active:bg-slate-50'
+                          ? 'text-text active:bg-line'
                           : unit === u
-                            ? 'border-primary-500 bg-primary-50 text-primary-700'
-                            : 'border-slate-200 text-slate-600 active:bg-slate-50',
-                      ].join(' ')}
+                            ? 'bg-ink-900 text-white'
+                            : 'bg-bg text-text-subtle active:bg-line',
+                      )}
                     >
                       {u}
                     </button>
@@ -650,10 +672,10 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
                       <button
                         type="button"
                         onClick={() => handleRemoveUnit(u)}
-                        className="min-h-0 min-w-0 absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-danger-500 text-white flex items-center justify-center shadow-sm"
+                        className="flex h-12 w-10 items-center justify-center rounded-sm text-danger active:bg-danger-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
                         aria-label={`លុប ${u}`}
                       >
-                        <X size={9} strokeWidth={3} />
+                        <X size={16} strokeWidth={2.75} aria-hidden="true" />
                       </button>
                     )}
                   </div>
@@ -662,187 +684,183 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
             </div>
 
             {manageUnits && (
-              <p className="text-[10px] text-slate-400 mt-1.5">
+              <p className="mt-1.5 text-caption text-text-muted">
                 ចុច​ឯកតា​ដើម្បី​កែ​ឈ្មោះ · ចុច × ដើម្បី​លុប
               </p>
             )}
 
             {/* Add new unit */}
-            <div className="flex gap-2 mt-2">
+            <div className="mt-2 flex gap-2">
               <input
                 type="text"
                 value={newUnit}
                 onChange={(e) => setNewUnit(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddUnit() } }}
                 placeholder="បន្ថែម​ឯកតា​ថ្មី…"
-                className="flex-1 h-10 rounded-xl border border-slate-200 px-3 text-[14px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500 min-w-0"
+                aria-label="បន្ថែម​ឯកតា​ថ្មី"
+                className="h-12 min-w-0 flex-1 rounded-sm bg-bg px-4 text-body-sm text-text outline-none placeholder:text-text-muted focus:ring-2 focus:ring-ink-900/20"
               />
-              <button
-                type="button"
+              <Button
+                variant="dark"
                 onClick={handleAddUnit}
                 disabled={!newUnit.trim()}
-                className="shrink-0 h-10 px-3.5 rounded-xl bg-primary-600 text-white text-[13px] font-bold flex items-center gap-1 disabled:opacity-40 active:bg-primary-700 transition-colors"
+                icon={<Plus size={18} strokeWidth={2.5} />}
+                className="shrink-0"
               >
-                <Plus size={15} strokeWidth={2.5} />
                 បន្ថែម
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Price — sell + cost, enter in ៛ or $ */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-[12px] font-semibold text-slate-500">តម្លៃ</p>
-              <div className="flex items-center rounded-lg border border-slate-200 bg-white overflow-hidden">
-                {(['KHR', 'USD'] as const).map((cur) => (
-                  <button
-                    key={cur}
-                    type="button"
-                    onClick={() => switchPriceCurrency(cur)}
-                    className={[
-                      'min-h-0 min-w-0 h-7 px-3 text-[13px] font-bold tabular-nums transition-colors',
-                      priceCurrency === cur ? 'bg-primary-600 text-white' : 'text-slate-500 active:bg-slate-50',
-                    ].join(' ')}
-                  >
-                    {cur === 'KHR' ? '៛' : '$'}
-                  </button>
-                ))}
-              </div>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="text-meta font-semibold text-text-subtle">តម្លៃ</p>
+              <SegmentedControl
+                ariaLabel="រូបិយប័ណ្ណតម្លៃ"
+                className="w-36"
+                items={[
+                  { value: 'KHR', label: '៛' },
+                  { value: 'USD', label: '$' },
+                ]}
+                value={priceCurrency}
+                onChange={switchPriceCurrency}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-[12px] font-semibold text-slate-500 mb-1.5">តម្លៃលក់ *</p>
-                <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:border-primary-500">
-                  <span className="pl-3 text-[13px] font-bold text-slate-400 shrink-0">{priceCurrency === 'USD' ? '$' : '៛'}</span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    value={sellPrice}
-                    onChange={(e) => setSellPrice(e.target.value)}
-                    placeholder="0"
-                    className="flex-1 h-12 px-3 text-[16px] font-bold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none min-w-0"
-                  />
-                </div>
-                {priceCurrency === 'USD' && Number(sellPrice) > 0 && (
-                  <p className="text-[10px] text-slate-400 mt-1 tabular-nums">
-                    ≈ {formatKHR(toKHR(Math.round(Number(sellPrice) * getExchangeRate())))}
-                  </p>
-                )}
-              </div>
-              <div>
-                <p className="text-[12px] font-semibold text-slate-500 mb-1.5">ថ្លៃទិញ (ស្រេចចិត្ត)</p>
-                <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:border-primary-500">
-                  <span className="pl-3 text-[13px] font-bold text-slate-400 shrink-0">{priceCurrency === 'USD' ? '$' : '៛'}</span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    value={costPrice}
-                    onChange={(e) => setCostPrice(e.target.value)}
-                    placeholder={sellPrice ? String(+(Number(sellPrice) * 0.7).toFixed(priceCurrency === 'USD' ? 2 : 0)) : '0'}
-                    className="flex-1 h-12 px-3 text-[16px] font-semibold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none min-w-0"
-                  />
-                </div>
-                {priceCurrency === 'USD' && Number(costPrice) > 0 && (
-                  <p className="text-[10px] text-slate-400 mt-1 tabular-nums">
-                    ≈ {formatKHR(toKHR(Math.round(Number(costPrice) * getExchangeRate())))}
-                  </p>
-                )}
-                {/* Profit margin hint */}
-                {sellPrice && costPrice && Number(costPrice) > 0 && Number(sellPrice) > 0 && (
-                  <p className="text-[10px] text-success-600 mt-1 font-semibold">
-                    ចំណេញ {Math.round(((Number(sellPrice) - Number(costPrice)) / Number(sellPrice)) * 100)}%
-                  </p>
-                )}
-              </div>
+              <Input
+                label="តម្លៃលក់ *"
+                type="number"
+                inputMode="decimal"
+                value={sellPrice}
+                onChange={(e) => setSellPrice(e.target.value)}
+                placeholder="0"
+                className="text-title-sm font-bold tabular-nums"
+                trailing={<span className="text-body font-bold text-text-subtle">{priceCurrency === 'USD' ? '$' : '៛'}</span>}
+                hint={priceCurrency === 'USD' && Number(sellPrice) > 0
+                  ? `≈ ${formatKHR(toKHR(Math.round(Number(sellPrice) * getExchangeRate())))}`
+                  : undefined}
+              />
+              <Input
+                label="ថ្លៃទិញ (ស្រេចចិត្ត)"
+                type="number"
+                inputMode="decimal"
+                value={costPrice}
+                onChange={(e) => setCostPrice(e.target.value)}
+                placeholder={sellPrice ? String(+(Number(sellPrice) * 0.7).toFixed(priceCurrency === 'USD' ? 2 : 0)) : '0'}
+                className="text-title-sm tabular-nums"
+                trailing={<span className="text-body font-bold text-text-subtle">{priceCurrency === 'USD' ? '$' : '៛'}</span>}
+                hint={priceCurrency === 'USD' && Number(costPrice) > 0
+                  ? `≈ ${formatKHR(toKHR(Math.round(Number(costPrice) * getExchangeRate())))}`
+                  : undefined}
+              />
             </div>
+
+            {/* Profit per unit — display only, from the form values */}
+            {sellPrice && costPrice && Number(costPrice) > 0 && Number(sellPrice) > 0 && (() => {
+              const diff     = Number(sellPrice) - Number(costPrice)
+              const diffRiel = toKHR(priceCurrency === 'USD' ? diff * getExchangeRate() : diff)
+              const positive = diff >= 0
+              return (
+                <div className={cx('mt-3 flex items-center justify-between gap-3 rounded-md px-4 py-3', positive ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger')}>
+                  <span className="text-body-sm font-semibold">ចំណេញក្នុងមួយឯកតា</span>
+                  <span className="text-right tabular-nums">
+                    <span className="block text-body font-bold">{formatKHR(diffRiel)} · {formatUSD(diffRiel)}</span>
+                    <span className="block text-meta font-semibold">
+                      ចំណេញ {Math.round(((Number(sellPrice) - Number(costPrice)) / Number(sellPrice)) * 100)}%
+                    </span>
+                  </span>
+                </div>
+              )
+            })()}
           </div>
 
-          {/* Stock qty with +/− stepper */}
-          <div>
-            <p className="text-[12px] font-semibold text-slate-500 mb-1.5">ចំនួនស្តុក</p>
-            <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:border-primary-500 bg-white">
+          {/* Stock qty + low-stock threshold, each with a +/− stepper */}
+          <div className="grid grid-cols-2 gap-3">
+            <div
+              className={cx(
+                'flex min-h-[54px] items-center rounded-[18px] transition-shadow focus-within:ring-2 focus-within:ring-ink-900/20',
+                (Number(stockQty) || 0) <= (Number(lowStock) || 5) ? 'bg-warn-bg' : 'bg-bg',
+              )}
+            >
               <button
                 type="button"
                 onClick={() => setStockQty(v => String(Math.max(0, (Number(v) || 0) - 1)))}
-                className="min-h-0 min-w-0 w-12 h-12 flex items-center justify-center text-slate-500 active:bg-slate-100 text-[22px] font-light border-r border-slate-200 transition-colors"
+                className="flex h-12 w-11 shrink-0 items-center justify-center rounded-[14px] text-title font-semibold text-text-subtle transition-colors active:bg-line focus-visible:outline-2 focus-visible:outline-ink-900"
+                aria-label="បន្ថយស្តុក"
               >
                 −
               </button>
-              <input
-                type="number"
-                inputMode="numeric"
-                value={stockQty}
-                onChange={(e) => setStockQty(e.target.value)}
-                placeholder="0"
-                className="flex-1 h-12 text-center text-[18px] font-bold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none"
-              />
+              <div className="flex min-w-0 flex-1 flex-col items-center py-1.5">
+                <label htmlFor="product-stock" className="text-caption font-semibold text-text-subtle">ចំនួនស្តុក</label>
+                <input
+                  id="product-stock"
+                  type="number"
+                  inputMode="numeric"
+                  value={stockQty}
+                  onChange={(e) => setStockQty(e.target.value)}
+                  placeholder="0"
+                  className="w-full min-w-0 bg-transparent text-center text-title-sm font-bold tabular-nums text-text outline-none placeholder:text-text-muted"
+                />
+              </div>
               <button
                 type="button"
                 onClick={() => setStockQty(v => String((Number(v) || 0) + 1))}
-                className="min-h-0 min-w-0 w-12 h-12 flex items-center justify-center text-slate-500 active:bg-slate-100 text-[22px] font-light border-l border-slate-200 transition-colors"
+                className="flex h-12 w-11 shrink-0 items-center justify-center rounded-[14px] text-title font-semibold text-text-subtle transition-colors active:bg-line focus-visible:outline-2 focus-visible:outline-ink-900"
+                aria-label="បន្ថែមស្តុក"
               >
                 +
               </button>
             </div>
-          </div>
 
-          {/* Low stock threshold */}
-          <div>
-            <p className="text-[12px] font-semibold text-slate-500 mb-1.5">ជូនដំណឹងនៅ (ឯកតា)</p>
-            <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:border-warning-400 bg-white">
+            <div className="flex min-h-[54px] items-center rounded-[18px] bg-bg transition-shadow focus-within:ring-2 focus-within:ring-ink-900/20">
               <button
                 type="button"
                 onClick={() => setLowStock(v => String(Math.max(1, (Number(v) || 5) - 1)))}
-                className="min-h-0 min-w-0 w-12 h-12 flex items-center justify-center text-slate-500 active:bg-slate-100 text-[22px] font-light border-r border-slate-200 transition-colors"
+                className="flex h-12 w-11 shrink-0 items-center justify-center rounded-[14px] text-title font-semibold text-text-subtle transition-colors active:bg-line focus-visible:outline-2 focus-visible:outline-ink-900"
+                aria-label="បន្ថយកម្រិតជូនដំណឹង"
               >
                 −
               </button>
-              <input
-                type="number"
-                inputMode="numeric"
-                value={lowStock}
-                onChange={(e) => setLowStock(e.target.value)}
-                placeholder="5"
-                className="flex-1 h-12 text-center text-[16px] font-semibold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none"
-              />
+              <div className="flex min-w-0 flex-1 flex-col items-center py-1.5">
+                <label htmlFor="product-low" className="text-caption font-semibold text-text-subtle">ជូនដំណឹងនៅ</label>
+                <input
+                  id="product-low"
+                  type="number"
+                  inputMode="numeric"
+                  value={lowStock}
+                  onChange={(e) => setLowStock(e.target.value)}
+                  placeholder="5"
+                  className="w-full min-w-0 bg-transparent text-center text-title-sm font-bold tabular-nums text-text outline-none placeholder:text-text-muted"
+                />
+              </div>
               <button
                 type="button"
                 onClick={() => setLowStock(v => String((Number(v) || 5) + 1))}
-                className="min-h-0 min-w-0 w-12 h-12 flex items-center justify-center text-slate-500 active:bg-slate-100 text-[22px] font-light border-l border-slate-200 transition-colors"
+                className="flex h-12 w-11 shrink-0 items-center justify-center rounded-[14px] text-title font-semibold text-text-subtle transition-colors active:bg-line focus-visible:outline-2 focus-visible:outline-ink-900"
+                aria-label="បន្ថែមកម្រិតជូនដំណឹង"
               >
                 +
               </button>
             </div>
-            <p className="text-[11px] text-warning-600 mt-1">⚠️ ស្តុកធ្លាក់ចុះ ≤ {lowStock || '5'} — ជូនដំណឹង</p>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="shrink-0 border-t border-slate-200 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] space-y-2">
-          <button
-            type="button"
-            disabled={!canSave || saving}
-            onClick={handleSave}
-            className="w-full h-14 rounded-xl bg-primary-600 text-white font-bold text-[16px] disabled:opacity-50 disabled:pointer-events-none active:bg-primary-700 transition-colors"
-          >
-            {saving ? 'កំពុងរក្សាទុក…' : isEdit ? 'រក្សាទុកការកែ' : 'បន្ថែមទំនិញ'}
-          </button>
+          <p className="-mt-3 px-1 text-meta text-warn">⚠️ ស្តុកធ្លាក់ចុះ ≤ {lowStock || '5'} — ជូនដំណឹង</p>
 
           {/* Delete — 2-step confirm */}
           {isEdit && !confirmDel && (
-            <button
-              type="button"
+            <Button
+              variant="dangerSoft"
+              fullWidth
               onClick={() => setConfirmDel(true)}
-              className="w-full h-10 rounded-xl border border-danger-200 text-danger-600 font-semibold text-[13px] flex items-center justify-center gap-2 active:bg-danger-50 transition-colors"
+              icon={<Trash2 size={18} strokeWidth={2.25} />}
             >
-              <Trash2 size={14} strokeWidth={2} />
               លុបទំនិញ
-            </button>
+            </Button>
           )}
 
           {isEdit && confirmDel && (
-            <div className="rounded-xl bg-danger-50 border border-danger-100 px-3 py-3 space-y-2">
-              <p className="text-center text-[12px] font-semibold text-danger-700">
+            <div className="space-y-2 rounded-md bg-danger-bg p-3">
+              <p className="text-center text-body-sm font-semibold text-danger">
                 ⚠️ ប្រាកដទេ? ទំនិញនឹងបាត់ចេញពី List!
               </p>
               <div className="flex gap-2">
@@ -850,14 +868,14 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
                   type="button"
                   disabled={deleting}
                   onClick={handleDelete}
-                  className="flex-1 h-10 rounded-xl bg-danger-600 text-white font-bold text-[13px] disabled:opacity-50 active:bg-danger-700 transition-colors"
+                  className="h-12 flex-1 rounded-md bg-danger text-body-sm font-bold text-white transition-[filter] active:brightness-95 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
                 >
                   {deleting ? '…' : 'បាទ/ចាស លុប'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmDel(false)}
-                  className="flex-1 h-10 rounded-xl border border-slate-200 text-slate-600 font-semibold text-[13px] active:bg-slate-50 transition-colors"
+                  className="h-12 flex-1 rounded-md bg-surface text-body-sm font-semibold text-text transition-colors active:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
                 >
                   បោះបង់
                 </button>
@@ -865,7 +883,7 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
             </div>
           )}
         </div>
-      </div>
+      </Sheet>
 
       {/* Barcode scanner mini modal */}
       {showScanner && (
@@ -882,6 +900,6 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
           onClose={() => setShowHistory(false)}
         />
       )}
-    </div>
+    </>
   )
 }

@@ -54,11 +54,11 @@ function MetaRow({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <span className="text-[12px] text-slate-400 shrink-0">{label}</span>
+      <span className="text-caption text-text-muted shrink-0 leading-[1.5]">{label}</span>
       <span
         className={[
-          'text-[12px] text-right tabular-nums',
-          bold ? 'font-bold text-slate-900' : 'font-medium text-slate-700',
+          'text-caption text-right tabular-nums leading-[1.5]',
+          bold ? 'font-bold text-text' : 'font-medium text-text-subtle',
           valueClass,
         ].join(' ')}
       >
@@ -213,7 +213,7 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-slate-900/60"
+      className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-ink-900/60"
       onClick={onClose}
     >
       <div
@@ -230,18 +230,18 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
       >
 
         {/* ══ Top bar ════════════════════════════════════════════ */}
-        <div className="shrink-0 flex items-center justify-between px-4 h-14 bg-white rounded-t-2xl md:rounded-t-2xl border-b border-slate-200">
+        <div className="shrink-0 flex items-center justify-between px-4 h-14 bg-surface rounded-t-2xl md:rounded-t-2xl border-b border-line">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-success-100 flex items-center justify-center shrink-0">
-              <CheckCircle2 size={15} className="text-success-600" strokeWidth={2.5} />
+            <div className="w-7 h-7 rounded-lg bg-success-bg flex items-center justify-center shrink-0">
+              <CheckCircle2 size={15} className="text-success" strokeWidth={2.5} />
             </div>
-            <span className="text-[16px] font-bold text-slate-900">វិក្កយបត្រ</span>
+            <span className="text-body font-bold text-text">វិក្កយបត្រ</span>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="បិទ"
-            className="min-h-0 min-w-0 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200"
+            className="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-muted active:bg-line"
           >
             <X size={17} />
           </button>
@@ -251,12 +251,12 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
         <div className="flex-1 overflow-y-auto min-h-0 p-4">
 
           {/* Paper card — ref for image capture */}
-          <div ref={receiptRef} className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
+          <div ref={receiptRef} className="bg-surface rounded-xl border border-line shadow-card overflow-hidden">
 
             {/* ── Perforation top ─────────────────────────────── */}
-            <div className="flex items-center gap-[3px] px-1 py-2 border-b border-dashed border-slate-300">
+            <div className="flex items-center gap-[3px] px-1 py-2 border-b border-dashed border-line-strong">
               {Array.from({ length: 30 }).map((_, i) => (
-                <div key={i} className="flex-1 h-px bg-slate-200" />
+                <div key={i} className="flex-1 h-px bg-line" />
               ))}
             </div>
 
@@ -267,29 +267,29 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
                   <img
                     src={storeLogo}
                     alt="Store logo"
-                    className="w-14 h-14 rounded-2xl object-cover mx-auto mb-2.5 border border-slate-200 shadow-sm"
+                    className="w-14 h-14 rounded-2xl object-cover mx-auto mb-2.5 border border-line shadow-sm"
                   />
                 ) : (
-                  <div className="w-11 h-11 rounded-xl bg-primary-600 text-white text-[17px] font-bold flex items-center justify-center mx-auto mb-2.5 shadow-sm">
+                  <div className="w-11 h-11 rounded-xl bg-ink-900 text-white text-label-lg font-bold flex items-center justify-center mx-auto mb-2.5 shadow-sm leading-[1.5]">
                     {displayInitial}
                   </div>
                 )
               )}
-              <h2 className="text-[16px] font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-body font-extrabold text-text tracking-tight leading-[1.5]">
                 {displayName}
               </h2>
               {receiptHeaderNote.trim() && (
-                <p className="text-[11px] font-medium text-slate-500 mt-1 whitespace-pre-line leading-snug">
+                <p className="text-caption font-medium text-text-muted mt-1 whitespace-pre-line leading-[1.5]">
                   {receiptHeaderNote}
                 </p>
               )}
               {receiptShowAddress && (
-                <p className="text-[10.5px] text-slate-400 mt-0.5">
+                <p className="text-caption text-text-muted mt-0.5 leading-[1.5]">
                   {displayAddr}
                 </p>
               )}
               {receiptShowPhone && displayPhone && (
-                <p className="text-[10.5px] text-slate-400 mt-0.5">
+                <p className="text-caption text-text-muted mt-0.5 leading-[1.5]">
                   📞 {displayPhone}
                 </p>
               )}
@@ -312,10 +312,10 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
 
             {/* ── Items header ────────────────────────────────── */}
             <div className="px-5 pt-3 pb-1.5 flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <span className="text-caption font-bold text-text-muted uppercase tracking-widest leading-[1.5]">
                 ទំនិញ
               </span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <span className="text-caption font-bold text-text-muted uppercase tracking-widest leading-[1.5]">
                 សរុប
               </span>
             </div>
@@ -325,14 +325,14 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
               {data.items.map((item, i) => (
                 <div key={i} className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-semibold text-slate-800 leading-snug">
+                    <p className="text-meta font-semibold text-text leading-[1.5]">
                       {item.nameKm}
                     </p>
-                    <p className="text-[11px] text-slate-400 tabular-nums mt-0.5">
+                    <p className="text-caption text-text-muted tabular-nums mt-0.5 leading-[1.5]">
                       {formatKHR(item.unitPrice)} × {item.qty}
                     </p>
                   </div>
-                  <span className="text-[13px] font-bold text-slate-900 tabular-nums shrink-0 pt-0.5">
+                  <span className="text-meta font-bold text-text tabular-nums shrink-0 pt-0.5 leading-[1.5]">
                     {formatKHR(multiplyKHR(item.unitPrice, item.qty))}
                   </span>
                 </div>
@@ -349,25 +349,25 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
                 <MetaRow
                   label="បញ្ចុះតម្លៃ"
                   value={`−${formatKHR(discount)}`}
-                  valueClass="text-danger-600"
+                  valueClass="text-danger"
                 />
               )}
             </div>
 
             {/* ── Double rule before total ─────────────────────── */}
-            <div className="mx-5 h-px bg-slate-800" />
-            <div className="mx-5 mt-[3px] h-px bg-slate-800" />
+            <div className="mx-5 h-px bg-ink-900" />
+            <div className="mx-5 mt-[3px] h-px bg-ink-900" />
 
             {/* ── Grand total ─────────────────────────────────── */}
             <div className="px-5 py-3.5 flex items-center justify-between">
-              <span className="text-[14px] font-extrabold text-slate-900">
+              <span className="text-body-sm font-extrabold text-text leading-[1.5]">
                 សរុបចុងក្រោយ
               </span>
               <div className="text-right">
-                <span className="block text-[22px] font-extrabold text-slate-900 tabular-nums tracking-tight leading-tight">
+                <span className="block text-title font-extrabold text-text tabular-nums tracking-tight leading-[1.5]">
                   {formatKHR(data.totalAmount)}
                 </span>
-                <span className="block text-[14px] font-bold text-primary-600 tabular-nums">
+                <span className="block text-body-sm font-bold text-text-subtle tabular-nums leading-[1.5]">
                   {formatUSD(data.totalAmount)}
                 </span>
               </div>
@@ -381,13 +381,13 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
 
               {/* Payment type badge */}
               <div className="flex items-center justify-between">
-                <span className="text-[12px] text-slate-400">ប្រភេទទូទាត់</span>
+                <span className="text-caption text-text-muted leading-[1.5]">ប្រភេទទូទាត់</span>
                 <span
                   className={[
-                    'text-[11px] font-bold px-3 py-1 rounded-full',
+                    'text-caption font-bold px-3 py-1 rounded-full leading-[1.5]',
                     isCash
-                      ? 'bg-success-100 text-success-700'
-                      : 'bg-slate-100 text-slate-600',
+                      ? 'bg-success-bg text-success'
+                      : 'bg-surface-2 text-text-subtle',
                   ].join(' ')}
                 >
                   {isCash ? 'សាច់ប្រាក់' : 'ជំពាក់'}
@@ -404,11 +404,11 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
 
               {/* Change due */}
               {isCash && data.changeGiven != null && data.changeGiven > 0 && (
-                <div className="flex items-center justify-between rounded-xl bg-success-50 border border-success-100 px-3.5 py-2.5">
-                  <span className="text-[12px] font-semibold text-success-700">
+                <div className="flex items-center justify-between rounded-xl bg-success-bg border border-success-bg px-3.5 py-2.5">
+                  <span className="text-caption font-semibold text-success leading-[1.5]">
                     ប្រាក់អាប់
                   </span>
-                  <span className="text-[17px] font-extrabold text-success-700 tabular-nums">
+                  <span className="text-label-lg font-extrabold text-success tabular-nums leading-[1.5]">
                     {formatKHR(data.changeGiven)}
                   </span>
                 </div>
@@ -426,24 +426,24 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
               {!isCash && data.debtRemaining != null && data.debtRemaining > 0 && (
                 <div className={[
                   'flex items-center justify-between rounded-xl border px-3.5 py-2.5',
-                  debtSettled ? 'bg-slate-50 border-slate-200' : 'bg-danger-50 border-danger-100',
+                  debtSettled ? 'bg-surface-2 border-line' : 'bg-debt-bg border-debt-bg',
                 ].join(' ')}>
                   <span className={[
-                    'text-[12px] font-semibold',
-                    debtSettled ? 'text-slate-400 line-through' : 'text-danger-700',
+                    'text-caption font-semibold leading-[1.5]',
+                    debtSettled ? 'text-text-muted line-through' : 'text-debt',
                   ].join(' ')}>
                     នៅខ្វះ (ជំពាក់)
                   </span>
                   <div className="text-right">
                     <span className={[
-                      'block text-[17px] font-extrabold tabular-nums leading-tight',
-                      debtSettled ? 'text-slate-400 line-through' : 'text-danger-700',
+                      'block text-label-lg font-extrabold tabular-nums leading-[1.5]',
+                      debtSettled ? 'text-text-muted line-through' : 'text-debt',
                     ].join(' ')}>
                       {formatKHR(data.debtRemaining)}
                     </span>
                     <span className={[
-                      'block text-[11px] font-bold tabular-nums',
-                      debtSettled ? 'text-slate-400 line-through' : 'text-primary-600',
+                      'block text-caption font-bold tabular-nums leading-[1.5]',
+                      debtSettled ? 'text-text-muted line-through' : 'text-text-subtle',
                     ].join(' ')}>
                       {formatUSD(data.debtRemaining)}
                     </span>
@@ -453,9 +453,9 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
 
               {/* Debt customer */}
               {!isCash && data.customerName && (
-                <div className="flex items-center justify-between rounded-xl bg-slate-50 border border-slate-200 px-3.5 py-2.5">
-                  <span className="text-[12px] text-slate-500">អ្នកជំពាក់</span>
-                  <span className="text-[13px] font-semibold text-slate-800">
+                <div className="flex items-center justify-between rounded-xl bg-surface-2 border border-line px-3.5 py-2.5">
+                  <span className="text-caption text-text-muted leading-[1.5]">អ្នកជំពាក់</span>
+                  <span className="text-meta font-semibold text-text leading-[1.5]">
                     {data.customerName}
                   </span>
                 </div>
@@ -467,15 +467,15 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
 
             {/* ── Thank you footer ────────────────────────────── */}
             <div className="px-5 py-4 text-center">
-              <p className="text-[12px] font-semibold text-slate-500 whitespace-pre-line leading-relaxed">
+              <p className="text-caption font-semibold text-text-muted whitespace-pre-line leading-[1.5]">
                 {displayFooter}
               </p>
             </div>
 
             {/* ── Perforation bottom ───────────────────────────── */}
-            <div className="flex items-center gap-[3px] px-1 py-2 border-t border-dashed border-slate-300">
+            <div className="flex items-center gap-[3px] px-1 py-2 border-t border-dashed border-line-strong">
               {Array.from({ length: 30 }).map((_, i) => (
-                <div key={i} className="flex-1 h-px bg-slate-200" />
+                <div key={i} className="flex-1 h-px bg-line" />
               ))}
             </div>
 
@@ -483,7 +483,7 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
         </div>{/* /scroll area */}
 
         {/* ══ Action footer ══════════════════════════════════════ */}
-        <div className="shrink-0 bg-white border-t border-slate-200 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="shrink-0 bg-surface border-t border-line px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
 
           <div className="grid grid-cols-3 gap-2">
 
@@ -498,9 +498,9 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
             <ActionButton
               icon={
                 capturing ? (
-                  <span className="w-[18px] h-[18px] border-2 border-primary-400 border-t-transparent rounded-full animate-spin inline-block" />
+                  <span className="w-[18px] h-[18px] border-2 border-ink-700 border-t-transparent rounded-full animate-spin inline-block" />
                 ) : imageDone ? (
-                  <Check size={18} strokeWidth={2.5} className="text-success-600" />
+                  <Check size={18} strokeWidth={2.5} className="text-success" />
                 ) : (
                   <ImageDown size={18} strokeWidth={2} />
                 )
@@ -514,7 +514,7 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
             {/* Share text */}
             <ActionButton
               icon={copied
-                ? <Check size={18} strokeWidth={2.5} className="text-success-600" />
+                ? <Check size={18} strokeWidth={2.5} className="text-success" />
                 : <Share2 size={18} strokeWidth={2} />
               }
               label={copied ? 'បានចម្លង!' : 'អត្ថបទ'}
@@ -524,7 +524,7 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
 
           </div>
 
-          <p className="text-center text-[10px] text-slate-300 mt-2">
+          <p className="text-center text-caption text-text-muted mt-2">
             «រូបភាព» → share ទៅ Telegram · Facebook ផ្ទាល់
           </p>
         </div>
@@ -537,7 +537,7 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function Divider() {
-  return <div className="mx-5 border-b border-dashed border-slate-200" />
+  return <div className="mx-5 border-b border-dashed border-line" />
 }
 
 function ActionButton({
@@ -564,20 +564,19 @@ function ActionButton({
       disabled={disabled || loading}
       className={[
         'flex flex-col items-center justify-center gap-1.5 h-[60px] rounded-xl border transition-colors',
-        'min-h-0 min-w-0',
         disabled
-          ? 'border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed opacity-60'
+          ? 'border-line bg-surface-2 text-text-muted cursor-not-allowed opacity-60'
           : loading
-            ? 'border-primary-200 bg-primary-50 text-primary-500'
+            ? 'border-line bg-surface-2 text-text-muted'
             : danger
-              ? 'border-danger-200 bg-danger-50 text-danger-400 active:bg-danger-100'
+              ? 'border-danger-bg bg-danger-bg text-danger active:brightness-95'
               : active
-                ? 'border-success-200 bg-success-50 text-success-600'
-                : 'border-slate-200 bg-slate-50 text-slate-600 active:bg-slate-100',
+                ? 'border-success-bg bg-success-bg text-success'
+                : 'border-line bg-surface-2 text-text-subtle active:bg-line',
       ].join(' ')}
     >
       {icon}
-      <span className="text-[11px] font-semibold leading-none">{label}</span>
+      <span className="text-caption font-semibold leading-none">{label}</span>
     </button>
   )
 }
