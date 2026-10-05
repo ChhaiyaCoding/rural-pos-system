@@ -39,6 +39,8 @@ export function PageHeader({
       ? <IconButton aria-label={backLabel} variant={btnVariant} onClick={onBack}><ChevronLeft size={22} strokeWidth={2.25} /></IconButton>
       : null
 
+  /* Top padding = status-bar inset (min 12px) + 12px, so the first row sits
+     right below the status bar in Safari, standalone PWA and notched phones. */
   return (
     <header
       className={cx(
@@ -46,23 +48,24 @@ export function PageHeader({
         hero
           ? cx(
               'rounded-b-2xl bg-ink-900 text-white md:pt-6',
-              compact ? 'pb-4 pt-[max(16px,calc(env(safe-area-inset-top)+12px))]' : 'pb-5 pt-[max(56px,calc(env(safe-area-inset-top)+20px))]',
+              'pt-[calc(max(env(safe-area-inset-top),12px)+12px)]',
+              compact ? 'pb-3' : 'pb-5',
             )
-          : 'pb-3 pt-[max(20px,calc(env(safe-area-inset-top)+12px))]',
+          : 'pb-3 pt-[calc(max(env(safe-area-inset-top),12px)+12px)]',
         className,
       )}
     >
       <div className="flex items-center gap-3">
         {back ?? leading}
         <div className="min-w-0 flex-1">
-          <h1 className={cx('truncate text-title font-bold', hero ? 'text-white' : 'text-text')}>{title}</h1>
+          <h1 className={cx('truncate font-bold', compact ? 'text-title-sm' : 'text-title', hero ? 'text-white' : 'text-text')}>{title}</h1>
           {subtitle != null && (
             <p className={cx('truncate text-meta', hero ? 'text-ink-300' : 'text-text-muted')}>{subtitle}</p>
           )}
         </div>
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>
-      {children != null && <div className="mt-4">{children}</div>}
+      {children != null && <div className={compact ? 'mt-3' : 'mt-4'}>{children}</div>}
     </header>
   )
 }
