@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import {
-  X, Trash2, Camera, ChevronDown, ChevronUp, ScanLine, CheckCircle2, AlertCircle, History, Pencil, Plus, Check,
+  X, Trash2, Camera, ChevronDown, ChevronUp, ScanLine, CheckCircle2, AlertCircle, AlertTriangle, History, Pencil, Plus, Check,
   Image as ImageIcon,
 } from 'lucide-react'
 import { productService } from '@/services/product.service'
@@ -491,8 +491,9 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
               </button>
             </div>
             {barcodeStatus === 'dup' && (
-              <p className="mt-1 px-1 text-meta font-semibold text-danger">
-                ⚠ Barcode នេះមានស្រាប់ក្នុងទំនិញផ្សេងហើយ
+              <p className="mt-1 flex items-start gap-1.5 px-1 text-meta font-semibold text-danger">
+                <AlertCircle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+                Barcode នេះមានស្រាប់ក្នុងទំនិញផ្សេងហើយ
               </p>
             )}
             {barcodeStatus === 'ok' && (
@@ -588,7 +589,7 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCat() } }}
                 placeholder="បន្ថែម​ប្រភេទ​ថ្មី…"
                 aria-label="បន្ថែម​ប្រភេទ​ថ្មី"
-                className="h-12 min-w-0 flex-1 rounded-sm bg-bg px-4 text-body-sm text-text outline-none placeholder:text-text-muted focus:ring-2 focus:ring-ink-900/20"
+                className="h-12 min-w-0 flex-1 rounded-sm bg-bg px-4 text-body text-text outline-none placeholder:text-text-muted focus:ring-2 focus:ring-ink-900/20"
               />
               <Button
                 variant="dark"
@@ -688,7 +689,7 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddUnit() } }}
                 placeholder="បន្ថែម​ឯកតា​ថ្មី…"
                 aria-label="បន្ថែម​ឯកតា​ថ្មី"
-                className="h-12 min-w-0 flex-1 rounded-sm bg-bg px-4 text-body-sm text-text outline-none placeholder:text-text-muted focus:ring-2 focus:ring-ink-900/20"
+                className="h-12 min-w-0 flex-1 rounded-sm bg-bg px-4 text-body text-text outline-none placeholder:text-text-muted focus:ring-2 focus:ring-ink-900/20"
               />
               <Button
                 variant="dark"
@@ -834,7 +835,10 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
               </button>
             </div>
           </div>
-          <p className="-mt-3 px-1 text-meta text-warn">⚠️ ស្តុកធ្លាក់ចុះ ≤ {lowStock || '5'} — ជូនដំណឹង</p>
+          <p className="-mt-3 flex items-start gap-1.5 px-1 text-meta text-warn">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+            ស្តុកធ្លាក់ចុះ ≤ {lowStock || '5'} — ជូនដំណឹង
+          </p>
 
           {/* Delete — 2-step confirm */}
           {isEdit && !confirmDel && (
@@ -850,8 +854,9 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
 
           {isEdit && confirmDel && (
             <div className="space-y-2 rounded-md bg-danger-bg p-3">
-              <p className="text-center text-body-sm font-semibold text-danger">
-                ⚠️ ប្រាកដទេ? ទំនិញនឹងបាត់ចេញពី List!
+              <p className="flex items-center justify-center gap-2 text-body-sm font-semibold text-danger">
+                <AlertTriangle size={18} className="shrink-0" aria-hidden="true" />
+                ប្រាកដទេ? ទំនិញនឹងបាត់ចេញពី List!
               </p>
               <div className="flex gap-2">
                 <button
