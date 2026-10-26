@@ -5,6 +5,7 @@ import { X, Printer, Share2, CheckCircle2, Check, ImageDown } from 'lucide-react
 import { formatKHR, formatUSD, toKHR, addKHR, multiplyKHR } from '@/lib/money'
 import { formatDateTimeKm } from '@/lib/date'
 import { useStoreProfile } from '@/store/storeProfile.store'
+import { printElement } from '@/lib/print'
 import type { KHR } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -136,7 +137,7 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
     storeName, storeAddress, storePhone, storeLogo,
     cashierName: defaultCashier, receiptFooter,
     receiptHeaderNote, receiptShowLogo, receiptShowCashier,
-    receiptShowPhone, receiptShowAddress,
+    receiptShowPhone, receiptShowAddress, receiptPaper,
   } = useStoreProfile()
 
   const isCash        = data.paymentType === 'cash'
@@ -207,7 +208,9 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
   }
 
   /* ── Print ───────────────────────────────────────────────────── */
-  const handlePrint = () => window.print()
+  const handlePrint = () => {
+    if (receiptRef.current) printElement(receiptRef.current, receiptPaper)
+  }
 
   /* ──────────────────────────────────────────────────────────── */
 

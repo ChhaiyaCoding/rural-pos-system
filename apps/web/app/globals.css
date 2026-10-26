@@ -235,3 +235,22 @@
     display: none;
   }
 }
+
+/* ── Printing one element (src/lib/print.ts) ─────────────────────────
+   Only #print-root is printed; black on white for thermal printers.   */
+#print-root { display: none; }
+
+@media print {
+  html.printing body > *:not(#print-root) { display: none !important; }
+  html.printing body { background: #fff; }
+  html.printing #print-root { display: block; margin: 0 auto; }
+  html.printing #print-root[data-paper="a4"] { max-width: 80mm; }
+  html.printing #print-root * {
+    color: #000 !important;
+    background: transparent !important;
+    border-color: #000 !important;
+    box-shadow: none !important;
+  }
+  html.printing #print-root > * { border: 0 !important; border-radius: 0 !important; }
+  html.printing #print-root img { filter: grayscale(1); }
+}

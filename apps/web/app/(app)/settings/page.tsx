@@ -21,6 +21,7 @@ import { backupService } from '@/services/backup.service'
 import { formatKHR } from '@/lib/money'
 import { toKHR } from '@/lib/money'
 import { compressImage, LOGO_IMAGE } from '@/lib/image'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 
 /* The form below copies the saved profile into local state once, on its first
    render. While React hydrates the page, zustand hands out the *initial*
@@ -58,7 +59,7 @@ function SettingsForm() {
     storeName, storeAddress, storePhone,
     storeLogo, cashierName, receiptFooter,
     receiptHeaderNote, receiptShowLogo, receiptShowCashier,
-    receiptShowPhone, receiptShowAddress, exchangeRate,
+    receiptShowPhone, receiptShowAddress, receiptPaper, exchangeRate,
     update, clearLogo,
   } = useStoreProfile()
 
@@ -278,6 +279,20 @@ function SettingsForm() {
               <ToggleRow label="បង្ហាញ អាសយដ្ឋាន"   value={receiptShowAddress} onChange={(v) => update({ receiptShowAddress: v })} />
               <ToggleRow label="បង្ហាញ លេខទូរស័ព្ទ" value={receiptShowPhone}   onChange={(v) => update({ receiptShowPhone: v })} />
               <ToggleRow label="បង្ហាញ អ្នកគិតលុយ"   value={receiptShowCashier} onChange={(v) => update({ receiptShowCashier: v })} />
+              <div className="flex min-h-[60px] items-center justify-between gap-3 px-4 py-2">
+                <span className="text-body-sm font-semibold text-text">ក្រដាសបោះពុម្ព</span>
+                <SegmentedControl
+                  ariaLabel="ទំហំក្រដាសបោះពុម្ព"
+                  value={receiptPaper}
+                  onChange={(v) => update({ receiptPaper: v })}
+                  items={[
+                    { value: '58', label: '58mm' },
+                    { value: '80', label: '80mm' },
+                    { value: 'a4', label: 'A4' },
+                  ]}
+                  className="w-[200px] shrink-0"
+                />
+              </div>
             </div>
 
             <div className="space-y-2 border-t border-line p-3">

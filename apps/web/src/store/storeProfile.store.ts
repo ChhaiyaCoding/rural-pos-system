@@ -14,6 +14,8 @@ export interface StoreProfile {
   receiptShowCashier: boolean
   receiptShowPhone: boolean
   receiptShowAddress: boolean
+  /** Paper the receipt is printed on: thermal 58mm / 80mm, or a normal page */
+  receiptPaper: '58' | '80' | 'a4'
   // ── Currency ──
   exchangeRate: number       // KHR per 1 USD (display conversion only)
 }
@@ -37,6 +39,7 @@ export const useStoreProfile = create<StoreProfile & StoreProfileActions>()(
       receiptShowCashier: true,
       receiptShowPhone:   true,
       receiptShowAddress: true,
+      receiptPaper:       '58',
       exchangeRate:       4000,
 
       update: (patch) => set(patch),
