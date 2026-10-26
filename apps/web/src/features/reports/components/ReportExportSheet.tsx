@@ -1,8 +1,9 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { X, Printer, Share2, CheckCircle2, Banknote, NotebookPen, Users } from 'lucide-react'
 import { formatKHR, formatUSD } from '@/lib/money'
+import { escapeHtml as esc } from '@/lib/html'
 import { expenseCategoryLabel, expenseCategoryEmoji } from '@/services/expense.service'
 import type { KHR } from '@/types/branded'
 
@@ -50,6 +51,7 @@ export function ReportExportSheet({
   dateRange,
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null)
+  const [copied, setCopied] = useState(false)
   const today   = new Date().toLocaleDateString('km-KH', { day: 'numeric', month: 'long', year: 'numeric' })
 
   /* ── Print ─────────────────────────────────────────── */
@@ -63,7 +65,7 @@ export function ReportExportSheet({
     printWin.document.write(`
       <html>
       <head>
-        <title>របាយការណ៍ ${periodLabel}</title>
+        <title>របាយការណ៍ ${esc(periodLabel)}</title>
         <meta charset="utf-8" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap" />
         <style>
@@ -93,9 +95,9 @@ export function ReportExportSheet({
       <body>
         <div class="card">
           <div class="header">
-            <div class="store">${storeName}</div>
-            <div class="period">របាយការណ៍ ${periodLabel}</div>
-            <div class="date">${dateRange}</div>
+            <div class="store">${esc(storeName)}</div>
+            <div class="period">របាយការណ៍ ${esc(periodLabel)}</div>
+            <div class="date">${esc(dateRange)}</div>
           </div>
 
           <div class="section">
@@ -127,7 +129,7 @@ export function ReportExportSheet({
             <div class="section-title">ចំណាយតាមប្រភេទ</div>
             ${expenseByCat.map(([cat, amt]) => `
               <div class="row">
-                <span class="label">${expenseCategoryEmoji(cat)} ${expenseCategoryLabel(cat)}</span>
+                <span class="label">${esc(expenseCategoryEmoji(cat))} ${esc(expenseCategoryLabel(cat))}</span>
                 <span class="value" style="color:#B93815">${formatKHR(amt as KHR)}</span>
               </div>
             `).join('')}
@@ -153,7 +155,7 @@ export function ReportExportSheet({
               <div class="row">
                 <span>
                   <span class="rank ${i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : ''}">${i + 1}</span>
-                  <span class="label">${p.name}</span>
+                  <span class="label">${esc(p.name)}</span>
                 </span>
                 <span class="value">${formatKHR(p.revenue as KHR)} · ${formatUSD(p.revenue as KHR)}</span>
               </div>
@@ -172,7 +174,7 @@ export function ReportExportSheet({
           ` : ''}
 
           <div class="footer">
-            ថ្ងៃទី ${today}<br/>
+            ថ្ងៃទី ${esc(today)}<br/>
             Rural POS System
           </div>
         </div>
@@ -218,8 +220,10 @@ export function ReportExportSheet({
       } catch { /* user cancelled */ }
     } else {
       // Fallback: copy to clipboard
-      await navigator.clipboard.writeText(text)
-      alert('Copy ទៅ Clipboard ហើយ! Paste ក្នុង WhatsApp/Telegram')
+      try {
+        await navigator.clipboard.writeText(text)
+        setCopied(true)
+      } catch { /* clipboard blocked — nothing else to do */ }
     }
   }
 
@@ -396,11 +400,18 @@ export function ReportExportSheet({
             </button>
           </div>
 
+          {copied && (
+            <p role="status" className="flex items-center gap-2 rounded-md bg-success-bg px-3 py-2.5 text-body-sm font-semibold text-success">
+              <CheckCircle2 size={16} className="shrink-0" aria-hidden="true" />
+              បានចម្លងរួច — បិទភ្ជាប់ (paste) ក្នុង Telegram បាន
+            </p>
+          )}
+
           {/* Screenshot tip */}
           <div className="flex items-start gap-2.5 bg-surface-2 rounded-xl px-3 py-2.5 border border-line">
             <CheckCircle2 size={15} className="text-text-subtle shrink-0 mt-0.5" />
             <p className="text-caption text-text-muted leading-relaxed">
-              <span className="font-semibold text-text-subtle">Tip:</span> ថតរូបអេក្រង់ (Screenshot) Report Card ខាងលើ → ផ្ញើ WhatsApp / Telegram បានភ្លាម!
+              <span className="font-semibold text-text-subtle">គន្លឹះ:</span> ថតរូបអេក្រង់នៃរបាយការណ៍ខាងលើ → ផ្ញើតាម Telegram បានភ្លាម!
             </p>
           </div>
         </div>
