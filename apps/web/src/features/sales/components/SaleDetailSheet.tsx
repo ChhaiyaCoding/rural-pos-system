@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { User, Trash2, AlertTriangle, Printer, CheckCircle2, Clock, ShoppingCart } from 'lucide-react'
+import { User, Trash2, AlertTriangle, Printer, CheckCircle2, Clock, ShoppingCart, Info } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db'
-import { saleService } from '@/services/sale.service'
+import { saleService, saleHasDebtPayments } from '@/services/sale.service'
 import { formatKHR } from '@/lib/money'
 import { ReprintReceipt } from './ReprintReceipt'
 import { Sheet } from '@/components/ui/Sheet'
@@ -35,6 +35,7 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
   const [confirmVoid, setConfirmVoid] = useState(false)
   const [voiding,     setVoiding]     = useState(false)
   const [voidDone,    setVoidDone]    = useState(false)
+  const [voidError,   setVoidError]   = useState<string | null>(null)
   const [showReprint, setShowReprint] = useState(false)
 
   const items = useLiveQuery(
@@ -46,6 +47,9 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
     if (!sale.customerId) return undefined
     return db.customers.get(sale.customerId)
   }, [sale.customerId])
+
+  /* A debt invoice with payments on it cannot be voided (see saleService.voidSale) */
+  const hasPayments = useLiveQuery(() => saleHasDebtPayments(sale), [sale.id]) ?? false
 
   /* Live sale — reflects isVoid after voiding */
   const liveSale = useLiveQuery(
@@ -64,9 +68,17 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
   const handleVoid = async () => {
     if (voiding || !confirmVoid) return
     setVoiding(true)
+    setVoidError(null)
     try {
       const result = await saleService.voidSale(sale.id as SaleId, DEMO_TENANT)
-      if (result.ok) {
+      if (!result.ok) {
+        setConfirmVoid(false)
+        setVoidError(
+          result.error.code === 'INVALID_PAYMENT' && result.error.reason === 'SALE_HAS_PAYMENTS'
+            ? 'មិនអាចលុបបានទេ ព្រោះអតិថិជនបានសងប្រាក់លើវិក្កយបត្រនេះហើយ។'
+            : 'លុបការលក់មិនបានទេ។ សូមសាកម្ដងទៀត។',
+        )
+      } else {
         setVoidDone(true)
         setConfirmVoid(false)
         setTimeout(() => {
@@ -74,6 +86,9 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
           onClose()
         }, 1500)
       }
+    } catch {
+      setConfirmVoid(false)
+      setVoidError('លុបការលក់មិនបានទេ។ សូមសាកម្ដងទៀត។')
     } finally {
       setVoiding(false)
     }
@@ -197,7 +212,21 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
           {/* ── Void section ────────────────────────── */}
           {!isVoid && !voidDone && (
             <div className="px-4 pb-6 pt-4 md:px-6">
-              {!confirmVoid ? (
+              {voidError && (
+                <p role="alert" className="mb-3 rounded-md bg-danger-bg px-4 py-3 text-body-sm font-semibold text-danger">
+                  {voidError}
+                </p>
+              )}
+              {hasPayments ? (
+                /* Paid (fully or partly) debt invoice — void is blocked */
+                <div className="flex items-start gap-3 rounded-lg bg-surface-2 p-4 text-text-subtle">
+                  <Info size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
+                  <p className="text-body-sm">
+                    មិនអាចលុបការលក់នេះបានទេ ព្រោះអតិថិជនបានសងប្រាក់លើវិក្កយបត្រនេះហើយ។
+                    បើពិតជាត្រូវលុប សូមលុបការសងប្រាក់នោះ នៅទំព័របំណុលរបស់អតិថិជនជាមុនសិន។
+                  </p>
+                </div>
+              ) : !confirmVoid ? (
                 /* Step 1 — Void button */
                 <Button
                   variant="dangerSoft"

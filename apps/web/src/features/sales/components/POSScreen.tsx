@@ -1,23 +1,23 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Search, Check, Receipt, PauseCircle, Clock, Trash2, ArrowRight } from 'lucide-react'
+import { Search, Check, Receipt, PauseCircle, Clock, Trash2, ArrowRight, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { IconButton } from '@/components/ui/IconButton'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Sheet } from '@/components/ui/Sheet'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { cx } from '@/components/ui/cx'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useSaleStore } from '@/store/sale.store'
 import { formatKHR, formatUSD, addKHR, toKHR, multiplyKHR, subtractKHR } from '@/lib/money'
 import { nowISO } from '@/lib/date'
 import { saleService } from '@/services/sale.service'
-import { debtService } from '@/services/debt.service'
 import { productService } from '@/services/product.service'
 import { customerService } from '@/services/customer.service'
 import { db } from '@/db'
-import type { KHR } from '@/types'
+import type { KHR, AppError } from '@/types'
 import type { TenantId, UserId, CustomerId } from '@/types/branded'
 import { productMatchesQuery } from '@/lib/search'
 import { useCategoryStore } from '@/store/category.store'
@@ -41,6 +41,16 @@ import type { CashDrawer } from '@/types'
 const DEMO_TENANT  = 'tenant-demo'  as TenantId
 const DEMO_CASHIER = 'cashier-demo' as UserId
 
+type CheckoutType = 'cash' | 'debt' | 'partial'
+type CheckoutResult = { change: KHR | null; customerName: string | null; customerId: CustomerId | null; discount: KHR; partialDebt: KHR | null }
+
+/** Khmer message for a sale that could not be saved */
+function saveErrorMessage(error: AppError): string {
+  if (error.code === 'CUSTOMER_NOT_FOUND') return 'រកមិនឃើញអតិថិជននេះទេ។ សូមជ្រើសអតិថិជនម្ដងទៀត។'
+  if (error.code === 'UNKNOWN' && /quota/i.test(error.message)) return 'ទំហំផ្ទុកក្នុងឧបករណ៍ពេញ។ សូមលុបរូបថត ឬកម្មវិធីខ្លះ រួចសាកម្ដងទៀត។'
+  return 'ការលក់មិនត្រូវបានរក្សាទុកទេ។ ទំនិញនៅក្នុងរទេះដដែល — សូមសាកម្ដងទៀត។'
+}
+
 type Success = {
   type: 'cash' | 'debt' | 'partial'
   amount: KHR
@@ -61,6 +71,8 @@ export function POSScreen() {
   const [openShift,   setOpenShift]   = useState(false)
   const [closeShift,  setCloseShift]  = useState(false)
   const [flyItems,    setFlyItems]    = useState<FlyItem[]>([])
+  const [saveError,   setSaveError]   = useState<{ message: string; retry: () => void } | null>(null)
+  const savingRef    = useRef(false)                     // blocks a double tap from saving the sale twice
   const cartBtnRef   = useRef<HTMLButtonElement>(null)   // mobile checkout bar (only when count>0)
   const cartPanelRef = useRef<HTMLElement>(null)         // desktop cart sidebar (always rendered)
 
@@ -206,11 +218,9 @@ export function POSScreen() {
     setCheckout({ type })
   }
 
-  /* Step 2 — cashier confirmed: record the sale and show success */
-  const finalizeSale = (
-    type: 'cash' | 'debt' | 'partial',
-    result: { change: KHR | null; customerName: string | null; customerId: CustomerId | null; discount: KHR; partialDebt: KHR | null }
-  ) => {
+  /* Step 2 — cashier confirmed: save the sale, and only then show success */
+  const finalizeSale = async (type: CheckoutType, result: CheckoutResult) => {
+    if (savingRef.current) return
     const subtotal  = total
     const discount  = result.discount
     const amount    = subtractKHR(subtotal, discount)    // final amount (after discount)
@@ -243,6 +253,32 @@ export function POSScreen() {
     const receiptNumber = `${shortDate}-${shortRef}`
 
     const cashReceived = type === 'cash' ? paidNow : type === 'partial' ? paidNow : null
+    const debtAmount   = type === 'debt' ? amount : type === 'partial' ? partialDebtAmt : toKHR(0)
+
+    // Persist sale + stock + debt in one IndexedDB transaction before any success UI
+    savingRef.current = true
+    const saved = await saleService.create({
+      tenantId:    DEMO_TENANT,
+      cashierId:   DEMO_CASHIER,
+      cart:        cartSnap,
+      receiptNumber,
+      paymentType: type === 'partial' ? 'debt' : type,
+      paidAmount:  type === 'cash' ? paidNow : type === 'partial' ? paidNow : toKHR(0),
+      ...(discount ? { discount } : {}),
+      ...(result.customerId ? { customerId: result.customerId } : {}),
+      ...(result.customerName ? { note: result.customerName } : {}),
+      ...(debtAmount > 0 ? { debtAmount } : {}),
+    }).catch((err: unknown): Awaited<ReturnType<typeof saleService.create>> => ({
+      ok: false,
+      error: { code: 'UNKNOWN', message: err instanceof Error ? err.message : String(err) },
+    }))
+    savingRef.current = false
+
+    if (!saved.ok) {
+      // Keep the cart and the checkout sheet so nothing is lost; let the cashier retry
+      setSaveError({ message: saveErrorMessage(saved.error), retry: () => void finalizeSale(type, result) })
+      return
+    }
 
     setReceipt({
       data: {
@@ -266,37 +302,6 @@ export function POSScreen() {
     setCheckout(null)
     setCartOpen(false)
     setSuccess({ type, amount, change: result.change, customerName: result.customerName, partialDebt: result.partialDebt })
-
-    // Persist to IndexedDB — then charge debt if applicable
-    saleService.create({
-      tenantId:    DEMO_TENANT,
-      cashierId:   DEMO_CASHIER,
-      cart:        cartSnap,
-      receiptNumber,
-      paymentType: type === 'partial' ? 'debt' : type,
-      paidAmount:  type === 'cash' ? paidNow : type === 'partial' ? paidNow : toKHR(0),
-      ...(discount ? { discount } : {}),
-      ...(result.customerId ? { customerId: result.customerId } : {}),
-      ...(result.customerName ? { note: result.customerName } : {}),
-    }).then((saleResult) => {
-      if (saleResult.ok && result.customerId) {
-        if (type === 'debt') {
-          debtService.charge({
-            tenantId:   DEMO_TENANT,
-            customerId: result.customerId,
-            saleId:     saleResult.data.id,
-            amount,
-          }).catch(() => {})
-        } else if (type === 'partial' && partialDebtAmt > 0) {
-          debtService.charge({
-            tenantId:   DEMO_TENANT,
-            customerId: result.customerId,
-            saleId:     saleResult.data.id,
-            amount:     partialDebtAmt,
-          }).catch(() => {})
-        }
-      }
-    }).catch(() => { /* silent — sync queue retries */ })
   }
 
   /* ────────────────────────────────────────────────────────── */
@@ -514,9 +519,22 @@ export function POSScreen() {
         <CheckoutSheet
           type={checkout.type}
           onClose={() => setCheckout(null)}
-          onConfirm={(result) => finalizeSale(checkout.type, { ...result, partialDebt: result.partialDebt ?? null })}
+          onConfirm={(result) => void finalizeSale(checkout.type, { ...result, partialDebt: result.partialDebt ?? null })}
         />
       )}
+
+      {/* Save failed — the cart and checkout stay as they were */}
+      <ConfirmDialog
+        open={!!saveError}
+        tone="danger"
+        icon={<AlertTriangle size={28} strokeWidth={2.25} />}
+        title="រក្សាទុកការលក់មិនបាន"
+        message={saveError?.message}
+        confirmLabel="សាកម្ដងទៀត"
+        cancelLabel="បិទ"
+        onConfirm={() => { const retry = saveError?.retry; setSaveError(null); retry?.() }}
+        onCancel={() => setSaveError(null)}
+      />
 
       {/* ════════════════════════════════════════════════════
           SUCCESS — full screen (phone) / large modal (md+)
