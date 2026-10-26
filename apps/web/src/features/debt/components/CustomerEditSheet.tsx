@@ -9,6 +9,7 @@ import { customerService } from '@/services/customer.service'
 import { formatKHR, formatUSD } from '@/lib/money'
 import type { Customer } from '@/types'
 import type { CustomerId } from '@/types/branded'
+import { compressImage, CUSTOMER_IMAGE } from '@/lib/image'
 
 interface Props {
   customer: Customer
@@ -42,9 +43,7 @@ export function CustomerEditSheet({ customer, onClose, onSaved }: Props) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => setImageUri(ev.target?.result as string)
-    reader.readAsDataURL(file)
+    compressImage(file, CUSTOMER_IMAGE).then(setImageUri).catch(() => { /* not an image — keep the old photo */ })
     e.target.value = ''
   }
 

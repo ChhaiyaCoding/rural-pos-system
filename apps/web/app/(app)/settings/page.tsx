@@ -20,6 +20,7 @@ import { BackupSheet } from '@/features/settings/components/BackupSheet'
 import { backupService } from '@/services/backup.service'
 import { formatKHR } from '@/lib/money'
 import { toKHR } from '@/lib/money'
+import { compressImage, LOGO_IMAGE } from '@/lib/image'
 
 /* The form below copies the saved profile into local state once, on its first
    render. While React hydrates the page, zustand hands out the *initial*
@@ -78,6 +79,13 @@ function SettingsForm() {
   const [showReset,    setShowReset]    = useState(false)
   const [resetting,    setResetting]    = useState(false)
 
+  /* /settings?backup=1 (the home screen's backup reminder) opens the backup sheet */
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('backup') !== '1') return
+    setShowBackup(true)
+    window.history.replaceState(null, '', '/settings')
+  }, [])
+
   const router    = useRouter()
   const clearAuth = useAuthStore((s) => s.clearAuth)
 
@@ -87,9 +95,9 @@ function SettingsForm() {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => update({ storeLogo: ev.target?.result as string })
-    reader.readAsDataURL(file)
+    compressImage(file, LOGO_IMAGE)
+      .then((storeLogo) => update({ storeLogo }))
+      .catch(() => { /* not an image — keep the old logo */ })
     e.target.value = ''
   }
 

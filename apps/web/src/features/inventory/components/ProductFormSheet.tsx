@@ -21,6 +21,7 @@ import { Pill } from '@/components/ui/Pill'
 import { cx } from '@/components/ui/cx'
 import type { Product } from '@/types'
 import type { TenantId, ProductId } from '@/types/branded'
+import { compressImage, PRODUCT_IMAGE } from '@/lib/image'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
@@ -35,43 +36,6 @@ interface ProductFormSheetProps {
   product?: Product
   onClose: () => void
   onSaved: () => void
-}
-
-async function compressImage(file: File): Promise<string> {
-  return new Promise((resolve) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const img = new Image()
-      img.onload = () => {
-        // Uniform square canvas with WHITE background so every product looks
-        // consistent — transparent PNGs blend (no more black), white-bg photos
-        // match the app, and the product is centred with breathing room.
-        const SIZE = 320          // square output (px)
-        const PAD  = 0.84         // product fills 84% → whitespace around it
-        const canvas = document.createElement('canvas')
-        canvas.width  = SIZE
-        canvas.height = SIZE
-        const ctx = canvas.getContext('2d')!
-
-        // 1. Fill white (fixes transparent PNG turning black under JPEG)
-        ctx.fillStyle = '#ffffff'
-        ctx.fillRect(0, 0, SIZE, SIZE)
-
-        // 2. Contain-fit the product, centred, with padding
-        const box   = SIZE * PAD
-        const scale = Math.min(box / img.width, box / img.height)
-        const w = img.width  * scale
-        const h = img.height * scale
-        const x = (SIZE - w) / 2
-        const y = (SIZE - h) / 2
-        ctx.drawImage(img, x, y, w, h)
-
-        resolve(canvas.toDataURL('image/jpeg', 0.85))
-      }
-      img.src = e.target!.result as string
-    }
-    reader.readAsDataURL(file)
-  })
 }
 
 export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheetProps) {
@@ -225,10 +189,11 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
   const handleImagePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const uri = await compressImage(file)
+    e.target.value = ''
+    const uri = await compressImage(file, PRODUCT_IMAGE).catch(() => null)
+    if (!uri) return   // not an image — keep what was there
     setImageUri(uri)
     setShowEmoji(false)
-    e.target.value = ''
   }
 
   const handleSave = async () => {

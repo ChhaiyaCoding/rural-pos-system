@@ -1,15 +1,17 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
   ShoppingCart, PackagePlus, Wallet, HandCoins,
-  Package, Users, ChartColumn, ArrowRight, CircleCheck,
+  Package, Users, ChartColumn, ArrowRight, CircleCheck, DatabaseBackup,
 } from 'lucide-react'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
 import { todayISODate, startOfTodayISO } from '@/lib/date'
 import { useStoreProfile } from '@/store/storeProfile.store'
+import { backupService, BACKUP_REMINDER_DAYS } from '@/services/backup.service'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { StatTile } from '@/components/ui/StatTile'
@@ -47,6 +49,12 @@ export default function HomePage() {
   ) ?? []
   const todayExpenseTotal = todayExpenses.reduce((s, e) => s + (e.amount as number), 0) as KHR
   const todayProfit       = (todayRevenue - todayExpenseTotal) as KHR
+
+  /* Backup reminder: the device holds the only copy of the shop's data */
+  const hasSales = (useLiveQuery(() => db.sales.where('tenantId').equals(DEMO_TENANT).count(), []) ?? 0) > 0
+  const [backupDays, setBackupDays] = useState<number | null | undefined>(undefined)  // undefined = not read yet
+  useEffect(() => { setBackupDays(backupService.daysSinceBackup()) }, [])
+  const backupDue = hasSales && backupDays !== undefined && (backupDays === null || backupDays >= BACKUP_REMINDER_DAYS)
 
   /* Low stock */
   const lowStockCount = useLiveQuery(
@@ -125,6 +133,19 @@ export default function HomePage() {
           <h2 className="mb-2.5 text-title-sm font-bold text-text">ត្រូវធ្វើថ្ងៃនេះ</h2>
           <div className="space-y-2">
             {/* Only rows with something to act on; otherwise one "all good" row */}
+            {backupDue && (
+              <ListRow
+                href="/settings?backup=1"
+                leading={
+                  <TaskIcon tone="warn">
+                    <DatabaseBackup size={22} strokeWidth={2} />
+                  </TaskIcon>
+                }
+                title="Backup ទិន្នន័យ"
+                meta={backupDays == null ? 'មិនទាន់ធ្លាប់ backup — ការពារទិន្នន័យបាត់' : `backup ចុងក្រោយ ${backupDays} ថ្ងៃមុន`}
+                chevron
+              />
+            )}
             {lowStockCount > 0 && (
               <ListRow
                 href="/inventory"
@@ -153,7 +174,7 @@ export default function HomePage() {
                 chevron
               />
             )}
-            {lowStockCount === 0 && debtorCount === 0 && (
+            {lowStockCount === 0 && debtorCount === 0 && !backupDue && (
               <ListRow
                 leading={
                   <TaskIcon tone="success">

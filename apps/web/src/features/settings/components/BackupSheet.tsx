@@ -1,10 +1,10 @@
 'use client'
 
-import { useRef, useState } from 'react'
-import { Download, Upload, CheckCircle2, AlertTriangle, Lightbulb } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Download, Upload, CheckCircle2, AlertTriangle, Lightbulb, Undo2 } from 'lucide-react'
 import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
-import { backupService, type BackupFile, type BackupStats } from '@/services/backup.service'
+import { backupService, BackupError, type BackupFile, type BackupStats } from '@/services/backup.service'
 
 interface Props {
   onClose: () => void
@@ -14,13 +14,21 @@ type Phase =
   | { kind: 'idle' }
   | { kind: 'exported';  stats: BackupStats }
   | { kind: 'confirm';   backup: BackupFile; stats: BackupStats }
-  | { kind: 'restored';  stats: BackupStats }
+  | { kind: 'restored';  stats: BackupStats; undone?: boolean }
   | { kind: 'error';     message: string }
 
 export function BackupSheet({ onClose }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [phase,   setPhase]   = useState<Phase>({ kind: 'idle' })
   const [working, setWorking] = useState(false)
+  /* When the data was saved right before the last restore (null = nothing to undo) */
+  const [undoAt,  setUndoAt]  = useState<string | null>(null)
+  const [lastAt,  setLastAt]  = useState<string | null>(null)
+
+  useEffect(() => {
+    setLastAt(backupService.lastBackupAt())
+    backupService.lastRestoreSnapshotAt().then(setUndoAt).catch(() => {})
+  }, [])
 
   /* ── Export ──────────────────────────────────────── */
   const handleExport = async () => {
@@ -28,6 +36,7 @@ export function BackupSheet({ onClose }: Props) {
     setWorking(true)
     try {
       const stats = await backupService.downloadBackup()
+      setLastAt(backupService.lastBackupAt())
       setPhase({ kind: 'exported', stats })
     } catch {
       setPhase({ kind: 'error', message: 'Export បរាជ័យ — សូមព្យាយាមម្ដងទៀត' })
@@ -44,15 +53,30 @@ export function BackupSheet({ onClose }: Props) {
     setWorking(true)
     try {
       const backup = await backupService.readFile(file)
-      const stats: BackupStats = {
-        products:  backup.tables.products.length,
-        customers: backup.tables.customers.length,
-        sales:     backup.tables.sales.length,
-        debts:     backup.tables.debtTransactions.length,
-      }
-      setPhase({ kind: 'confirm', backup, stats })
+      setPhase({ kind: 'confirm', backup, stats: backupService.stats(backup) })
+    } catch (err) {
+      setPhase({
+        kind: 'error',
+        message: err instanceof BackupError && err.code === 'BACKUP_TOO_NEW'
+          ? 'Backup នេះមកពី app ជំនាន់ថ្មីជាង — សូមបើក app ឡើងវិញ (reload) ដើម្បីទទួលបានជំនាន់ថ្មី រួចសាកម្ដងទៀត'
+          : 'File មិនត្រឹមត្រូវ — សូមជ្រើស backup file ត្រឹមត្រូវ',
+      })
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  /* ── Undo the last restore ───────────────────────── */
+  const handleUndo = async () => {
+    if (working) return
+    setWorking(true)
+    try {
+      const stats = await backupService.undoLastRestore()
+      if (!stats) return
+      setPhase({ kind: 'restored', stats, undone: true })
+      setTimeout(() => window.location.reload(), 1800)
     } catch {
-      setPhase({ kind: 'error', message: 'File មិនត្រឹមត្រូវ — សូមជ្រើស backup file ត្រឹមត្រូវ' })
+      setPhase({ kind: 'error', message: 'ត្រឡប់ទិន្នន័យមិនបាន — ទិន្នន័យមិនបានផ្លាស់ប្ដូរ' })
     } finally {
       setWorking(false)
     }
@@ -86,7 +110,8 @@ export function BackupSheet({ onClose }: Props) {
               <div>
                 <p className="text-body font-bold text-danger">ប្រុងប្រយ័ត្ន!</p>
                 <p className="mt-1 text-body-sm text-danger">
-                  ការ Restore នឹង <span className="font-bold">លុបទិន្នន័យបច្ចុប្បន្នទាំងអស់</span> ហើយជំនួសដោយ backup file។ មិនអាចត្រឡប់វិញបានទេ។
+                  ការ Restore នឹង <span className="font-bold">ជំនួសទិន្នន័យបច្ចុប្បន្នទាំងអស់</span> ដោយ backup file។
+                  App រក្សាទុកទិន្នន័យបច្ចុប្បន្នមួយច្បាប់ជាមុន ដូច្នេះអាចត្រឡប់វិញបាន។
                 </p>
               </div>
             </div>
@@ -123,7 +148,7 @@ export function BackupSheet({ onClose }: Props) {
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success-bg text-success" aria-hidden="true">
               <CheckCircle2 size={36} strokeWidth={2} />
             </div>
-            <p className="text-title-sm font-bold text-text">Restore ជោគជ័យ!</p>
+            <p className="text-title-sm font-bold text-text">{phase.undone ? 'បានត្រឡប់ទិន្នន័យមុនវិញ!' : 'Restore ជោគជ័យ!'}</p>
             <p className="text-meta text-text-muted">
               {phase.stats.products} ទំនិញ · {phase.stats.customers} អតិថិជន · {phase.stats.sales} ការលក់
             </p>
@@ -148,6 +173,10 @@ export function BackupSheet({ onClose }: Props) {
                 <span className="mt-0.5 block text-meta text-text-muted">ទាញយក backup file (.json) ទុកក្នុងទូរស័ព្ទ</span>
               </span>
             </button>
+
+            <p className="px-1 text-meta text-text-muted">
+              Backup ចុងក្រោយ: <span className="font-semibold text-text">{lastBackupLabel(lastAt)}</span>
+            </p>
 
             {/* Export success */}
             {phase.kind === 'exported' && (
@@ -182,6 +211,24 @@ export function BackupSheet({ onClose }: Props) {
               onChange={handleFilePick}
             />
 
+            {/* Undo the last restore */}
+            {undoAt && (
+              <button
+                type="button"
+                disabled={working}
+                onClick={handleUndo}
+                className="flex w-full items-center gap-3 rounded-lg border border-line p-4 text-left transition-colors active:bg-surface-2 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
+              >
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-surface-2 text-ink-900" aria-hidden="true">
+                  <Undo2 size={22} strokeWidth={2} />
+                </span>
+                <span className="flex-1">
+                  <span className="block text-body font-bold text-text">ត្រឡប់ទិន្នន័យមុន Restore</span>
+                  <span className="mt-0.5 block text-meta text-text-muted">ទិន្នន័យដែលមាននៅ {formatWhen(undoAt)}</span>
+                </span>
+              </button>
+            )}
+
             {/* Error */}
             {phase.kind === 'error' && (
               <div className="flex items-center gap-2.5 rounded-md bg-danger-bg px-4 py-3" role="alert">
@@ -193,7 +240,7 @@ export function BackupSheet({ onClose }: Props) {
             {/* Tip */}
             <p className="flex items-start gap-2 rounded-md bg-surface-2 px-3.5 py-3 text-meta text-text-muted">
               <Lightbulb size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-              <span>Export ទុក backup ជារៀងរាល់ថ្ងៃ → ផ្ញើ Telegram ខ្លួនឯង ឬ save Google Drive ដើម្បីការពារទិន្នន័យបាត់។</span>
+              <span>Export backup យ៉ាងហោចណាស់ម្ដងក្នុងមួយសប្ដាហ៍ → ផ្ញើ Telegram ខ្លួនឯង ឬ save Google Drive។ បើទូរស័ព្ទបាត់ ឬខូច នេះជាផ្លូវតែមួយគត់ដើម្បីយកទិន្នន័យមកវិញ។</span>
             </p>
           </>
         )}
@@ -209,4 +256,15 @@ function StatPill({ label, value }: { label: string; value: number }) {
       <span className="text-body-sm font-bold tabular-nums text-text">{value}</span>
     </div>
   )
+}
+
+function formatWhen(iso: string): string {
+  const d = new Date(iso)
+  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} ម៉ោង ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function lastBackupLabel(iso: string | null): string {
+  if (!iso) return 'មិនទាន់ធ្វើ'
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
+  return days <= 0 ? 'ថ្ងៃនេះ' : `${days} ថ្ងៃមុន`
 }

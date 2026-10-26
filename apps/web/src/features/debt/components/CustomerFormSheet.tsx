@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { customerService } from '@/services/customer.service'
 import type { TenantId } from '@/types/branded'
+import { compressImage, CUSTOMER_IMAGE } from '@/lib/image'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
@@ -33,11 +34,7 @@ export function CustomerFormSheet({ onClose, onSaved }: Props) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      setImageUri(ev.target?.result as string)
-    }
-    reader.readAsDataURL(file)
+    compressImage(file, CUSTOMER_IMAGE).then(setImageUri).catch(() => { /* not an image — keep the old photo */ })
     // reset input so same file can be picked again
     e.target.value = ''
   }
