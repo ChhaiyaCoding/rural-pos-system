@@ -1,12 +1,10 @@
 'use client'
 
 import { useEffect } from 'react'
-import { NextIntlClientProvider } from 'next-intl'
 import { startSyncEngine } from '@/sync/engine'
 import { useSyncStore } from '@/store/sync.store'
 import { useStoreProfile } from '@/store/storeProfile.store'
 import { setExchangeRate } from '@/lib/money'
-import kmMessages from '@/i18n/km.json'
 
 /** Best effort: Chrome/Android grants it silently (more readily once installed),
  *  Safari decides on its own; unsupported browsers just skip it. */
@@ -51,9 +49,5 @@ export function Providers({ children }: { children: React.ReactNode }) {
     void requestPersistentStorage()
   }, [])
 
-  return (
-    <NextIntlClientProvider locale="km" messages={kmMessages}>
-      {children}
-    </NextIntlClientProvider>
-  )
+  return <>{children}</>
 }
