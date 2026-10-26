@@ -30,6 +30,13 @@ export default function InventoryPage() {
   const [addOpen,   setAddOpen]   = useState(false)
   const [restocking, setRestocking] = useState<Product | null>(null)
 
+  /* /inventory?add=1 (the empty POS screen's "បន្ថែមទំនិញ") opens the add form */
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('add') !== '1') return
+    setAddOpen(true)
+    window.history.replaceState(null, '', '/inventory')
+  }, [])
+
   /* Categories from the shared store — labels for display stay complete,
      but filter tabs only show categories that actually have products */
   const categories = useCategoryStore((s) => s.categories)

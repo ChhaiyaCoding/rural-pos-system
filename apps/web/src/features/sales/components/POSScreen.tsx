@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Search, Check, Receipt, PauseCircle, Clock, Trash2, ArrowRight, AlertTriangle } from 'lucide-react'
+import { Search, Check, Receipt, PauseCircle, Clock, Trash2, ArrowRight, AlertTriangle, Package, Plus, Sparkles } from 'lucide-react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { IconButton } from '@/components/ui/IconButton'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -14,8 +15,7 @@ import { useSaleStore } from '@/store/sale.store'
 import { formatKHR, formatUSD, addKHR, toKHR, multiplyKHR, subtractKHR } from '@/lib/money'
 import { nowISO } from '@/lib/date'
 import { saleService } from '@/services/sale.service'
-import { productService } from '@/services/product.service'
-import { customerService } from '@/services/customer.service'
+import { sampleDataService } from '@/services/sampleData.service'
 import { db } from '@/db'
 import type { KHR, AppError } from '@/types'
 import type { TenantId, UserId, CustomerId } from '@/types/branded'
@@ -90,16 +90,20 @@ export function POSScreen() {
   const categories = useCategoryStore((s) => s.categories)
 
   /* Products from DB (live — updates when stock changes) */
-  const dbProducts = useLiveQuery(
+  const liveProducts = useLiveQuery(
     () => db.products.where('tenantId').equals(DEMO_TENANT).filter((p) => !p.deletedAt).toArray(),
     []
-  ) ?? []
+  )
+  const dbProducts = liveProducts ?? []
+  /* A brand-new shop: no products yet (not just an empty search/filter) */
+  const noProducts = liveProducts !== undefined && liveProducts.length === 0
 
-  /* Seed mock data to DB on first run */
-  useEffect(() => {
-    productService.seedIfEmpty(DEMO_TENANT).catch(() => {})
-    customerService.seedIfEmpty(DEMO_TENANT).catch(() => {})
-  }, [])
+  /* Sample data is opt-in — never seeded automatically into a real shop */
+  const [loadingSample, setLoadingSample] = useState(false)
+  const loadSample = async () => {
+    setLoadingSample(true)
+    try { await sampleDataService.load(DEMO_TENANT) } finally { setLoadingSample(false) }
+  }
 
   /* Live shift/session activity — grows as sales complete (feels operational) */
   const [session, setSession] = useState({ total: toKHR(125_000), count: 23 })
@@ -425,7 +429,35 @@ export function POSScreen() {
               count > 0 ? 'pb-[calc(110px+env(safe-area-inset-bottom))] md:pb-6' : 'pb-6',
             )}
           >
-            {filteredProducts.length === 0 ? (
+            {noProducts ? (
+              <EmptyState
+                icon={<Package size={30} strokeWidth={1.5} />}
+                title="មិនទាន់មានទំនិញ"
+                description="បន្ថែមទំនិញរបស់ហាងអ្នក ដើម្បីចាប់ផ្ដើមលក់។"
+                action={
+                  <div className="flex w-[260px] flex-col gap-2.5">
+                    <Link
+                      href="/inventory?add=1"
+                      className="flex h-14 items-center justify-center gap-2 rounded-md bg-ink-900 px-5 text-label-lg font-bold text-white transition-colors active:bg-ink-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    >
+                      <Plus size={20} strokeWidth={2.5} aria-hidden="true" />
+                      បន្ថែមទំនិញ
+                    </Link>
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      fullWidth
+                      disabled={loadingSample}
+                      onClick={() => void loadSample()}
+                      icon={<Sparkles size={18} strokeWidth={2.25} />}
+                    >
+                      {loadingSample ? 'កំពុងបញ្ចូល…' : 'សាកជាមួយទិន្នន័យគំរូ'}
+                    </Button>
+                    <p className="text-caption text-text-muted">ទិន្នន័យគំរូ = ទំនិញ និងអតិថិជនក្លែងក្លាយ សម្រាប់សាកល្បងប៉ុណ្ណោះ</p>
+                  </div>
+                }
+              />
+            ) : filteredProducts.length === 0 ? (
               <EmptyState
                 icon={<Search size={28} strokeWidth={1.75} />}
                 title={search ? `រកមិនឃើញ «${search}»` : 'គ្មានទំនិញក្នុងប្រភេទនេះ'}

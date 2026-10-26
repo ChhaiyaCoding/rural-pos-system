@@ -18,13 +18,8 @@ import { useStoreProfile } from '@/store/storeProfile.store'
 import { useAuthStore } from '@/store/auth.store'
 import { BackupSheet } from '@/features/settings/components/BackupSheet'
 import { backupService } from '@/services/backup.service'
-import { productService } from '@/services/product.service'
-import { customerService } from '@/services/customer.service'
 import { formatKHR } from '@/lib/money'
 import { toKHR } from '@/lib/money'
-import type { TenantId } from '@/types/branded'
-
-const DEMO_TENANT = 'tenant-demo' as TenantId
 
 /* The form below copies the saved profile into local state once, on its first
    render. While React hydrates the page, zustand hands out the *initial*
@@ -147,14 +142,11 @@ function SettingsForm() {
     }
   }
 
-  /* ── Reset all data → wipe + restore demo data ─────────────── */
+  /* ── Reset all data → an empty shop (no demo data is put back) ── */
   const handleResetData = async () => {
     setResetting(true)
     try {
       await backupService.clearAll()
-      // Re-seed fresh demo data so the app isn't left empty
-      await productService.seedIfEmpty(DEMO_TENANT)
-      await customerService.seedIfEmpty(DEMO_TENANT)
       // Full reload so every screen + cart picks up the clean data
       window.location.href = '/'
     } catch {
@@ -472,7 +464,7 @@ function SettingsForm() {
         tone="danger"
         icon={<Trash2 size={26} strokeWidth={2} />}
         title="លុបទិន្នន័យទាំងអស់?"
-        message={<>ទំនិញ · ការលក់ · បំណុល នឹងត្រូវលុបចេញ<br />ហើយដាក់ទិន្នន័យ demo ឡើងវិញ។<br />សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។</>}
+        message={<>ទំនិញ · ការលក់ · បំណុល · ចំណាយ នឹងត្រូវលុបចេញទាំងអស់។<br />ព័ត៌មានហាង និងការកំណត់ នៅដដែល។<br />សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ — សូម backup ជាមុនសិន។</>}
         confirmLabel="បាទ/ចាស លុប"
         busy={resetting}
         busyLabel="កំពុងលុប…"
