@@ -151,12 +151,12 @@ export function BarcodeScannerSheet({ onClose }: Props) {
       open
       onClose={handleClose}
       tone="dark"
-      title="ស្កែន Barcode"
+      title="ស្កែនបាកូដ"
       bodyClassName="p-0"
       headerActions={
         <IconButton
           variant="onDark"
-          aria-label="វាយ Barcode ដៃ"
+          aria-label="វាយលេខបាកូដ"
           aria-pressed={state.status === 'manual'}
           onClick={() => setState(s => s.status === 'manual' ? { status: 'scanning' } : { status: 'manual' })}
         >
@@ -228,7 +228,7 @@ export function BarcodeScannerSheet({ onClose }: Props) {
         {/* Manual input */}
         {state.status === 'manual' && (
           <div>
-            <label htmlFor="manual-barcode" className="mb-2 block text-meta text-ink-300">វាយ Barcode ដៃ</label>
+            <label htmlFor="manual-barcode" className="mb-2 block text-meta text-ink-300">វាយលេខបាកូដ</label>
             <div className="flex gap-2">
               <input
                 id="manual-barcode"

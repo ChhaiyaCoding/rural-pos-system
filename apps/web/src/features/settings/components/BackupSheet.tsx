@@ -39,7 +39,7 @@ export function BackupSheet({ onClose }: Props) {
       setLastAt(backupService.lastBackupAt())
       setPhase({ kind: 'exported', stats })
     } catch {
-      setPhase({ kind: 'error', message: 'Export បរាជ័យ — សូមព្យាយាមម្ដងទៀត' })
+      setPhase({ kind: 'error', message: 'ទាញយកមិនបាន — សូមព្យាយាមម្ដងទៀត' })
     } finally {
       setWorking(false)
     }
@@ -59,7 +59,7 @@ export function BackupSheet({ onClose }: Props) {
         kind: 'error',
         message: err instanceof BackupError && err.code === 'BACKUP_TOO_NEW'
           ? 'Backup នេះមកពី app ជំនាន់ថ្មីជាង — សូមបើក app ឡើងវិញ (reload) ដើម្បីទទួលបានជំនាន់ថ្មី រួចសាកម្ដងទៀត'
-          : 'File មិនត្រឹមត្រូវ — សូមជ្រើស backup file ត្រឹមត្រូវ',
+          : 'ឯកសារមិនត្រឹមត្រូវ — សូមជ្រើសឯកសារ backup ពី app នេះ',
       })
     } finally {
       setWorking(false)
@@ -92,14 +92,14 @@ export function BackupSheet({ onClose }: Props) {
       // Reload after a moment so live queries + zustand re-read fresh data
       setTimeout(() => window.location.reload(), 1800)
     } catch {
-      setPhase({ kind: 'error', message: 'Restore បរាជ័យ — ទិន្នន័យមិនបានផ្លាស់ប្ដូរ' })
+      setPhase({ kind: 'error', message: 'ដាក់ទិន្នន័យចូលមិនបាន — ទិន្នន័យមិនបានផ្លាស់ប្ដូរទេ' })
     } finally {
       setWorking(false)
     }
   }
 
   return (
-    <Sheet open onClose={onClose} title="Backup / Restore">
+    <Sheet open onClose={onClose} title="Backup ទិន្នន័យ">
       <div className="space-y-3 pt-1 pb-2">
 
         {/* ── Confirm restore phase ──────────────────── */}
@@ -110,7 +110,7 @@ export function BackupSheet({ onClose }: Props) {
               <div>
                 <p className="text-body font-bold text-danger">ប្រុងប្រយ័ត្ន!</p>
                 <p className="mt-1 text-body-sm text-danger">
-                  ការ Restore នឹង <span className="font-bold">ជំនួសទិន្នន័យបច្ចុប្បន្នទាំងអស់</span> ដោយ backup file។
+                  ការដាក់ backup ចូល នឹង <span className="font-bold">ជំនួសទិន្នន័យបច្ចុប្បន្នទាំងអស់</span> ដោយ backup file។
                   App រក្សាទុកទិន្នន័យបច្ចុប្បន្នមួយច្បាប់ជាមុន ដូច្នេះអាចត្រឡប់វិញបាន។
                 </p>
               </div>
@@ -134,7 +134,7 @@ export function BackupSheet({ onClose }: Props) {
                 onClick={handleRestore}
                 className="h-14 flex-1 rounded-md bg-danger text-body font-bold text-white active:brightness-95 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
               >
-                {working ? 'កំពុង Restore…' : 'បាទ/ចាស Restore'}
+                {working ? 'កំពុងដាក់ចូល…' : 'បាទ/ចាស ដាក់ចូល'}
               </button>
               <Button variant="secondary" size="lg" className="flex-1" onClick={() => setPhase({ kind: 'idle' })}>
                 បោះបង់
@@ -148,11 +148,11 @@ export function BackupSheet({ onClose }: Props) {
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success-bg text-success" aria-hidden="true">
               <CheckCircle2 size={36} strokeWidth={2} />
             </div>
-            <p className="text-title-sm font-bold text-text">{phase.undone ? 'បានត្រឡប់ទិន្នន័យមុនវិញ!' : 'Restore ជោគជ័យ!'}</p>
+            <p className="text-title-sm font-bold text-text">{phase.undone ? 'បានត្រឡប់ទិន្នន័យមុនវិញ!' : 'ដាក់ទិន្នន័យចូលវិញជោគជ័យ!'}</p>
             <p className="text-meta text-text-muted">
               {phase.stats.products} ទំនិញ · {phase.stats.customers} អតិថិជន · {phase.stats.sales} ការលក់
             </p>
-            <p className="text-meta text-text-muted">កំពុង reload…</p>
+            <p className="text-meta text-text-muted">កំពុងបើកឡើងវិញ…</p>
           </div>
 
         /* ── Default / exported / error ─────────────── */
@@ -169,8 +169,8 @@ export function BackupSheet({ onClose }: Props) {
                 <Download size={22} strokeWidth={2} />
               </span>
               <span className="flex-1">
-                <span className="block text-body font-bold text-text">Export ទិន្នន័យ</span>
-                <span className="mt-0.5 block text-meta text-text-muted">ទាញយក backup file (.json) ទុកក្នុងទូរស័ព្ទ</span>
+                <span className="block text-body font-bold text-text">ទាញយក Backup</span>
+                <span className="mt-0.5 block text-meta text-text-muted">រក្សាឯកសារ backup ទុកក្នុងទូរស័ព្ទ</span>
               </span>
             </button>
 
@@ -199,8 +199,8 @@ export function BackupSheet({ onClose }: Props) {
                 <Upload size={22} strokeWidth={2} />
               </span>
               <span className="flex-1">
-                <span className="block text-body font-bold text-text">Restore ទិន្នន័យ</span>
-                <span className="mt-0.5 block text-meta text-text-muted">ផ្ទុក backup file ត្រឡប់ (លុបទិន្នន័យចាស់)</span>
+                <span className="block text-body font-bold text-text">ដាក់ Backup ចូលវិញ</span>
+                <span className="mt-0.5 block text-meta text-text-muted">ជ្រើសឯកសារ backup (ជំនួសទិន្នន័យបច្ចុប្បន្ន)</span>
               </span>
             </button>
             <input
@@ -223,7 +223,7 @@ export function BackupSheet({ onClose }: Props) {
                   <Undo2 size={22} strokeWidth={2} />
                 </span>
                 <span className="flex-1">
-                  <span className="block text-body font-bold text-text">ត្រឡប់ទិន្នន័យមុន Restore</span>
+                  <span className="block text-body font-bold text-text">ត្រឡប់ទៅទិន្នន័យមុនពេលដាក់ចូល</span>
                   <span className="mt-0.5 block text-meta text-text-muted">ទិន្នន័យដែលមាននៅ {formatWhen(undoAt)}</span>
                 </span>
               </button>
@@ -240,7 +240,7 @@ export function BackupSheet({ onClose }: Props) {
             {/* Tip */}
             <p className="flex items-start gap-2 rounded-md bg-surface-2 px-3.5 py-3 text-meta text-text-muted">
               <Lightbulb size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-              <span>Export backup យ៉ាងហោចណាស់ម្ដងក្នុងមួយសប្ដាហ៍ → ផ្ញើ Telegram ខ្លួនឯង ឬ save Google Drive។ បើទូរស័ព្ទបាត់ ឬខូច នេះជាផ្លូវតែមួយគត់ដើម្បីយកទិន្នន័យមកវិញ។</span>
+              <span>ទាញយក backup យ៉ាងហោចណាស់ម្ដងក្នុងមួយសប្ដាហ៍ → ផ្ញើ Telegram ខ្លួនឯង ឬ save Google Drive។ បើទូរស័ព្ទបាត់ ឬខូច នេះជាផ្លូវតែមួយគត់ដើម្បីយកទិន្នន័យមកវិញ។</span>
             </p>
           </>
         )}

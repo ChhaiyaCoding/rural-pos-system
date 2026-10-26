@@ -30,7 +30,7 @@ export function StoreDaySummaryView({ summary }: Props) {
       {/* Breakdown */}
       <div className="divide-y divide-line overflow-hidden rounded-lg bg-surface">
         <Row label="ប្រាក់ដើមដំបូង"   value={summary.openingCash}   dot="bg-line-strong" />
-        <Row label="លក់សុទ្ធ (Cash)" value={summary.cashSales}     dot="bg-chart-3" />
+        <Row label="លក់សាច់ប្រាក់" value={summary.cashSales}     dot="bg-chart-3" />
         <Row label="ABA"             value={summary.abaSales}      dot="bg-chart-1" />
         <Row label="ជំពាក់ (ឥណទាន)"  value={summary.debtSales}     dot="bg-chart-5" valueClass="text-debt" />
         <Row label="ចំណាយសរុប"       value={summary.totalExpenses} dot="bg-danger" valueClass="text-danger" prefix={summary.totalExpenses > 0 ? '−' : ''} />

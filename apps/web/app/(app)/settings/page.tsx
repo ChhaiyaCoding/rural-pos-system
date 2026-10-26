@@ -22,6 +22,7 @@ import { formatKHR } from '@/lib/money'
 import { toKHR } from '@/lib/money'
 import { compressImage, LOGO_IMAGE } from '@/lib/image'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { APP_VERSION } from '@/lib/support'
 
 /* The form below copies the saved profile into local state once, on its first
    render. While React hydrates the page, zustand hands out the *initial*
@@ -107,7 +108,7 @@ function SettingsForm() {
     const parsedRate = Math.max(1, Number(rate) || 4000)
     update({
       storeName:         name.trim()    || 'ហាងលក់ទំនិញ',
-      storeAddress:      address.trim() || 'ភ្នំពេញ · Cambodia',
+      storeAddress:      address.trim() || 'ភ្នំពេញ',
       storePhone:        phone.trim(),
       cashierName:       cashier.trim() || 'សុខា',
       receiptFooter:     footer.trim()  || '🙏 អរគុណដែលបានមកទិញ!',
@@ -212,7 +213,7 @@ function SettingsForm() {
           </div>
           <div className="mt-3 flex items-center justify-between gap-3 border-t border-ink-700 pt-3">
             <p className="text-meta text-ink-300">
-              {storeLogo ? 'Logo ហាង' : 'បន្ថែម Logo ហាង'} · PNG · JPG · បង្ហាញក្នុង Receipt
+              {storeLogo ? 'Logo ហាង' : 'បន្ថែម Logo ហាង'} · បង្ហាញក្នុង Receipt
             </p>
             <Button variant="onDark" icon={<Camera size={16} strokeWidth={2.25} />} onClick={() => fileRef.current?.click()}>
               {storeLogo ? 'ប្ដូររូប' : 'ជ្រើសរូប'}
@@ -266,7 +267,7 @@ function SettingsForm() {
           </label>
           <p className="col-span-2 flex items-start gap-1.5 px-1 text-meta text-text-muted">
             <Banknote size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-            តម្លៃ​ទាំងអស់​បង្ហាញ​ទាំង ៛ និង $ — DB រក្សាទុក​ជា ៛ ប៉ុណ្ណោះ
+            តម្លៃទាំងអស់បង្ហាញទាំង ៛ និង $ — ប្រព័ន្ធគិត និងរក្សាទុកជា ៛
           </p>
         </section>
 
@@ -309,7 +310,7 @@ function SettingsForm() {
               </label>
               {/* Footer text */}
               <label className="flex flex-col rounded-[18px] bg-bg px-4 py-2 focus-within:ring-2 focus-within:ring-ink-900/20">
-                <span className="text-caption font-semibold text-text-subtle">សារអរគុណ (footer)</span>
+                <span className="text-caption font-semibold text-text-subtle">សារអរគុណ (ខាងក្រោមវិក្កយបត្រ)</span>
                 <textarea
                   value={footer}
                   onChange={(e) => setFooter(e.target.value)}
@@ -329,7 +330,7 @@ function SettingsForm() {
             >
               <span className="flex items-center gap-2 text-body-sm font-semibold text-text">
                 <Receipt size={18} strokeWidth={2.25} aria-hidden="true" />
-                {showPreview ? 'បិទ Preview Receipt' : 'មើល Preview Receipt'}
+                {showPreview ? 'បិទគំរូវិក្កយបត្រ' : 'មើលគំរូវិក្កយបត្រ'}
               </span>
               <ChevronRight
                 size={18}
@@ -418,8 +419,8 @@ function SettingsForm() {
               <Database size={20} />
             </span>
             <span>
-              <span className="block text-body-sm font-bold text-text">Backup / Restore</span>
-              <span className="block text-caption text-text-muted">Export ឬ ផ្ទុកទិន្នន័យត្រឡប់ (.json)</span>
+              <span className="block text-body-sm font-bold text-text">Backup ទិន្នន័យ</span>
+              <span className="block text-caption text-text-muted">ទាញយកទុក ឬដាក់ទិន្នន័យចូលវិញ</span>
             </span>
           </button>
           <label className="flex min-h-[112px] flex-col justify-between rounded-lg bg-surface p-3.5 focus-within:ring-2 focus-within:ring-ink-900/20">
@@ -462,7 +463,7 @@ function SettingsForm() {
           <SectionHeader icon={<Info size={16} />} label="ប្រព័ន្ធ" />
           <div className="divide-y divide-line overflow-hidden rounded-lg bg-surface">
             <SoonRow label="គ្រប់គ្រងអ្នកប្រើ" sub="បន្ថែម ឬដកអ្នកប្រើប្រាស់" />
-            <SoonRow label="ការជាវ SaaS"        sub="គ្រប់គ្រងផែនការ" />
+            <SoonRow label="ការជាវ"            sub="គម្រោង និងការបង់ប្រាក់" />
           </div>
         </section>
 
@@ -479,8 +480,8 @@ function SettingsForm() {
 
         {/* ══ App info ═════════════════════════════════════ */}
         <div className="space-y-1 pt-2 text-center">
-          <p className="text-caption font-semibold text-text-muted">Rural POS v1.0.0</p>
-          <p className="text-caption text-text-muted">Offline-first · IndexedDB · Next.js 15</p>
+          <p className="text-caption font-semibold text-text-muted">POS ហាង · ជំនាន់ {APP_VERSION}</p>
+          <p className="text-caption text-text-muted">ប្រើបានទាំងពេលគ្មានអ៊ីនធឺណិត</p>
         </div>
       </div>
 
@@ -509,7 +510,7 @@ function SettingsForm() {
         tone="danger"
         icon={<LogOut size={26} strokeWidth={2} />}
         title="ចេញពីគណនី?"
-        message={<>ទិន្នន័យ IndexedDB នៅ device នៅដដែល។<br />ចូលម្ដងទៀតដើម្បី sync ។</>}
+        message={<>ទិន្នន័យនៅក្នុងឧបករណ៍នេះនៅដដែល។<br />ចូលម្ដងទៀត ដើម្បីប្រើបន្ត។</>}
         confirmLabel="បាទ/ចាស ចេញ"
         busy={signingOut}
         busyLabel="កំពុងចេញ…"

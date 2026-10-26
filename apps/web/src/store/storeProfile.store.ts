@@ -31,7 +31,7 @@ export const useStoreProfile = create<StoreProfile & StoreProfileActions>()(
   persist(
     (set) => ({
       storeName:     'ហាងលក់ទំនិញ',
-      storeAddress:  'ភ្នំពេញ · Cambodia',
+      storeAddress:  'ភ្នំពេញ',
       storePhone:    '',
       storeLogo:     null,
       cashierName:   'សុខា',

@@ -450,7 +450,7 @@ export function ProductFormSheet({ product, onClose, onSaved }: ProductFormSheet
                 type="button"
                 onClick={() => setShowScanner(true)}
                 className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-[18px] bg-ink-900 text-accent transition-colors active:bg-ink-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
-                aria-label="ស្កែន Barcode"
+                aria-label="ស្កែនបាកូដ"
               >
                 <ScanLine size={22} strokeWidth={2.25} aria-hidden="true" />
               </button>

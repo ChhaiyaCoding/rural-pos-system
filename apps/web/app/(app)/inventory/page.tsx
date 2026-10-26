@@ -174,7 +174,7 @@ export default function InventoryPage() {
         <SearchInput
           value={search}
           onChange={setSearch}
-          placeholder="ស្វែង ឈ្មោះ · EN · barcode · តម្លៃ…"
+          placeholder="ស្វែងរក ឈ្មោះ · បាកូដ · តម្លៃ…"
         />
 
         {/* Category pills */}

@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 export default function SuppliersPage() {
   return (
     <div className="flex min-h-full flex-col">
-      <PageHeader title="អ្នកផ្គត់ផ្គង់" subtitle="Suppliers · ការ​ទិញ​ចូល" backHref="/inventory" />
+      <PageHeader title="អ្នកផ្គត់ផ្គង់" subtitle="ការ​ទិញ​ចូល​ពី​អ្នកផ្គត់ផ្គង់" backHref="/inventory" />
       <EmptyState
         fullHeight
         icon={<Truck size={30} strokeWidth={1.5} />}

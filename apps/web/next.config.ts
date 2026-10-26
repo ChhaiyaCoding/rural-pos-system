@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
   // /_next/image optimizer endpoint off — it is the attack surface of the
   // Next.js/sharp image advisories.
   images: { unoptimized: true },
+  // Build id shown in the app (More / Settings) for support: the git commit on Vercel
+  env: {
+    NEXT_PUBLIC_APP_VERSION: (process.env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 7),
+  },
 }
 
 export default nextConfig

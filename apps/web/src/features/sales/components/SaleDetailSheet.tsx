@@ -234,7 +234,7 @@ export function SaleDetailSheet({ sale, onClose, onVoided }: Props) {
                   onClick={() => setConfirmVoid(true)}
                   icon={<Trash2 size={18} strokeWidth={2.25} />}
                 >
-                  លុប / Cancel ការលក់នេះ
+                  លុបការលក់នេះ
                 </Button>
               ) : (
                 /* Step 2 — Confirm */

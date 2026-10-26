@@ -146,7 +146,7 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
   const itemsSubtotal = data.items.reduce((s, i) => addKHR(s, multiplyKHR(i.unitPrice, i.qty)), toKHR(0))
   const discount      = toKHR(Math.max(0, (itemsSubtotal as number) - (data.totalAmount as number)))
   const displayName    = storeName     || 'ហាងលក់ទំនិញ'
-  const displayAddr    = storeAddress  || 'ភ្នំពេញ · Cambodia'
+  const displayAddr    = storeAddress  || 'ភ្នំពេញ'
   const displayPhone   = storePhone    || ''
   const displayFooter  = receiptFooter || '🙏 អរគុណដែលបានមកទិញ!'
   const displayInitial = displayName.charAt(0) || 'ហ'
@@ -269,7 +269,7 @@ export function SaleReceiptSheet({ data, onClose, debtSettled = false }: Props) 
                 storeLogo ? (
                   <img
                     src={storeLogo}
-                    alt="Store logo"
+                    alt="Logo ហាង"
                     className="w-14 h-14 rounded-2xl object-cover mx-auto mb-2.5 border border-line shadow-sm"
                   />
                 ) : (

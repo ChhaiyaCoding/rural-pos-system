@@ -380,7 +380,7 @@ export function POSScreen() {
           <SearchInput
             value={search}
             onChange={setSearch}
-            placeholder="ស្វែង ឈ្មោះ · EN · barcode · តម្លៃ…"
+            placeholder="ស្វែងរក ឈ្មោះ · បាកូដ · តម្លៃ…"
             onScan={() => setScanning(true)}
           />
         </PageHeader>
@@ -391,7 +391,7 @@ export function POSScreen() {
             className="flex-1"
             value={search}
             onChange={setSearch}
-            placeholder="ស្វែង ឈ្មោះ · EN · barcode · តម្លៃ…"
+            placeholder="ស្វែងរក ឈ្មោះ · បាកូដ · តម្លៃ…"
             onScan={() => setScanning(true)}
           />
           <Button

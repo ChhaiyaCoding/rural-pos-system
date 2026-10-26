@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { ChartColumn, ReceiptText, Users, Wallet, UserCog, Settings } from 'lucide-react'
+import { ChartColumn, ReceiptText, Users, Wallet, UserCog, Settings, Send, Phone, LifeBuoy } from 'lucide-react'
 import { useStoreProfile } from '@/store/storeProfile.store'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Pill } from '@/components/ui/Pill'
 import { firstGrapheme } from '@/components/ui/text'
+import { SUPPORT, APP_VERSION } from '@/lib/support'
 
 interface MoreTile {
   href:  string
@@ -22,7 +23,7 @@ const TILES: MoreTile[] = [
   { href: '/customers', icon: <Users size={22} />,       label: 'អតិថិជន',     sub: 'បញ្ជី​អតិថិជន​ទាំងអស់' },
   { href: '/expenses',  icon: <Wallet size={22} />,      label: 'ការចំណាយ',    sub: 'កត់ត្រា​ការ​ចំណាយ​ប្រចាំ​ថ្ងៃ' },
   { href: '/staff',     icon: <UserCog size={22} />,     label: 'បុគ្គលិក',    sub: 'អ្នកប្រើ & សិទ្ធិ', soon: true },
-  { href: '/settings',  icon: <Settings size={22} />,    label: 'ការកំណត់',    sub: 'ហាង · receipt · backup' },
+  { href: '/settings',  icon: <Settings size={22} />,    label: 'ការកំណត់',    sub: 'ហាង · វិក្កយបត្រ · Backup' },
 ]
 
 export default function MorePage() {
@@ -61,7 +62,39 @@ export default function MorePage() {
         ))}
       </nav>
 
-      <p className="px-4 pb-6 pt-6 text-center text-caption text-text-muted">Rural POS v1.0.0</p>
+      {(SUPPORT.telegram || SUPPORT.phone) && (
+        <section aria-label="ជំនួយ" className="mx-4 mt-5 rounded-lg bg-surface p-4 md:mx-0">
+          <p className="flex items-center gap-2 text-body font-bold text-text">
+            <LifeBuoy size={20} aria-hidden="true" />
+            ត្រូវការជំនួយ?
+          </p>
+          <p className="mt-0.5 text-meta text-text-muted">សួរយើងបានគ្រប់ពេល — យើងនឹងឆ្លើយឆាប់ៗ</p>
+          <div className="mt-3 grid gap-2.5">
+            {SUPPORT.telegram && (
+              <a
+                href={`https://t.me/${SUPPORT.telegram}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-14 items-center justify-center gap-2 rounded-md bg-ink-900 text-label-lg font-bold text-white transition-colors active:bg-ink-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                <Send size={20} strokeWidth={2.25} aria-hidden="true" />
+                សួរតាម Telegram
+              </a>
+            )}
+            {SUPPORT.phone && (
+              <a
+                href={`tel:${SUPPORT.phone.replace(/\s/g, '')}`}
+                className="flex h-14 items-center justify-center gap-2 rounded-md border border-line bg-surface text-label-lg font-bold text-ink-900 transition-colors active:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
+              >
+                <Phone size={20} strokeWidth={2.25} aria-hidden="true" />
+                ហៅទូរស័ព្ទ {SUPPORT.phone}
+              </a>
+            )}
+          </div>
+        </section>
+      )}
+
+      <p className="px-4 pb-6 pt-6 text-center text-caption text-text-muted">POS ហាង · ជំនាន់ {APP_VERSION}</p>
     </div>
   )
 }
