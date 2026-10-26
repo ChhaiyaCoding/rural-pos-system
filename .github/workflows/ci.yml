@@ -34,6 +34,9 @@ jobs:
       - name: Lint
         run: npx next lint --max-warnings 50
 
+      - name: Unit tests
+        run: npm test
+
       # Fail on critical advisories in what ships to users. The remaining
       # "high" (postcss bundled inside next 15) only goes away with Next 16.
       - name: Audit (production deps)
