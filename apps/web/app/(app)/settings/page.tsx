@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   Camera, X, User, FileText, Check,
   Package, ChevronRight, Info, ShieldAlert, Receipt, Database,
-  LogOut, Trash2, Banknote, Pencil, Phone, AlertTriangle,
+  LogOut, Trash2, Banknote, Pencil, Phone, AlertTriangle, Type,
 } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
@@ -59,7 +59,7 @@ function SettingsForm() {
     storeName, storeAddress, storePhone,
     storeLogo, cashierName, receiptFooter,
     receiptHeaderNote, receiptShowLogo, receiptShowCashier,
-    receiptShowPhone, receiptShowAddress, receiptPaper, exchangeRate,
+    receiptShowPhone, receiptShowAddress, receiptPaper, textSize, exchangeRate,
     update, clearLogo,
   } = useStoreProfile()
 
@@ -447,6 +447,14 @@ function SettingsForm() {
             <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
             នៅពេលស្តុកធ្លាក់ចុះទៅ {threshold || '5'} ឯកតា — ប្រព័ន្ធនឹងជូនដំណឹង
           </p>
+        </section>
+
+        {/* ══ Display (this device) ═══════════════════════════ */}
+        <section>
+          <SectionHeader icon={<Type size={16} />} label="ការបង្ហាញ" />
+          <div className="overflow-hidden rounded-lg bg-surface">
+            <ToggleRow label="អក្សរធំ (ងាយអាន)" value={textSize === 'large'} onChange={(v) => update({ textSize: v ? 'large' : 'normal' })} />
+          </div>
         </section>
 
         {/* ══ Not available yet (no action) ══════════════════ */}

@@ -28,8 +28,7 @@ export const viewport: Viewport = {
   themeColor: '#0F1B2D',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Pinch-zoom stays on (older shop owners); inputs are ≥16px so iOS does not auto-zoom
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

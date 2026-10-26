@@ -16,6 +16,8 @@ export interface StoreProfile {
   receiptShowAddress: boolean
   /** Paper the receipt is printed on: thermal 58mm / 80mm, or a normal page */
   receiptPaper: '58' | '80' | 'a4'
+  /** Reading text size on this device */
+  textSize: 'normal' | 'large'
   // ── Currency ──
   exchangeRate: number       // KHR per 1 USD (display conversion only)
 }
@@ -41,6 +43,7 @@ export const useStoreProfile = create<StoreProfile & StoreProfileActions>()(
       receiptShowAddress: true,
       receiptPaper:       '58',
       exchangeRate:       4000,
+      textSize:           'normal',
 
       update: (patch) => set(patch),
       clearLogo: () => set({ storeLogo: null }),

@@ -126,9 +126,9 @@
   --color-slate-900: #0F1B2D;
 
   /* ══ Type scale ════════════════════════════════════════════════
-     12px is the smallest allowed size. Khmer needs vertical room for
-     subscripts, so text sizes use 1.45; big numbers use 1.2.          */
-  --text-caption:       12px;  --text-caption--line-height:       1.45;
+     13px is the smallest size: Khmer subscripts are hard to read below
+     it. Text sizes use 1.45 line height; big numbers use 1.2.          */
+  --text-caption:       13px;  --text-caption--line-height:       1.45;
   --text-meta:          13px;  --text-meta--line-height:          1.45;
   --text-body-sm:       15px;  --text-body-sm--line-height:       1.45;
   --text-body:          16px;  --text-body--line-height:          1.45;
@@ -253,4 +253,20 @@
   }
   html.printing #print-root > * { border: 0 !important; border-radius: 0 !important; }
   html.printing #print-root img { filter: grayscale(1); }
+}
+
+/* ── "អក្សរធំ" (Settings) — larger reading text for older eyes ─────── */
+html[data-text="large"] {
+  --text-caption:  14px;
+  --text-meta:     15px;
+  --text-body-sm:  16px;
+  --text-body:     17px;
+  --text-label-lg: 18px;
+}
+/* Tile values are already big numbers and are sized to fit a 3-up phone tile
+   (StatTile valueSize) — keep their normal sizes so long amounts still fit. */
+html[data-text="large"] .stat-value {
+  --text-meta:    13px;
+  --text-body-sm: 15px;
+  --text-body:    16px;
 }

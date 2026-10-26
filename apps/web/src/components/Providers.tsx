@@ -20,6 +20,12 @@ async function requestPersistentStorage(): Promise<void> {
 export function Providers({ children }: { children: React.ReactNode }) {
   const setOnline = useSyncStore((s) => s.setOnline)
   const exchangeRate = useStoreProfile((s) => s.exchangeRate)
+  const textSize     = useStoreProfile((s) => s.textSize)
+
+  /* "អក្សរធំ" setting → html[data-text] swaps the type tokens (globals.css) */
+  useEffect(() => {
+    document.documentElement.dataset.text = textSize
+  }, [textSize])
 
   /* Keep the pure money lib in sync with the user's configured rate */
   useEffect(() => {

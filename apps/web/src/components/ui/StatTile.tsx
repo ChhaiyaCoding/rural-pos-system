@@ -43,7 +43,7 @@ export function StatTile({ label, value, sub, tone = 'light', dot, onClick, pres
         {dot && <span className={cx('h-2 w-2 shrink-0 rounded-full', dot)} aria-hidden="true" />}
         {label}
       </span>
-      <span className={cx('max-w-full font-bold tabular-nums', valueSize(value), dark ? 'text-white' : 'text-text')}>
+      <span className={cx('stat-value max-w-full font-bold tabular-nums', valueSize(value), dark ? 'text-white' : 'text-text')}>
         {value}
       </span>
       {sub && <span className={cx('text-caption', dark ? 'text-ink-300' : 'text-text-muted')}>{sub}</span>}
