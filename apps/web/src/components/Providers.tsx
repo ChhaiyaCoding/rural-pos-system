@@ -8,6 +8,16 @@ import { useStoreProfile } from '@/store/storeProfile.store'
 import { setExchangeRate } from '@/lib/money'
 import kmMessages from '@/i18n/km.json'
 
+/** Best effort: Chrome/Android grants it silently (more readily once installed),
+ *  Safari decides on its own; unsupported browsers just skip it. */
+async function requestPersistentStorage(): Promise<void> {
+  try {
+    if (!navigator.storage?.persist) return
+    if (await navigator.storage.persisted()) return
+    await navigator.storage.persist()
+  } catch { /* not available — nothing to do */ }
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const setOnline = useSyncStore((s) => s.setOnline)
   const exchangeRate = useStoreProfile((s) => s.exchangeRate)
@@ -33,6 +43,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const stop = startSyncEngine()
     return stop
+  }, [])
+
+  /* Ask the browser to keep IndexedDB (sales, stock, debt) instead of evicting
+     it under storage pressure — this device holds the shop's only copy. */
+  useEffect(() => {
+    void requestPersistentStorage()
   }, [])
 
   return (

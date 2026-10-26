@@ -28,19 +28,36 @@ const DEMO_TENANT = 'tenant-demo' as TenantId
 
 /* ── Notification helpers ────────────────────────────────────────── */
 
-/** Request notification permission once — silently if already decided */
+/** Request notification permission once — silently if already decided.
+ *  Never throws: a failure here must not take down the app. */
 async function requestNotifPermission() {
-  if (typeof Notification === 'undefined') return
-  if (Notification.permission === 'default') {
-    await Notification.requestPermission()
-  }
+  try {
+    if (typeof Notification === 'undefined') return
+    if (Notification.permission === 'default') {
+      await Notification.requestPermission()
+    }
+  } catch { /* unsupported — ignore */ }
 }
 
-/** Show a browser notification (requires permission granted) */
+/** Show a browser notification (requires permission granted).
+ *  Android Chrome forbids `new Notification()` (it throws "Illegal constructor")
+ *  and only allows notifications through a service worker, so prefer that and
+ *  never let a notification error crash the app. */
 function showNotif(title: string, body: string, tag = 'pos', icon = '/icons/icon-192x192.png') {
   if (typeof Notification === 'undefined') return
   if (Notification.permission !== 'granted') return
-  new Notification(title, { body, icon, badge: icon, tag })
+  const options = { body, icon, badge: icon, tag }
+  const viaWorker = 'serviceWorker' in navigator
+    ? navigator.serviceWorker.getRegistration().then((reg) => {
+        if (!reg) return false
+        return reg.showNotification(title, options).then(() => true)
+      })
+    : Promise.resolve(false)
+  viaWorker
+    .then((shown) => {
+      if (!shown) new Notification(title, options)
+    })
+    .catch(() => { /* notifications unavailable — the in-app badges still show */ })
 }
 
 type BadgeKey = 'stock' | 'debt'
