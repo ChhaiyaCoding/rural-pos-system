@@ -7,18 +7,31 @@ import { IconButton } from '@/components/ui/IconButton'
 import { firstGrapheme } from '@/components/ui/text'
 import { useStoreProfile } from '@/store/storeProfile.store'
 
-type Platform = 'android' | 'ios' | null
+type Platform = 'android' | 'ios' | 'ipad' | null
 
 const DISMISSED_KEY = 'pwa-install-dismissed'
+/** A dismissed banner comes back after this many days — installing is what
+ *  keeps Safari from deleting the shop's data, so it is worth asking again. */
+const REMIND_AFTER_DAYS = 7
 
 function detectPlatform(): Platform {
   if (typeof navigator === 'undefined') return null
   const ua = navigator.userAgent
-  const isIOS = /ipad|iphone|ipod/i.test(ua)
-  const isAndroid = /android/i.test(ua)
-  if (isIOS) return 'ios'
-  if (isAndroid) return 'android'
+  // iPadOS Safari reports a Mac user agent; a touch screen gives it away
+  if (/ipad/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) return 'ipad'
+  if (/iphone|ipod/i.test(ua)) return 'ios'
+  if (/android/i.test(ua)) return 'android'
   return null
+}
+
+function recentlyDismissed(): boolean {
+  try {
+    const at = Number(localStorage.getItem(DISMISSED_KEY))
+    // '1' from older versions counts as dismissed long ago
+    return Date.now() - at < REMIND_AFTER_DAYS * 86_400_000
+  } catch {
+    return false
+  }
 }
 
 function isStandalone(): boolean {
@@ -41,8 +54,8 @@ export function PWAInstallBanner() {
     // Already installed as PWA — never show
     if (isStandalone()) return
 
-    // User already dismissed — don't show again
-    if (localStorage.getItem(DISMISSED_KEY)) return
+    // Dismissed within the last week — ask again later
+    if (recentlyDismissed()) return
 
     const plt = detectPlatform()
     setPlatform(plt)
@@ -59,7 +72,7 @@ export function PWAInstallBanner() {
       return () => window.removeEventListener('beforeinstallprompt', handler)
     }
 
-    if (plt === 'ios') {
+    if (plt === 'ios' || plt === 'ipad') {
       // iOS: no native prompt — show manual instructions after delay
       const t = setTimeout(() => setShow(true), 3000)
       return () => clearTimeout(t)
@@ -80,7 +93,7 @@ export function PWAInstallBanner() {
 
   const dismiss = () => {
     setShow(false)
-    localStorage.setItem(DISMISSED_KEY, '1')
+    try { localStorage.setItem(DISMISSED_KEY, String(Date.now())) } catch { /* ignore */ }
   }
 
   if (!show) return null
@@ -105,11 +118,9 @@ export function PWAInstallBanner() {
               </p>
             )}
 
-            {platform === 'ios' && (
+            {(platform === 'ios' || platform === 'ipad') && (
               <p className="mt-0.5 text-meta text-text-muted">
-                ចុច{' '}
-                <Share size={13} className="mx-0.5 inline-block align-middle text-text" strokeWidth={2.5} aria-hidden="true" />
-                {' '}Share → <span className="font-semibold text-text">Add to Home Screen</span>
+                ដាក់លើ Home Screen ដើម្បីបើកបានពេលគ្មានអ៊ីនធឺណិត និងការពារទិន្នន័យកុំឲ្យបាត់
               </p>
             )}
           </div>
@@ -135,11 +146,11 @@ export function PWAInstallBanner() {
         )}
 
         {/* iOS step-by-step */}
-        {platform === 'ios' && (
+        {(platform === 'ios' || platform === 'ipad') && (
           <div className="mt-3 flex items-center gap-2 rounded-md bg-surface-2 px-3 py-2.5">
             <Share size={16} className="shrink-0 text-text" strokeWidth={2.5} aria-hidden="true" />
             <p className="text-meta font-semibold text-text-subtle">
-              Safari → ចុច Share ក្រោម → &quot;Add to Home Screen&quot; → Add
+              Safari → ចុច Share {platform === 'ipad' ? '(ខាងលើ ស្ដាំ)' : '(ខាងក្រោម)'} → &quot;Add to Home Screen&quot; → Add
             </p>
           </div>
         )}

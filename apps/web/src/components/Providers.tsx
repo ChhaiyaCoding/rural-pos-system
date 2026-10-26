@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { startSyncEngine } from '@/sync/engine'
 import { useSyncStore } from '@/store/sync.store'
 import { useStoreProfile } from '@/store/storeProfile.store'
@@ -43,7 +44,20 @@ export function Providers({ children }: { children: React.ReactNode }) {
     return stop
   }, [])
 
-  /* Ask the browser to keep IndexedDB (sales, stock, debt) instead of evicting
+  /* Offline app shell (public/sw.js). Production only — in dev it would cache
+     hot-reloaded code. WARM pre-caches every screen once the user is in. */
+  const pathname = usePathname()
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) return
+    navigator.serviceWorker.register('/sw.js').catch(() => { /* no offline support — the app still works online */ })
+  }, [])
+  // On every screen change (the SW throttles it), e.g. right after login
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) return
+    navigator.serviceWorker.ready.then((reg) => reg.active?.postMessage({ type: 'WARM' })).catch(() => {})
+  }, [pathname])
+
+    /* Ask the browser to keep IndexedDB (sales, stock, debt) instead of evicting
      it under storage pressure — this device holds the shop's only copy. */
   useEffect(() => {
     void requestPersistentStorage()
