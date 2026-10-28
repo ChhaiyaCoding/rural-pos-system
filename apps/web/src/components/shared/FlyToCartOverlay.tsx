@@ -42,8 +42,6 @@ function FlyBubble({ item, onDone }: { item: FlyItem; onDone: () => void }) {
     display:     'flex',
     alignItems:  'center',
     justifyContent: 'center',
-    boxShadow:   '0 4px 16px rgba(37,99,235,0.35)',
-    background:  item.imageUri ? '#fff' : '#2563eb',
     fontSize:    '22px',
     lineHeight:  '1',
 
@@ -67,6 +65,7 @@ function FlyBubble({ item, onDone }: { item: FlyItem; onDone: () => void }) {
     <div
       ref={ref}
       style={style}
+      className={['shadow-fab', item.imageUri ? 'bg-surface' : 'bg-ink-900'].join(' ')}
       onTransitionEnd={() => {
         if (phase === 'fly') onDone()
       }}

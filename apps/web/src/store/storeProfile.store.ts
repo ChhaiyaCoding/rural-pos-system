@@ -14,6 +14,10 @@ export interface StoreProfile {
   receiptShowCashier: boolean
   receiptShowPhone: boolean
   receiptShowAddress: boolean
+  /** Paper the receipt is printed on: thermal 58mm / 80mm, or a normal page */
+  receiptPaper: '58' | '80' | 'a4'
+  /** Reading text size on this device */
+  textSize: 'normal' | 'large'
   // ── Currency ──
   exchangeRate: number       // KHR per 1 USD (display conversion only)
 }
@@ -27,7 +31,7 @@ export const useStoreProfile = create<StoreProfile & StoreProfileActions>()(
   persist(
     (set) => ({
       storeName:     'ហាងលក់ទំនិញ',
-      storeAddress:  'ភ្នំពេញ · Cambodia',
+      storeAddress:  'ភ្នំពេញ',
       storePhone:    '',
       storeLogo:     null,
       cashierName:   'សុខា',
@@ -37,7 +41,9 @@ export const useStoreProfile = create<StoreProfile & StoreProfileActions>()(
       receiptShowCashier: true,
       receiptShowPhone:   true,
       receiptShowAddress: true,
+      receiptPaper:       '58',
       exchangeRate:       4000,
+      textSize:           'normal',
 
       update: (patch) => set(patch),
       clearLogo: () => set({ storeLogo: null }),

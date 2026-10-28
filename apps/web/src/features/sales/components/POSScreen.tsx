@@ -1,17 +1,23 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
-import { Search, ScanLine, X, CheckCircle2, ShoppingCart, ChevronUp, Receipt, PauseCircle } from 'lucide-react'
+import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue } from 'react'
+import { Search, Check, Receipt, PauseCircle, Clock, Trash2, ArrowRight, AlertTriangle, Package, Plus, Sparkles } from 'lucide-react'
+import Link from 'next/link'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Sheet } from '@/components/ui/Sheet'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { cx } from '@/components/ui/cx'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useSaleStore } from '@/store/sale.store'
-import { formatKHR, addKHR, toKHR, multiplyKHR, subtractKHR } from '@/lib/money'
+import { formatKHR, formatUSD, addKHR, toKHR, multiplyKHR, subtractKHR } from '@/lib/money'
 import { nowISO } from '@/lib/date'
 import { saleService } from '@/services/sale.service'
-import { debtService } from '@/services/debt.service'
-import { productService } from '@/services/product.service'
-import { customerService } from '@/services/customer.service'
+import { sampleDataService } from '@/services/sampleData.service'
 import { db } from '@/db'
-import type { KHR } from '@/types'
+import type { KHR, AppError } from '@/types'
 import type { TenantId, UserId, CustomerId } from '@/types/branded'
 import { productMatchesQuery } from '@/lib/search'
 import { useCategoryStore } from '@/store/category.store'
@@ -20,6 +26,7 @@ import { CategoryTabs, type TabCategory } from './CategoryTabs'
 import { FlyToCartOverlay, type FlyItem } from '@/components/shared/FlyToCartOverlay'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { CartPanel } from './CartPanel'
+import { CartChromeContext } from './cartChrome'
 import { CheckoutSheet } from './CheckoutSheet'
 import { SaleReceiptSheet, type ReceiptData } from './SaleReceiptSheet'
 import { HeldInvoicesSheet } from './HeldInvoicesSheet'
@@ -30,9 +37,20 @@ import { CloseShiftSheet } from './CloseShiftSheet'
 import { useStoreProfile } from '@/store/storeProfile.store'
 import { cashDrawerService } from '@/services/cashDrawer.service'
 import type { CashDrawer } from '@/types'
+import { useProgressiveList } from '@/components/shared/useProgressiveList'
 
 const DEMO_TENANT  = 'tenant-demo'  as TenantId
 const DEMO_CASHIER = 'cashier-demo' as UserId
+
+type CheckoutType = 'cash' | 'debt' | 'partial'
+type CheckoutResult = { change: KHR | null; customerName: string | null; customerId: CustomerId | null; discount: KHR; partialDebt: KHR | null }
+
+/** Khmer message for a sale that could not be saved */
+function saveErrorMessage(error: AppError): string {
+  if (error.code === 'CUSTOMER_NOT_FOUND') return 'រកមិនឃើញអតិថិជននេះទេ។ សូមជ្រើសអតិថិជនម្ដងទៀត។'
+  if (error.code === 'UNKNOWN' && /quota/i.test(error.message)) return 'ទំហំផ្ទុកក្នុងឧបករណ៍ពេញ។ សូមលុបរូបថត ឬកម្មវិធីខ្លះ រួចសាកម្ដងទៀត។'
+  return 'ការលក់មិនត្រូវបានរក្សាទុកទេ។ ទំនិញនៅក្នុងរទេះដដែល — សូមសាកម្ដងទៀត។'
+}
 
 type Success = {
   type: 'cash' | 'debt' | 'partial'
@@ -54,6 +72,8 @@ export function POSScreen() {
   const [openShift,   setOpenShift]   = useState(false)
   const [closeShift,  setCloseShift]  = useState(false)
   const [flyItems,    setFlyItems]    = useState<FlyItem[]>([])
+  const [saveError,   setSaveError]   = useState<{ message: string; retry: () => void } | null>(null)
+  const savingRef    = useRef(false)                     // blocks a double tap from saving the sale twice
   const cartBtnRef   = useRef<HTMLButtonElement>(null)   // mobile checkout bar (only when count>0)
   const cartPanelRef = useRef<HTMLElement>(null)         // desktop cart sidebar (always rendered)
 
@@ -71,16 +91,20 @@ export function POSScreen() {
   const categories = useCategoryStore((s) => s.categories)
 
   /* Products from DB (live — updates when stock changes) */
-  const dbProducts = useLiveQuery(
+  const liveProducts = useLiveQuery(
     () => db.products.where('tenantId').equals(DEMO_TENANT).filter((p) => !p.deletedAt).toArray(),
     []
-  ) ?? []
+  )
+  const dbProducts = liveProducts ?? []
+  /* A brand-new shop: no products yet (not just an empty search/filter) */
+  const noProducts = liveProducts !== undefined && liveProducts.length === 0
 
-  /* Seed mock data to DB on first run */
-  useEffect(() => {
-    productService.seedIfEmpty(DEMO_TENANT).catch(() => {})
-    customerService.seedIfEmpty(DEMO_TENANT).catch(() => {})
-  }, [])
+  /* Sample data is opt-in — never seeded automatically into a real shop */
+  const [loadingSample, setLoadingSample] = useState(false)
+  const loadSample = async () => {
+    setLoadingSample(true)
+    try { await sampleDataService.load(DEMO_TENANT) } finally { setLoadingSample(false) }
+  }
 
   /* Live shift/session activity — grows as sales complete (feels operational) */
   const [session, setSession] = useState({ total: toKHR(125_000), count: 23 })
@@ -114,15 +138,19 @@ export function POSScreen() {
   }
 
   /* Filter products by category + smart search (Khmer/English/barcode/price) */
+  /* Typing stays instant; the (possibly long) filter runs on the deferred value */
+  const deferredSearch = useDeferredValue(search)
   const filteredProducts = useMemo(
     () =>
       dbProducts.filter((p) => {
-        const matchSearch = productMatchesQuery(p, search)
+        const matchSearch = productMatchesQuery(p, deferredSearch)
         const matchCat = category === 'all' || p.categoryId === category
         return matchSearch && matchCat
       }),
-    [dbProducts, search, category]
+    [dbProducts, deferredSearch, category]
   )
+  /* Draw the grid a slice at a time (shops can have thousands of products) */
+  const grid = useProgressiveList(filteredProducts, `${deferredSearch}|${category}`)
 
   /* Live per-category counts for the tab badges */
   const categoryCounts = useMemo(() => {
@@ -165,7 +193,8 @@ export function POSScreen() {
   }, [cart.length])
 
   /* ── Fly-to-cart animation ───────────────────────────────────── */
-  const handleFly = (startX: number, startY: number, emoji: string, imageUri: string | null) => {
+  // Stable identity so memoized ProductCards don't re-render on every cart change
+  const handleFly = useCallback((startX: number, startY: number, emoji: string, imageUri: string | null) => {
     const id = `fly-${Date.now()}-${Math.random()}`
     // Defer one frame: the first tap renders the mobile cart bar (count 0→1),
     // so we must read the target *after* that DOM update. We pick whichever
@@ -191,7 +220,7 @@ export function POSScreen() {
 
       setFlyItems(prev => [...prev, { id, emoji, imageUri, startX, startY, endX, endY }])
     })
-  }
+  }, [])
 
   /* Step 1 — open the checkout/confirmation sheet for the chosen method */
   const handlePay = (type: 'cash' | 'debt' | 'partial') => {
@@ -199,11 +228,9 @@ export function POSScreen() {
     setCheckout({ type })
   }
 
-  /* Step 2 — cashier confirmed: record the sale and show success */
-  const finalizeSale = (
-    type: 'cash' | 'debt' | 'partial',
-    result: { change: KHR | null; customerName: string | null; customerId: CustomerId | null; discount: KHR; partialDebt: KHR | null }
-  ) => {
+  /* Step 2 — cashier confirmed: save the sale, and only then show success */
+  const finalizeSale = async (type: CheckoutType, result: CheckoutResult) => {
+    if (savingRef.current) return
     const subtotal  = total
     const discount  = result.discount
     const amount    = subtractKHR(subtotal, discount)    // final amount (after discount)
@@ -236,6 +263,32 @@ export function POSScreen() {
     const receiptNumber = `${shortDate}-${shortRef}`
 
     const cashReceived = type === 'cash' ? paidNow : type === 'partial' ? paidNow : null
+    const debtAmount   = type === 'debt' ? amount : type === 'partial' ? partialDebtAmt : toKHR(0)
+
+    // Persist sale + stock + debt in one IndexedDB transaction before any success UI
+    savingRef.current = true
+    const saved = await saleService.create({
+      tenantId:    DEMO_TENANT,
+      cashierId:   DEMO_CASHIER,
+      cart:        cartSnap,
+      receiptNumber,
+      paymentType: type === 'partial' ? 'debt' : type,
+      paidAmount:  type === 'cash' ? paidNow : type === 'partial' ? paidNow : toKHR(0),
+      ...(discount ? { discount } : {}),
+      ...(result.customerId ? { customerId: result.customerId } : {}),
+      ...(result.customerName ? { note: result.customerName } : {}),
+      ...(debtAmount > 0 ? { debtAmount } : {}),
+    }).catch((err: unknown): Awaited<ReturnType<typeof saleService.create>> => ({
+      ok: false,
+      error: { code: 'UNKNOWN', message: err instanceof Error ? err.message : String(err) },
+    }))
+    savingRef.current = false
+
+    if (!saved.ok) {
+      // Keep the cart and the checkout sheet so nothing is lost; let the cashier retry
+      setSaveError({ message: saveErrorMessage(saved.error), retry: () => void finalizeSale(type, result) })
+      return
+    }
 
     setReceipt({
       data: {
@@ -259,232 +312,244 @@ export function POSScreen() {
     setCheckout(null)
     setCartOpen(false)
     setSuccess({ type, amount, change: result.change, customerName: result.customerName, partialDebt: result.partialDebt })
-
-    // Persist to IndexedDB — then charge debt if applicable
-    saleService.create({
-      tenantId:    DEMO_TENANT,
-      cashierId:   DEMO_CASHIER,
-      cart:        cartSnap,
-      receiptNumber,
-      paymentType: type === 'partial' ? 'debt' : type,
-      paidAmount:  type === 'cash' ? paidNow : type === 'partial' ? paidNow : toKHR(0),
-      ...(discount ? { discount } : {}),
-      ...(result.customerId ? { customerId: result.customerId } : {}),
-      ...(result.customerName ? { note: result.customerName } : {}),
-    }).then((saleResult) => {
-      if (saleResult.ok && result.customerId) {
-        if (type === 'debt') {
-          debtService.charge({
-            tenantId:   DEMO_TENANT,
-            customerId: result.customerId,
-            saleId:     saleResult.data.id,
-            amount,
-          }).catch(() => {})
-        } else if (type === 'partial' && partialDebtAmt > 0) {
-          debtService.charge({
-            tenantId:   DEMO_TENANT,
-            customerId: result.customerId,
-            saleId:     saleResult.data.id,
-            amount:     partialDebtAmt,
-          }).catch(() => {})
-        }
-      }
-    }).catch(() => { /* silent — sync queue retries */ })
   }
 
   /* ────────────────────────────────────────────────────────── */
 
+  /* ── Presentation helpers (display only) ─────────────────────── */
+  const lines        = cart.length
+  const shiftLabel   = shiftOpen ? 'បិទហាង' : 'បើកហាង'
+  const openShiftUi  = () => (shiftOpen ? setCloseShift(true) : setOpenShift(true))
+  const headerStatus = [shiftOpen ? 'ហាងបើក' : 'មិនទាន់បើកហាង', cashierName].filter(Boolean).join(' · ')
+  const heldBadge    = heldCount > 0 && (
+    <span
+      className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-accent px-1 text-caption font-bold leading-none text-ink-900"
+      aria-hidden="true"
+    >
+      {heldCount > 9 ? '9+' : heldCount}
+    </span>
+  )
+  const shiftIcon = (
+    <span className="relative inline-flex">
+      <Clock size={20} strokeWidth={2.25} />
+      {shiftOpen && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-success-on-dark ring-2 ring-current" />}
+    </span>
+  )
+  const paidMethodLabel = success
+    ? success.type === 'cash' ? 'ទូទាត់សាច់ប្រាក់' : success.type === 'debt' ? 'ជំពាក់' : 'បង់ខ្លះ'
+    : ''
+
   return (
-    <div className="flex h-full overflow-hidden bg-surface">
+    <div className="flex h-full overflow-hidden bg-bg">
 
       {/* ════════════════════════════════════════════════════
-          LEFT — Header + Search + Product Grid
+          iPad landscape (lg+) — category column
       ════════════════════════════════════════════════════ */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <aside aria-label="ប្រភេទ" className="hidden w-[196px] shrink-0 flex-col bg-surface lg:flex">
+        <p className="px-5 pb-2 pt-6 text-title-sm font-bold text-text">ប្រភេទ</p>
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+          <CategoryTabs categories={tabCategories} active={category} onChange={setCategory} counts={categoryCounts} />
+        </div>
+      </aside>
 
-        {/* ── Operational header ───────────────────────────── */}
-        <header className="bg-white border-b border-slate-200 px-4 pt-5 pb-4 space-y-3 shrink-0 z-10">
-          <div className="flex items-center justify-between gap-3">
+      {/* ════════════════════════════════════════════════════
+          Catalog — header, categories, product grid
+      ════════════════════════════════════════════════════ */}
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
 
-            {/* Store / cashier identity */}
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-primary-600 text-white flex items-center justify-center font-bold text-[15px] shrink-0 shadow-sm">
-                ហ
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-[19px] font-bold text-slate-900 leading-tight truncate">
-                  {storeName || 'ហាងលក់ទំនិញ'}
-                </h1>
-                <div className="flex items-center gap-1.5 text-[11px] leading-tight mt-0.5">
-                  <span className="flex items-center gap-1 font-medium text-success-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-success-500" />
-                    អនឡាញ
-                  </span>
-                  {cashierName && (
-                    <>
-                      <span className="text-slate-300">·</span>
-                      <span className="text-slate-500 truncate">{cashierName}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Shift status + scan */}
-            <div className="flex items-center gap-2 shrink-0">
-              {/* Cash Drawer button */}
-              {shiftOpen ? (
-                <button
-                  type="button"
-                  onClick={() => setCloseShift(true)}
-                  className="flex flex-col items-end px-2.5 py-1.5 rounded-lg bg-success-50 border border-success-200 active:bg-success-100 transition-colors"
-                >
-                  <span className="flex items-center gap-1 text-[9px] font-bold text-success-600 leading-none">
-                    <span className="w-1.5 h-1.5 rounded-full bg-success-500" />
-                    ហាងបើក
-                  </span>
-                  <span className="text-[12px] font-bold text-success-800 tabular-nums leading-tight mt-0.5">
-                    {formatKHR(currentDrawer!.openingBalance)}
-                  </span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setOpenShift(true)}
-                  className="flex items-center gap-1.5 h-10 px-3 rounded-lg border border-slate-300 text-slate-600 text-[12px] font-bold active:bg-slate-50 transition-colors"
-                >
-                  💰 បើកហាង
-                </button>
-              )}
-
-              {/* Held invoices (resume) */}
-              <button
-                type="button"
+        {/* Phone: compact hero header */}
+        <PageHeader
+          variant="hero"
+          compact
+          className="md:hidden"
+          backHref="/"
+          title="លក់"
+          subtitle={headerStatus}
+          actions={
+            <>
+              <Button
+                variant="onDark"
+                className="relative px-3"
+                icon={<PauseCircle size={18} strokeWidth={2.25} />}
                 onClick={() => setShowHeld(true)}
-                aria-label="វិក្កយបត្រផ្អាក"
-                className="relative min-w-0 w-10 h-10 flex items-center justify-center rounded-lg border border-slate-300 text-slate-700 active:bg-slate-50 transition-colors shrink-0"
+                aria-label={heldCount > 0 ? `វិក្កយបត្រផ្អាក ${heldCount}` : 'វិក្កយបត្រផ្អាក'}
               >
-                <PauseCircle size={19} strokeWidth={2.25} />
-                {heldCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-0.5 rounded-full bg-warning-500 text-white text-[9px] font-black flex items-center justify-center leading-none">
-                    {heldCount > 9 ? '9+' : heldCount}
-                  </span>
-                )}
-              </button>
-
-              {/* Barcode scan */}
-              <button
-                type="button"
-                onClick={() => setScanning(true)}
-                aria-label="ស្កែនបាកូដ"
-                className="min-w-0 w-10 h-10 flex items-center justify-center rounded-lg border border-slate-300 text-slate-700 active:bg-slate-50 transition-colors shrink-0"
-              >
-                <ScanLine size={19} strokeWidth={2.25} />
-              </button>
-            </div>
-          </div>
-
-          {/* Search */}
+                ផ្អាក
+                {heldBadge}
+              </Button>
+              <IconButton variant="onDark" aria-label={shiftLabel} onClick={openShiftUi}>
+                {shiftIcon}
+              </IconButton>
+            </>
+          }
+        >
           <SearchInput
             value={search}
             onChange={setSearch}
-            placeholder="ស្វែង ឈ្មោះ · EN · barcode · តម្លៃ…"
+            placeholder="ស្វែងរក ឈ្មោះ · បាកូដ · តម្លៃ…"
+            onScan={() => setScanning(true)}
           />
+        </PageHeader>
 
-          {/* Category tabs */}
-          <CategoryTabs categories={tabCategories} active={category} onChange={setCategory} counts={categoryCounts} />
-        </header>
-
-        {/* ── Product grid ─────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto p-3 min-h-0">
-          {filteredProducts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 gap-3 text-slate-400">
-              <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-xs">
-                <Search size={26} strokeWidth={1.75} />
-              </div>
-              <p className="text-sm font-medium text-slate-500">
-                {search ? `រកមិនឃើញ «${search}»` : 'គ្មានទំនិញក្នុងប្រភេទនេះ'}
-              </p>
-            </div>
-          ) : (
-            /* Adaptive columns on tablet/desktop — cards stay ≥120px (touch-friendly)
-               and fill the row in both iPad portrait & landscape without overflow */
-            <div className="grid grid-cols-3 md:grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2.5">
-              {filteredProducts.map((product, i) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  index={i}
-                  onFly={handleFly}
-                />
-              ))}
-            </div>
-          )}
+        {/* md+: search · scan · held · shift in one row */}
+        <div className="hidden items-center gap-2 px-6 pb-1 pt-5 md:flex">
+          <SearchInput
+            className="flex-1"
+            value={search}
+            onChange={setSearch}
+            placeholder="ស្វែងរក ឈ្មោះ · បាកូដ · តម្លៃ…"
+            onScan={() => setScanning(true)}
+          />
+          <Button
+            variant="secondary"
+            className="relative h-[52px]"
+            icon={<PauseCircle size={18} strokeWidth={2.25} />}
+            onClick={() => setShowHeld(true)}
+            aria-label={heldCount > 0 ? `វិក្កយបត្រផ្អាក ${heldCount}` : 'វិក្កយបត្រផ្អាក'}
+          >
+            ផ្អាក
+            {heldBadge}
+          </Button>
+          <IconButton variant="light" aria-label={shiftLabel} onClick={openShiftUi} className="h-[52px] w-[52px] text-ink-900">
+            {shiftIcon}
+          </IconButton>
         </div>
 
-        {/* ── Mobile checkout bar (above bottom nav) ───────── */}
-        {count > 0 && (
-          <div className="md:hidden shrink-0 px-3 pb-3 pt-1 bg-surface">
-            <button
-              type="button"
-              ref={cartBtnRef}
-              onClick={() => setCartOpen(true)}
-              className={[
-                'w-full h-14 rounded-xl bg-primary-600 text-white',
-                'shadow-lg shadow-primary-600/25',
-                'flex items-center justify-between pl-3 pr-4',
-                'active:bg-primary-700 active:scale-[0.99] transition-all',
-              ].join(' ')}
-            >
-              <span className="flex items-center gap-2.5">
-                <span className="relative">
-                  <ShoppingCart size={22} strokeWidth={2.25} />
-                  <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-white text-primary-700 text-[11px] font-bold flex items-center justify-center tabular-nums">
-                    {count}
-                  </span>
-                </span>
-                <span className="font-bold text-[15px]">មើលរទេះ</span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="font-extrabold text-[16px] tabular-nums tracking-tight">
-                  {formatKHR(total)}
-                </span>
-                <ChevronUp size={18} strokeWidth={2.5} className="opacity-80" />
-              </span>
-            </button>
+        {/* Categories — pills (phone + iPad portrait) */}
+        <CategoryTabs
+          categories={tabCategories}
+          active={category}
+          onChange={setCategory}
+          counts={categoryCounts}
+          className="shrink-0 px-4 py-3 md:px-6 lg:hidden"
+        />
+
+        {/* ── Product grid ─────────────────────────────────── */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {/* Bottom clearance for the cart bar (74 bar + 20 offset + home
+              indicator + 16 air) on an inner wrapper — iOS Safari ignores a
+              scroll container's own padding-bottom. */}
+          <div
+            className={cx(
+              'px-4 pt-1 md:px-6 md:pt-3',
+              count > 0 ? 'pb-[calc(110px+env(safe-area-inset-bottom))] md:pb-6' : 'pb-6',
+            )}
+          >
+            {noProducts ? (
+              <EmptyState
+                icon={<Package size={30} strokeWidth={1.5} />}
+                title="មិនទាន់មានទំនិញ"
+                description="បន្ថែមទំនិញរបស់ហាងអ្នក ដើម្បីចាប់ផ្ដើមលក់។"
+                action={
+                  <div className="flex w-[260px] flex-col gap-2.5">
+                    <Link
+                      href="/inventory?add=1"
+                      className="flex h-14 items-center justify-center gap-2 rounded-md bg-ink-900 px-5 text-label-lg font-bold text-white transition-colors active:bg-ink-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    >
+                      <Plus size={20} strokeWidth={2.5} aria-hidden="true" />
+                      បន្ថែមទំនិញ
+                    </Link>
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      fullWidth
+                      disabled={loadingSample}
+                      onClick={() => void loadSample()}
+                      icon={<Sparkles size={18} strokeWidth={2.25} />}
+                    >
+                      {loadingSample ? 'កំពុងបញ្ចូល…' : 'សាកជាមួយទិន្នន័យគំរូ'}
+                    </Button>
+                    <p className="text-caption text-text-muted">ទិន្នន័យគំរូ = ទំនិញ និងអតិថិជនក្លែងក្លាយ សម្រាប់សាកល្បងប៉ុណ្ណោះ</p>
+                  </div>
+                }
+              />
+            ) : filteredProducts.length === 0 ? (
+              <EmptyState
+                icon={<Search size={28} strokeWidth={1.75} />}
+                title={search ? `រកមិនឃើញ «${search}»` : 'គ្មានទំនិញក្នុងប្រភេទនេះ'}
+              />
+            ) : (
+              <div className="grid grid-cols-2 gap-2.5 md:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] md:gap-3">
+                {grid.visible.map((product, i) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    index={i}
+                    onFly={handleFly}
+                  />
+                ))}
+                {grid.hasMore && <span ref={grid.sentinelRef} className="col-span-full h-px" aria-hidden="true" />}
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* ── Phone cart bar (fly-to-cart target) ──────────── */}
+        {count > 0 && (
+          <button
+            type="button"
+            ref={cartBtnRef}
+            onClick={() => setCartOpen(true)}
+            aria-label={`មើលរទេះ · ${lines} មុខ · ${formatKHR(total)}`}
+            className={cx(
+              'absolute inset-x-3 bottom-[calc(20px+env(safe-area-inset-bottom))] z-20 md:hidden',
+              'flex h-[74px] items-center gap-3 rounded-[26px] bg-ink-900 px-2.5 text-left shadow-cartbar',
+              'transition-transform active:scale-[0.99]',
+              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
+            )}
+          >
+            <span className="flex h-[54px] w-[54px] shrink-0 flex-col items-center justify-center rounded-[18px] bg-ink-800" aria-hidden="true">
+              <span className="text-title-sm font-bold leading-none tabular-nums text-white">{count}</span>
+              <span className="text-caption leading-tight text-ink-300">ឯកតា</span>
+            </span>
+            <span className="min-w-0 flex-1" aria-hidden="true">
+              <span className="block text-title-sm font-bold tabular-nums text-white">{formatKHR(total)}</span>
+              <span className="block truncate text-meta tabular-nums text-ink-300">{formatUSD(total)} · {lines} មុខ</span>
+            </span>
+            <span className="flex h-[54px] shrink-0 items-center gap-1 rounded-[18px] bg-accent px-4 text-body font-bold text-ink-900" aria-hidden="true">
+              ទូទាត់
+              <ArrowRight size={18} strokeWidth={2.5} />
+            </span>
+          </button>
         )}
       </div>
 
       {/* ════════════════════════════════════════════════════
-          RIGHT — Cart sidebar (tablet / desktop)
+          RIGHT — Cart sidebar (md+), dark — fly-to-cart target
       ════════════════════════════════════════════════════ */}
-      <aside ref={cartPanelRef} className="hidden md:flex flex-col w-72 lg:w-[22rem] bg-white border-l border-slate-200 shadow-[-4px_0_24px_-16px_rgba(15,23,42,0.25)] shrink-0">
-        <CartPanel onPay={handlePay} onHold={handleHold} />
+      <aside
+        ref={cartPanelRef}
+        aria-label="រទេះ"
+        className="hidden w-[320px] shrink-0 flex-col bg-ink-900 md:flex lg:w-[364px]"
+      >
+        <CartChromeContext.Provider value={{ tone: 'dark', header: true }}>
+          <CartPanel onPay={handlePay} onHold={handleHold} />
+        </CartChromeContext.Provider>
       </aside>
 
       {/* ════════════════════════════════════════════════════
-          MOBILE — Cart bottom sheet
+          PHONE — Cart (full-screen sheet)
       ════════════════════════════════════════════════════ */}
-      {isCartOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-40 bg-slate-900/50"
-          onClick={() => setCartOpen(false)}
-          aria-hidden="true"
+      <div className="md:hidden">
+        <Sheet
+          open={isCartOpen}
+          onClose={() => setCartOpen(false)}
+          size="full"
+          tone="bg"
+          title="រទេះ"
+          subtitle={`${lines} មុខ · ${count} ឯកតា`}
+          headerActions={
+            <IconButton aria-label="សម្អាតរទេះ" variant="light" onClick={clearCart}>
+              <Trash2 size={20} strokeWidth={2.25} className="text-danger" />
+            </IconButton>
+          }
+          bodyClassName="flex flex-col p-0"
         >
-          <div
-            className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl max-h-[88dvh] flex flex-col shadow-pop animate-sheet-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Grab handle */}
-            <div className="shrink-0 flex justify-center pt-2.5 pb-1.5">
-              <div className="w-10 h-1 bg-slate-300 rounded-full" />
-            </div>
-
+          <CartChromeContext.Provider value={{ tone: 'light', header: false }}>
             <CartPanel onPay={handlePay} onHold={handleHold} />
-          </div>
-        </div>
-      )}
+          </CartChromeContext.Provider>
+        </Sheet>
+      </div>
 
       {/* ════════════════════════════════════════════════════
           CHECKOUT — confirmation + payment sheet
@@ -493,95 +558,144 @@ export function POSScreen() {
         <CheckoutSheet
           type={checkout.type}
           onClose={() => setCheckout(null)}
-          onConfirm={(result) => finalizeSale(checkout.type, { ...result, partialDebt: result.partialDebt ?? null })}
+          onConfirm={(result) => void finalizeSale(checkout.type, { ...result, partialDebt: result.partialDebt ?? null })}
         />
       )}
 
+      {/* Save failed — the cart and checkout stay as they were */}
+      <ConfirmDialog
+        open={!!saveError}
+        tone="danger"
+        icon={<AlertTriangle size={28} strokeWidth={2.25} />}
+        title="រក្សាទុកការលក់មិនបាន"
+        message={saveError?.message}
+        confirmLabel="សាកម្ដងទៀត"
+        cancelLabel="បិទ"
+        onConfirm={() => { const retry = saveError?.retry; setSaveError(null); retry?.() }}
+        onCancel={() => setSaveError(null)}
+      />
+
       {/* ════════════════════════════════════════════════════
-          SUCCESS STATE
+          SUCCESS — full screen (phone) / large modal (md+)
       ════════════════════════════════════════════════════ */}
       {success && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-6"
+          className="fixed inset-0 z-50 flex justify-center bg-ink-900 md:items-center md:bg-ink-900/60 md:p-6"
           role="status"
           aria-live="polite"
           onClick={() => setSuccess(null)}
         >
           <div
-            className="w-full max-w-xs bg-white rounded-2xl p-6 text-center shadow-pop animate-sheet-up"
+            className={cx(
+              'flex w-full flex-col overflow-y-auto bg-ink-900 text-white animate-sheet-up',
+              'px-5 pt-[max(48px,calc(env(safe-area-inset-top)+24px))] pb-[max(20px,env(safe-area-inset-bottom))]',
+              'md:max-h-[92dvh] md:max-w-[520px] md:rounded-[28px] md:p-8',
+            )}
             onClick={(e) => e.stopPropagation()}
           >
-            <div
-              className={[
-                'mx-auto flex items-center justify-center w-16 h-16 rounded-full mb-4',
-                success.type === 'cash'    ? 'bg-success-100 text-success-600'
-                : success.type === 'partial' ? 'bg-warning-100 text-warning-700'
-                : 'bg-slate-100 text-slate-700',
-              ].join(' ')}
-            >
-              <CheckCircle2 size={36} strokeWidth={2.25} />
+            <div className="flex flex-col items-center text-center">
+              <span className="flex h-[76px] w-[76px] items-center justify-center rounded-full bg-accent text-ink-900" aria-hidden="true">
+                <Check size={40} strokeWidth={3} />
+              </span>
+              <p className="mt-4 text-title font-bold">លក់បានជោគជ័យ</p>
+              <p className="mt-1 text-body-sm tabular-nums text-ink-300">
+                {paidMethodLabel} · {formatKHR(success.amount)}
+              </p>
             </div>
 
-            <p className="text-[16px] font-bold text-slate-900">
-              {success.type === 'cash' ? 'ទូទាត់ជោគជ័យ'
-              : success.type === 'partial' ? 'ទូទាត់ផ្នែកជោគជ័យ'
-              : 'កត់ត្រាបំណុលរួចរាល់'}
-            </p>
-            <p className="text-[28px] font-extrabold text-slate-900 tabular-nums mt-1 tracking-tight">
-              {formatKHR(success.amount)}
-            </p>
-
-            {success.type === 'cash' && success.change !== null && success.change > 0 && (
-              <div className="mt-4 flex items-center justify-between rounded-xl bg-success-50 px-4 py-2.5">
-                <span className="text-[13px] font-medium text-success-700">ប្រាក់អាប់</span>
-                <span className="text-[18px] font-extrabold text-success-700 tabular-nums">
-                  {formatKHR(success.change)}
-                </span>
-              </div>
-            )}
-
-            {success.type === 'partial' && success.partialDebt != null && success.partialDebt > 0 && (
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-warning-50 border border-warning-100 px-3 py-2">
-                  <p className="text-[10px] text-warning-600 font-semibold">ទូទាត់ហើយ</p>
-                  <p className="text-[15px] font-extrabold text-warning-800 tabular-nums">
-                    {formatKHR(subtractKHR(success.amount, success.partialDebt as KHR))}
-                  </p>
+            {/* Change (cash) or what is still owed (debt / partial) */}
+            <div className="mt-6 rounded-lg bg-ink-800 px-4 py-4">
+              {success.type === 'cash' ? (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-body font-semibold text-ink-300">អាប់ឲ្យភ្ញៀវ</span>
+                  <span className="flex flex-col items-end">
+                    <span className="text-amount-lg font-bold tabular-nums text-accent">
+                      {formatKHR(success.change ?? toKHR(0))}
+                    </span>
+                    <span className="text-body-sm font-semibold tabular-nums text-ink-300">
+                      {formatUSD(success.change ?? toKHR(0))}
+                    </span>
+                  </span>
                 </div>
-                <div className="rounded-xl bg-danger-50 border border-danger-100 px-3 py-2">
-                  <p className="text-[10px] text-danger-600 font-semibold">នៅជំពាក់</p>
-                  <p className="text-[15px] font-extrabold text-danger-700 tabular-nums">
-                    {formatKHR(success.partialDebt as KHR)}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {(success.type === 'debt' || success.type === 'partial') && success.customerName && (
-              <p className="text-[13px] text-slate-500 mt-3">
-                អ្នកជំពាក់៖{' '}
-                <span className="font-semibold text-slate-700">{success.customerName}</span>
-              </p>
-            )}
-
-            <div className="mt-5 flex flex-col gap-2">
-              {receipt && (
-                <button
-                  type="button"
-                  onClick={() => setReceipt((r) => r ? { ...r, open: true } : null)}
-                  className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-semibold text-[14px] flex items-center justify-center gap-2 active:bg-slate-100 transition-colors"
-                >
-                  <Receipt size={16} strokeWidth={2} />
-                  មើលវិក្កយបត្រ
-                </button>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-body font-semibold text-ink-300">នៅជំពាក់</span>
+                    <span className="flex flex-col items-end">
+                      <span className="text-amount-lg font-bold tabular-nums text-debt-on-dark">
+                        {formatKHR(success.type === 'partial' ? (success.partialDebt ?? toKHR(0)) as KHR : success.amount)}
+                      </span>
+                      <span className="text-body-sm font-semibold tabular-nums text-ink-300">
+                        {formatUSD(success.type === 'partial' ? (success.partialDebt ?? toKHR(0)) as KHR : success.amount)}
+                      </span>
+                    </span>
+                  </div>
+                  {success.type === 'partial' && success.partialDebt != null && (
+                    <div className="mt-3 flex items-center justify-between border-t border-ink-700 pt-3 text-body-sm">
+                      <span className="text-ink-300">ទូទាត់ហើយ</span>
+                      <span className="font-bold tabular-nums text-success-on-dark">
+                        {formatKHR(subtractKHR(success.amount, success.partialDebt as KHR))}
+                      </span>
+                    </div>
+                  )}
+                  {success.customerName && (
+                    <p className="mt-3 text-body-sm text-ink-300">
+                      អ្នកជំពាក់៖ <span className="font-semibold text-white">{success.customerName}</span>
+                    </p>
+                  )}
+                </>
               )}
+            </div>
+
+            {/* Receipt preview — tap to open the full receipt */}
+            {receipt && (
               <button
                 type="button"
-                onClick={() => { setSuccess(null); setReceipt(null) }}
-                className="w-full h-12 rounded-xl bg-primary-600 text-white font-bold text-[15px] active:bg-primary-700 transition-colors"
+                onClick={() => setReceipt((r) => r ? { ...r, open: true } : null)}
+                className="mt-4 rounded-lg bg-surface p-4 text-left text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
-                លក់ថ្មី
+                <span className="flex items-center justify-between text-meta text-text-muted">
+                  <span>វិក្កយបត្រ #{receipt.data.receiptNumber}</span>
+                  <Receipt size={16} strokeWidth={2} aria-hidden="true" />
+                </span>
+                <span className="mt-2 block space-y-1 border-y border-dashed border-line-strong py-2">
+                  {receipt.data.items.slice(0, 4).map((it, i) => (
+                    <span key={i} className="flex items-baseline justify-between gap-3 text-body-sm">
+                      <span className="truncate">{it.nameKm} <span className="text-text-muted">× {it.qty}</span></span>
+                      <span className="shrink-0 font-semibold tabular-nums">{formatKHR(it.subtotal)}</span>
+                    </span>
+                  ))}
+                  {receipt.data.items.length > 4 && (
+                    <span className="block text-meta text-text-muted">+{receipt.data.items.length - 4} មុខទៀត</span>
+                  )}
+                </span>
+                <span className="mt-2 flex items-baseline justify-between">
+                  <span className="text-body-sm font-semibold text-text-subtle">សរុបចុងក្រោយ</span>
+                  <span className="text-title-sm font-bold tabular-nums">{formatKHR(receipt.data.totalAmount)}</span>
+                </span>
               </button>
+            )}
+
+            <div className="mt-auto space-y-2.5 pt-6">
+              {receipt && (
+                <Button
+                  variant="onDark"
+                  size="lg"
+                  fullWidth
+                  icon={<Receipt size={18} strokeWidth={2} />}
+                  onClick={() => setReceipt((r) => r ? { ...r, open: true } : null)}
+                >
+                  មើលវិក្កយបត្រ
+                </Button>
+              )}
+              <Button
+                variant="primary"
+                size="xl"
+                fullWidth
+                onClick={() => { setSuccess(null); setReceipt(null) }}
+              >
+                លក់បន្ត
+              </Button>
             </div>
           </div>
         </div>

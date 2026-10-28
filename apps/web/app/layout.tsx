@@ -3,9 +3,9 @@ import { Noto_Sans_Khmer } from 'next/font/google'
 import { Providers } from '@/components/Providers'
 import './globals.css'
 
+// Variable font: one file per subset covers every weight (400–700 are used).
 const notoSansKhmer = Noto_Sans_Khmer({
-  subsets: ['khmer'],
-  weight: ['400', '500', '600', '700'],
+  subsets: ['khmer', 'latin'],
   variable: '--font-khmer',
   display: 'swap',
 })
@@ -25,18 +25,17 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#2563eb',
+  themeColor: '#0F1B2D',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Pinch-zoom stays on (older shop owners); inputs are ≥16px so iOS does not auto-zoom
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="km" className={notoSansKhmer.variable}>
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
       <body>
         <Providers>{children}</Providers>

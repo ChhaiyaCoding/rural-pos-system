@@ -9,6 +9,7 @@ import { buildReceiptData } from '../buildReceipt'
 import { SaleReceiptSheet } from './SaleReceiptSheet'
 import type { Sale, DebtTransaction } from '@/types'
 import type { TenantId, CustomerId } from '@/types/branded'
+import { salesOfCustomer } from '@/db/queries'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
@@ -37,8 +38,8 @@ export function ReprintReceipt({ sale, onClose }: { sale: Sale; onClose: () => v
   )
   const debtSales = useLiveQuery(
     () => sale.customerId
-      ? db.sales.where('tenantId').equals(DEMO_TENANT)
-          .filter((s) => s.customerId === sale.customerId && !s.isVoid && (s.paymentType === 'debt' || s.paymentType === 'partial'))
+      ? salesOfCustomer(DEMO_TENANT, sale.customerId)
+          .filter((s) => !s.isVoid && (s.paymentType === 'debt' || s.paymentType === 'partial'))
           .toArray()
       : Promise.resolve([] as Sale[]),
     [sale.customerId]

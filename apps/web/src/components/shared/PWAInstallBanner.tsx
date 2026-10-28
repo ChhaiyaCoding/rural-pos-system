@@ -2,19 +2,36 @@
 
 import { useEffect, useState } from 'react'
 import { X, Download, Share } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
+import { firstGrapheme } from '@/components/ui/text'
+import { useStoreProfile } from '@/store/storeProfile.store'
 
-type Platform = 'android' | 'ios' | null
+type Platform = 'android' | 'ios' | 'ipad' | null
 
 const DISMISSED_KEY = 'pwa-install-dismissed'
+/** A dismissed banner comes back after this many days — installing is what
+ *  keeps Safari from deleting the shop's data, so it is worth asking again. */
+const REMIND_AFTER_DAYS = 7
 
 function detectPlatform(): Platform {
   if (typeof navigator === 'undefined') return null
   const ua = navigator.userAgent
-  const isIOS = /ipad|iphone|ipod/i.test(ua)
-  const isAndroid = /android/i.test(ua)
-  if (isIOS) return 'ios'
-  if (isAndroid) return 'android'
+  // iPadOS Safari reports a Mac user agent; a touch screen gives it away
+  if (/ipad/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) return 'ipad'
+  if (/iphone|ipod/i.test(ua)) return 'ios'
+  if (/android/i.test(ua)) return 'android'
   return null
+}
+
+function recentlyDismissed(): boolean {
+  try {
+    const at = Number(localStorage.getItem(DISMISSED_KEY))
+    // '1' from older versions counts as dismissed long ago
+    return Date.now() - at < REMIND_AFTER_DAYS * 86_400_000
+  } catch {
+    return false
+  }
 }
 
 function isStandalone(): boolean {
@@ -31,13 +48,14 @@ export function PWAInstallBanner() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [installing,    setInstalling]    = useState(false)
+  const { storeName } = useStoreProfile()
 
   useEffect(() => {
     // Already installed as PWA — never show
     if (isStandalone()) return
 
-    // User already dismissed — don't show again
-    if (localStorage.getItem(DISMISSED_KEY)) return
+    // Dismissed within the last week — ask again later
+    if (recentlyDismissed()) return
 
     const plt = detectPlatform()
     setPlatform(plt)
@@ -54,7 +72,7 @@ export function PWAInstallBanner() {
       return () => window.removeEventListener('beforeinstallprompt', handler)
     }
 
-    if (plt === 'ios') {
+    if (plt === 'ios' || plt === 'ipad') {
       // iOS: no native prompt — show manual instructions after delay
       const t = setTimeout(() => setShow(true), 3000)
       return () => clearTimeout(t)
@@ -75,80 +93,67 @@ export function PWAInstallBanner() {
 
   const dismiss = () => {
     setShow(false)
-    localStorage.setItem(DISMISSED_KEY, '1')
+    try { localStorage.setItem(DISMISSED_KEY, String(Date.now())) } catch { /* ignore */ }
   }
 
   if (!show) return null
 
   return (
-    <div className="fixed bottom-[70px] inset-x-0 z-50 px-3 pointer-events-none">
-      <div className="pointer-events-auto w-full max-w-sm mx-auto bg-white rounded-2xl shadow-pop border border-slate-200 overflow-hidden animate-sheet-up">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(112px+env(safe-area-inset-bottom))] z-40 px-3 md:inset-x-auto md:bottom-6 md:left-[120px] md:px-0">
+      <div role="dialog" aria-label="ដំឡើង POS ហាង" className="pointer-events-auto mx-auto w-full max-w-sm rounded-xl bg-surface p-4 shadow-float animate-sheet-up">
+        <div className="flex items-start gap-3">
 
-        {/* Top accent bar */}
-        <div className="h-1 bg-gradient-to-r from-primary-500 to-primary-400" />
-
-        <div className="px-4 py-3.5">
-          <div className="flex items-start gap-3">
-
-            {/* App icon */}
-            <div className="shrink-0 w-11 h-11 rounded-xl bg-primary-600 text-white text-[18px] font-bold flex items-center justify-center shadow-sm">
-              ហ
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-bold text-slate-900 leading-tight">
-                ដំឡើង POS ហាង
-              </p>
-
-              {platform === 'android' && (
-                <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">
-                  ដំឡើងលើ Home Screen — ប្រើដូច App ពិតៗ, offline បាន
-                </p>
-              )}
-
-              {platform === 'ios' && (
-                <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">
-                  ចុច{' '}
-                  <Share size={11} className="inline-block align-middle mx-0.5 text-primary-600" strokeWidth={2.5} />
-                  {' '}Share → <span className="font-semibold text-slate-700">Add to Home Screen</span>
-                </p>
-              )}
-            </div>
-
-            {/* Close */}
-            <button
-              type="button"
-              onClick={dismiss}
-              className="min-h-0 min-w-0 shrink-0 w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 active:bg-slate-200 transition-colors"
-            >
-              <X size={13} strokeWidth={2.5} />
-            </button>
+          {/* App tile */}
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-accent text-title-sm font-bold text-ink-900" aria-hidden="true">
+            {firstGrapheme(storeName || 'ហ')}
           </div>
 
-          {/* Android install button */}
-          {platform === 'android' && (
-            <button
-              type="button"
-              onClick={handleInstall}
-              disabled={installing}
-              className="mt-3 w-full h-10 rounded-xl bg-primary-600 text-white font-bold text-[13px] flex items-center justify-center gap-2 active:bg-primary-700 disabled:opacity-60 transition-colors"
-            >
-              <Download size={15} strokeWidth={2.5} />
-              {installing ? 'កំពុងដំឡើង…' : 'ដំឡើងឥឡូវ'}
-            </button>
-          )}
+          {/* Content */}
+          <div className="min-w-0 flex-1 self-center">
+            <p className="text-body font-bold text-text">ដំឡើង POS ហាង</p>
 
-          {/* iOS step-by-step */}
-          {platform === 'ios' && (
-            <div className="mt-3 flex items-center gap-2 bg-primary-50 rounded-xl px-3 py-2.5">
-              <Share size={14} className="text-primary-600 shrink-0" strokeWidth={2.5} />
-              <p className="text-[11px] text-primary-700 font-semibold leading-snug">
-                Safari → ចុច Share ក្រោម → "Add to Home Screen" → Add
+            {platform === 'android' && (
+              <p className="mt-0.5 text-meta text-text-muted">
+                ដំឡើងលើ Home Screen — ប្រើដូច App ពិតៗ, offline បាន
               </p>
-            </div>
-          )}
+            )}
+
+            {(platform === 'ios' || platform === 'ipad') && (
+              <p className="mt-0.5 text-meta text-text-muted">
+                ដាក់លើ Home Screen ដើម្បីបើកបានពេលគ្មានអ៊ីនធឺណិត និងការពារទិន្នន័យកុំឲ្យបាត់
+              </p>
+            )}
+          </div>
+
+          {/* Close */}
+          <IconButton aria-label="បិទ" variant="soft" onClick={dismiss} className="-mr-1 -mt-1">
+            <X size={18} strokeWidth={2.5} />
+          </IconButton>
         </div>
+
+        {/* Android install button */}
+        {platform === 'android' && (
+          <Button
+            variant="primary"
+            fullWidth
+            className="mt-3"
+            onClick={handleInstall}
+            disabled={installing}
+            icon={<Download size={18} strokeWidth={2.5} />}
+          >
+            {installing ? 'កំពុងដំឡើង…' : 'ដំឡើងឥឡូវ'}
+          </Button>
+        )}
+
+        {/* iOS step-by-step */}
+        {(platform === 'ios' || platform === 'ipad') && (
+          <div className="mt-3 flex items-center gap-2 rounded-md bg-surface-2 px-3 py-2.5">
+            <Share size={16} className="shrink-0 text-text" strokeWidth={2.5} aria-hidden="true" />
+            <p className="text-meta font-semibold text-text-subtle">
+              Safari → ចុច Share {platform === 'ipad' ? '(ខាងលើ ស្ដាំ)' : '(ខាងក្រោម)'} → &quot;Add to Home Screen&quot; → Add
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )

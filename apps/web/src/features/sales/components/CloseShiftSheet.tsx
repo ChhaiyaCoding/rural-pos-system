@@ -1,14 +1,19 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, CheckCircle2, History } from 'lucide-react'
+import { CheckCircle2, History, Lock } from 'lucide-react'
+import { Sheet } from '@/components/ui/Sheet'
+import { Button } from '@/components/ui/Button'
+import { MoneyText } from '@/components/ui/MoneyText'
+import { cx } from '@/components/ui/cx'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { cashDrawerService } from '@/services/cashDrawer.service'
-import { addKHR } from '@/lib/money'
+import { addKHR, formatKHR } from '@/lib/money'
 import { formatDateTimeKm } from '@/lib/date'
 import { StoreDaySummaryView } from './StoreDaySummaryView'
 import { StoreHistorySheet } from './StoreHistorySheet'
 import type { CashDrawer } from '@/types'
+import type { KHR } from '@/types/branded'
 
 interface Props {
   drawer:   CashDrawer
@@ -63,108 +68,98 @@ export function CloseShiftSheet({ drawer, onClosed, onClose }: Props) {
   }, [done, closedData])
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/70"
-      onClick={!done ? onClose : undefined}
-      aria-hidden="true"
-    >
-      <div
-        className="w-full md:max-w-md bg-white rounded-t-2xl md:rounded-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-pop animate-sheet-up"
-        onClick={e => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
+    <>
+      <Sheet
+        open
+        onClose={onClose}
+        tone="bg"
+        dismissible={!done}
+        hideClose={done}
+        title="បិទហាង"
+        subtitle={`${drawer.cashierName} · បើកតាំងពី ${formatDateTimeKm(drawer.openedAt)} · ${durationStr}`}
+        headerActions={
+          !done ? (
+            <Button variant="secondary" icon={<History size={18} strokeWidth={2.25} />} onClick={() => setShowHistory(true)}>
+              ប្រវត្តិ
+            </Button>
+          ) : undefined
+        }
+        footer={
+          !done ? (
+            <Button
+              variant="dark"
+              size="xl"
+              fullWidth
+              disabled={saving || !summary}
+              onClick={handleClose}
+              icon={<Lock size={20} strokeWidth={2.25} className="text-accent" />}
+            >
+              {saving ? 'កំពុងបិទ…' : 'បិទហាង'}
+            </Button>
+          ) : undefined
+        }
       >
-        {/* Header */}
-        <div className="shrink-0 bg-slate-800 px-5 pt-5 pb-4 text-white">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={20} strokeWidth={2} />
-              <span className="text-[16px] font-bold">បិទហាង</span>
+        {/* Success state */}
+        {done && closedData && summary && (
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-success-bg text-success" aria-hidden="true">
+              <CheckCircle2 size={44} strokeWidth={1.75} />
             </div>
-            {!done && (
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setShowHistory(true)}
-                  className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-white/15 active:bg-white/25 text-[12px] font-semibold"
-                >
-                  <History size={14} /> ប្រវត្តិ
-                </button>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 active:bg-white/30"
-                >
-                  <X size={15} />
-                </button>
-              </div>
-            )}
+            <div className="text-center">
+              <p className="text-title-sm font-bold text-text">បិទហាងជោគជ័យ!</p>
+              <p className="mt-1 text-meta text-text-muted">{durationStr}</p>
+            </div>
+            <div className="w-full">
+              <StoreDaySummaryView summary={{ ...summary, closedAt: closedData.closedAt }} />
+            </div>
           </div>
-          <p className="text-[12px] opacity-70">
-            {drawer.cashierName} · បើកតាំងពី {formatDateTimeKm(drawer.openedAt)} · {durationStr}
-          </p>
-        </div>
+        )}
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Daily summary */}
+        {!done && (
+          <div className="space-y-4 pt-1">
+            {summary ? (
+              <>
+                {/* Hero: total sales + net profit */}
+                <div className="rounded-lg bg-ink-900 p-4 text-white">
+                  <p className="text-meta font-semibold text-ink-300">លក់សរុប</p>
+                  <MoneyText amount={summary.totalSales} size="lg" tone="onDark" />
+                  <div className="mt-3 flex items-center justify-between border-t border-ink-700 pt-3">
+                    <span className="text-body-sm font-semibold text-ink-300">ចំណេញសុទ្ធ</span>
+                    <span
+                      className={cx(
+                        'text-title-sm font-bold tabular-nums',
+                        summary.netProfit >= 0 ? 'text-accent' : 'text-debt-on-dark',
+                      )}
+                    >
+                      {summary.netProfit >= 0 ? '' : '−'}{formatKHR(Math.abs(summary.netProfit) as KHR)}
+                    </span>
+                  </div>
+                </div>
 
-          {/* Success state */}
-          {done && closedData && summary && (
-            <div className="flex flex-col items-center justify-center py-8 px-5 gap-4">
-              <div className="w-20 h-20 rounded-full bg-success-100 text-success-600 flex items-center justify-center">
-                <CheckCircle2 size={44} strokeWidth={1.75} />
-              </div>
-              <div className="text-center">
-                <p className="text-[18px] font-extrabold text-slate-900">បិទហាងជោគជ័យ!</p>
-                <p className="text-[13px] text-slate-500 mt-1">{durationStr}</p>
-              </div>
-              <div className="w-full">
-                <StoreDaySummaryView summary={{ ...summary, closedAt: closedData.closedAt }} />
-              </div>
+                <StoreDaySummaryView summary={summary} />
+              </>
+            ) : (
+              <p className="py-10 text-center text-meta text-text-muted">កំពុងគណនា…</p>
+            )}
+
+            {/* Note */}
+            <div className="flex min-h-[54px] flex-col justify-center rounded-[18px] bg-surface px-4 py-1.5 focus-within:ring-2 focus-within:ring-ink-900/20">
+              <label htmlFor="close-note" className="text-caption font-semibold text-text-subtle">កំណត់ចំណាំ (ស្រេចចិត្ត)</label>
+              <input
+                id="close-note"
+                type="text"
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                placeholder="ឧ. ចំណាយ/ទំនិញ…"
+                className="w-full bg-transparent text-body text-text outline-none placeholder:text-text-muted"
+              />
             </div>
-          )}
-
-          {/* Daily summary */}
-          {!done && (
-            <div className="px-5 py-4 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-slate-200" />
-                <span className="text-[11px] text-slate-400 font-medium">សង្ខេបប្រចាំថ្ងៃ</span>
-                <div className="flex-1 h-px bg-slate-200" />
-              </div>
-
-              {summary
-                ? <StoreDaySummaryView summary={summary} />
-                : <p className="py-10 text-center text-[12px] text-slate-400">កំពុងគណនា…</p>}
-
-              {/* Note */}
-              <div>
-                <p className="text-[12px] font-semibold text-slate-500 mb-1.5">កំណត់ចំណាំ (ស្រេចចិត្ត)</p>
-                <input
-                  type="text"
-                  value={note}
-                  onChange={e => setNote(e.target.value)}
-                  placeholder="ឧ. ចំណាយ/ទំនិញ…"
-                  className="w-full h-11 rounded-xl border border-slate-200 px-4 text-[13px] placeholder:text-slate-300 focus:outline-none focus:border-primary-400"
-                />
-              </div>
-
-              {/* Confirm */}
-              <button
-                type="button"
-                disabled={saving || !summary}
-                onClick={handleClose}
-                className="w-full h-14 rounded-2xl bg-slate-800 text-white font-bold text-[15px] disabled:opacity-40 active:bg-slate-900 transition-colors flex items-center justify-center gap-2"
-              >
-                <CheckCircle2 size={20} />
-                {saving ? 'កំពុងបិទ…' : 'បិទហាង'}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
+      </Sheet>
 
       {showHistory && <StoreHistorySheet onClose={() => setShowHistory(false)} />}
-    </div>
+    </>
   )
 }

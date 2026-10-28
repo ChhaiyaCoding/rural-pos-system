@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
+import { cx } from './cx'
 
 interface EmptyStateProps {
   /** A lucide icon element, e.g. <Users size={30} strokeWidth={1.5} /> — rendered
-   *  inside the standard tinted tile (color is inherited, no need to set it). */
+   *  inside the standard tile (color is inherited, no need to set it). */
   icon: ReactNode
   title: string
   description?: string | undefined
@@ -15,17 +16,17 @@ interface EmptyStateProps {
 export function EmptyState({ icon, title, description, action, fullHeight = false }: EmptyStateProps) {
   return (
     <div
-      className={[
-        'flex flex-col items-center justify-center gap-3 text-center px-6',
+      className={cx(
+        'flex flex-col items-center justify-center gap-3 px-6 text-center',
         fullHeight ? 'flex-1' : 'py-16',
-      ].join(' ')}
+      )}
     >
-      <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center text-slate-300">
+      <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-surface text-nav-off" aria-hidden="true">
         {icon}
       </div>
-      <p className="text-[14px] font-semibold text-slate-700">{title}</p>
+      <p className="text-body font-semibold text-text">{title}</p>
       {description && (
-        <p className="text-[12px] text-slate-400 max-w-[240px] leading-relaxed">{description}</p>
+        <p className="max-w-[260px] text-meta text-text-muted">{description}</p>
       )}
       {action && <div className="mt-1">{action}</div>}
     </div>

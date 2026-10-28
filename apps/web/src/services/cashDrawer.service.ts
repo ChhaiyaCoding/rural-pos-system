@@ -1,9 +1,11 @@
 import { db } from '@/db'
 import { generateId } from '@/lib/uuid'
 import { nowISO } from '@/lib/date'
-import { addKHR, toKHR } from '@/lib/money'
+import { addKHR } from '@/lib/money'
 import type { CashDrawer } from '@/types'
 import type { TenantId, UserId, KHR } from '@/types/branded'
+import { salesBetween } from '@/db/queries'
+import { computeProfit } from '@/lib/profit'
 
 export interface OpenDrawerInput {
   tenantId:       TenantId
@@ -25,7 +27,8 @@ export interface StoreDaySummary {
   debtSales:     KHR   // paymentType 'debt' | 'partial'
   abaSales:      KHR   // debt payments received via method 'aba' in window
   totalExpenses: KHR
-  netProfit:     KHR   // totalSales − totalExpenses
+  costOfGoods:   KHR   // cost of the goods sold in the window
+  netProfit:     KHR   // totalSales − costOfGoods − totalExpenses (lib/profit)
   openingCash:   KHR
   openedAt:      string
   closedAt:      string | null
@@ -59,13 +62,8 @@ export const cashDrawerService = {
     if (!drawer || drawer.closedAt) return null
 
     // Calculate cash sales during this shift
-    const cashSales = await db.sales
-      .where('tenantId').equals(drawer.tenantId)
-      .filter(s =>
-        !s.isVoid &&
-        s.paymentType === 'cash' &&
-        s.createdAt >= drawer.openedAt
-      )
+    const cashSales = await salesBetween(drawer.tenantId, drawer.openedAt)
+      .filter(s => !s.isVoid && s.paymentType === 'cash')
       .toArray()
 
     const cashSalesTotal = cashSales.reduce(
@@ -110,13 +108,8 @@ export const cashDrawerService = {
 
   /* ── Get cash sales total for current open shift ─── */
   async getLiveCashSales(drawer: CashDrawer): Promise<KHR> {
-    const cashSales = await db.sales
-      .where('tenantId').equals(drawer.tenantId)
-      .filter(s =>
-        !s.isVoid &&
-        s.paymentType === 'cash' &&
-        s.createdAt >= drawer.openedAt
-      )
+    const cashSales = await salesBetween(drawer.tenantId, drawer.openedAt)
+      .filter(s => !s.isVoid && s.paymentType === 'cash')
       .toArray()
     return cashSales.reduce((sum, s) => (sum + s.totalAmount) as KHR, 0 as KHR)
   },
@@ -127,13 +120,8 @@ export const cashDrawerService = {
   async getStoreDaySummary(drawer: CashDrawer): Promise<StoreDaySummary> {
     const until = drawer.closedAt ?? nowISO()
 
-    const sales = await db.sales
-      .where('tenantId').equals(drawer.tenantId)
-      .filter(s =>
-        !s.isVoid &&
-        s.createdAt >= drawer.openedAt &&
-        s.createdAt <= until
-      )
+    const sales = await salesBetween(drawer.tenantId, drawer.openedAt, until)
+      .filter(s => !s.isVoid)
       .toArray()
 
     let cashSales = 0
@@ -174,13 +162,19 @@ export const cashDrawerService = {
       .toArray()
     const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0)
 
+    const items = sales.length ? await db.saleItems.where('saleId').anyOf(sales.map((s) => s.id)).toArray() : []
+    const uncosted = [...new Set(items.filter((i) => i.unitCost == null).map((i) => i.productId))]
+    const costs = new Map((await db.products.bulkGet(uncosted)).flatMap((p) => (p ? [[p.id as string, p.costPrice as number]] : [])))
+    const profit = computeProfit({ sales, items, currentCost: (id) => costs.get(id), expenses: totalExpenses })
+
     return {
       totalSales:    totalSales    as KHR,
       cashSales:     cashSales     as KHR,
       debtSales:     debtSales     as KHR,
       abaSales:      abaSales      as KHR,
       totalExpenses: totalExpenses as KHR,
-      netProfit:     (totalSales - totalExpenses) as KHR,
+      costOfGoods:   profit.costOfGoods,
+      netProfit:     (totalSales - profit.costOfGoods - totalExpenses) as KHR,
       openingCash:   drawer.openingBalance,
       openedAt:      drawer.openedAt,
       closedAt:      drawer.closedAt,

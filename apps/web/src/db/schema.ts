@@ -67,5 +67,11 @@ export class PosDatabase extends Dexie {
     this.version(6).stores({
       heldInvoices: 'id, tenantId, createdAt',
     })
+
+    // v7 (additive — only new indexes, no data change): read sales by date
+    // range and by customer without scanning every sale ever made.
+    this.version(7).stores({
+      sales: 'id, tenantId, createdAt, isVoid, [tenantId+createdAt], [customerId+createdAt]',
+    })
   }
 }

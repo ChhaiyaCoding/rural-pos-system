@@ -1,16 +1,31 @@
 'use client'
 
 import { useEffect } from 'react'
-import { NextIntlClientProvider } from 'next-intl'
+import { usePathname } from 'next/navigation'
 import { startSyncEngine } from '@/sync/engine'
 import { useSyncStore } from '@/store/sync.store'
 import { useStoreProfile } from '@/store/storeProfile.store'
 import { setExchangeRate } from '@/lib/money'
-import kmMessages from '@/i18n/km.json'
+
+/** Best effort: Chrome/Android grants it silently (more readily once installed),
+ *  Safari decides on its own; unsupported browsers just skip it. */
+async function requestPersistentStorage(): Promise<void> {
+  try {
+    if (!navigator.storage?.persist) return
+    if (await navigator.storage.persisted()) return
+    await navigator.storage.persist()
+  } catch { /* not available — nothing to do */ }
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const setOnline = useSyncStore((s) => s.setOnline)
   const exchangeRate = useStoreProfile((s) => s.exchangeRate)
+  const textSize     = useStoreProfile((s) => s.textSize)
+
+  /* "អក្សរធំ" setting → html[data-text] swaps the type tokens (globals.css) */
+  useEffect(() => {
+    document.documentElement.dataset.text = textSize
+  }, [textSize])
 
   /* Keep the pure money lib in sync with the user's configured rate */
   useEffect(() => {
@@ -35,9 +50,24 @@ export function Providers({ children }: { children: React.ReactNode }) {
     return stop
   }, [])
 
-  return (
-    <NextIntlClientProvider locale="km" messages={kmMessages}>
-      {children}
-    </NextIntlClientProvider>
-  )
+  /* Offline app shell (public/sw.js). Production only — in dev it would cache
+     hot-reloaded code. WARM pre-caches every screen once the user is in. */
+  const pathname = usePathname()
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) return
+    navigator.serviceWorker.register('/sw.js').catch(() => { /* no offline support — the app still works online */ })
+  }, [])
+  // On every screen change (the SW throttles it), e.g. right after login
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) return
+    navigator.serviceWorker.ready.then((reg) => reg.active?.postMessage({ type: 'WARM' })).catch(() => {})
+  }, [pathname])
+
+    /* Ask the browser to keep IndexedDB (sales, stock, debt) instead of evicting
+     it under storage pressure — this device holds the shop's only copy. */
+  useEffect(() => {
+    void requestPersistentStorage()
+  }, [])
+
+  return <>{children}</>
 }

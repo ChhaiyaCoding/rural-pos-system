@@ -1,10 +1,8 @@
 import type { NextConfig } from 'next'
 import path from 'path'
 
-// NOTE: @ducanh2912/next-pwa v10 causes webpack prerender errors with
-// Next.js 15 App Router (module resolves to undefined during SSR).
-// PWA is temporarily disabled until the plugin is updated or replaced.
-// To re-enable: wrap nextConfig with withPWA() and add sw-related deps.
+// NOTE: PWA is disabled. @ducanh2912/next-pwa (v10) broke prerendering with the
+// App Router and was removed; the service worker will be rebuilt (WP7).
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -13,6 +11,14 @@ const nextConfig: NextConfig = {
   // the monorepo's pnpm-lock.yaml at the repo root (silences the dev "1 Issue"
   // multiple-lockfiles warning).
   outputFileTracingRoot: path.join(__dirname),
+  // The app never uses next/image (photos are data URIs), so turn the
+  // /_next/image optimizer endpoint off — it is the attack surface of the
+  // Next.js/sharp image advisories.
+  images: { unoptimized: true },
+  // Build id shown in the app (More / Settings) for support: the git commit on Vercel
+  env: {
+    NEXT_PUBLIC_APP_VERSION: (process.env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 7),
+  },
 }
 
 export default nextConfig

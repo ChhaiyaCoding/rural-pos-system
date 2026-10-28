@@ -1,7 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Package, CheckCircle2 } from 'lucide-react'
+import { Package, CheckCircle2 } from 'lucide-react'
+import { Sheet } from '@/components/ui/Sheet'
+import { Button } from '@/components/ui/Button'
+import { ProductThumb } from '@/components/ui/ProductThumb'
+import { cx } from '@/components/ui/cx'
 import { inventoryService } from '@/services/inventory.service'
 import { formatKHR } from '@/lib/money'
 import type { Product } from '@/types'
@@ -53,171 +57,137 @@ export function RestockSheet({ product, onClose, onRestocked }: Props) {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60"
-      onClick={onClose}
-      aria-hidden="true"
-    >
-      <div
-        className="w-full md:max-w-md bg-white rounded-t-2xl shadow-pop animate-sheet-up overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        {/* ── Header ─────────────────────────────────── */}
-        <div className="flex items-center justify-between px-4 h-14 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <Package size={16} strokeWidth={2.25} className="text-primary-500" />
-            <span className="text-[15px] font-bold text-slate-900">បន្ថែមស្តុក</span>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 active:bg-slate-200"
+    <Sheet
+      open
+      onClose={onClose}
+      title="បន្ថែមស្តុក"
+      footer={
+        success === null ? (
+          <Button
+            variant="primary"
+            size="xl"
+            fullWidth
+            disabled={!canSave}
+            onClick={handleSave}
+            icon={saving ? undefined : <Package size={20} strokeWidth={2.25} />}
           >
-            <X size={16} />
-          </button>
+            {saving
+              ? 'កំពុងរក្សាទុក…'
+              : delta > 0
+                ? `បន្ថែម +${delta} ${product.unit}`
+                : 'វាយចំនួន'}
+          </Button>
+        ) : undefined
+      }
+    >
+      <div className="space-y-4 pt-1">
+
+        {/* Product info row */}
+        <div className="flex items-center gap-3 rounded-lg bg-surface-2 p-3">
+          <ProductThumb product={product} size={48} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-body-sm font-bold text-text">{product.nameKm}</p>
+            <p className="mt-0.5 text-meta text-text-muted">
+              {formatKHR(product.sellPrice)} · {product.unit}
+            </p>
+          </div>
+          {/* Current stock */}
+          <div className="shrink-0 text-right">
+            <p className="text-caption text-text-muted">ស្តុកបច្ចុប្បន្ន</p>
+            <p className={cx('text-title-sm font-bold tabular-nums', isOut ? 'text-danger' : isLow ? 'text-warn' : 'text-success')}>
+              {product.stockQty}
+              <span className="ml-1 text-caption font-semibold opacity-80">{product.unit}</span>
+            </p>
+          </div>
         </div>
 
-        {/* ── Body ───────────────────────────────────── */}
-        <div className="px-4 pt-4 pb-6 space-y-4">
-
-          {/* Product info row */}
-          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-            <div className="shrink-0 w-11 h-11 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[24px] overflow-hidden">
-              {product.imageUri
-                ? <img src={product.imageUri} alt="" className="w-full h-full object-cover" />
-                : (product.emoji || '📦')}
+        {/* Success */}
+        {success !== null ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-6" role="status">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success-bg text-success" aria-hidden="true">
+              <CheckCircle2 size={36} strokeWidth={2} />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-bold text-slate-900 truncate">{product.nameKm}</p>
-              <p className="text-[12px] text-slate-400 mt-0.5">
-                {formatKHR(product.sellPrice)} · {product.unit}
-              </p>
-            </div>
-            {/* Current stock badge */}
-            <div className="shrink-0 text-right">
-              <p className="text-[10px] text-slate-400 mb-0.5">ស្តុកបច្ចុប្បន្ន</p>
-              <p className={[
-                'text-[18px] font-extrabold tabular-nums',
-                isOut ? 'text-danger-600' : isLow ? 'text-warning-600' : 'text-success-700',
-              ].join(' ')}>
-                {product.stockQty}
-                <span className="text-[11px] font-semibold ml-1 opacity-70">{product.unit}</span>
-              </p>
-            </div>
+            <p className="text-body font-bold text-success">
+              បន្ថែម +{success} {product.unit} ជោគជ័យ!
+            </p>
+            <p className="text-meta tabular-nums text-text-muted">
+              ស្តុកថ្មី: <span className="font-bold text-text">{product.stockQty + success} {product.unit}</span>
+            </p>
           </div>
-
-          {/* Success overlay */}
-          {success !== null ? (
-            <div className="flex flex-col items-center justify-center py-6 gap-3">
-              <div className="w-16 h-16 rounded-full bg-success-100 text-success-600 flex items-center justify-center">
-                <CheckCircle2 size={36} strokeWidth={2} />
-              </div>
-              <p className="text-[15px] font-bold text-success-800">
-                បន្ថែម +{success} {product.unit} ជោគជ័យ!
-              </p>
-              <p className="text-[13px] text-slate-500 tabular-nums">
-                ស្តុកថ្មី: <span className="font-bold text-slate-800">{product.stockQty + success} {product.unit}</span>
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Amount input */}
-              <div>
-                <p className="text-[12px] font-semibold text-slate-500 mb-2">ចំនួនបន្ថែម</p>
-                <div className="flex items-center gap-2 border border-primary-300 rounded-xl bg-primary-50 overflow-hidden">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                    placeholder="0"
-                    autoFocus
-                    min={1}
-                    className="flex-1 h-13 px-4 py-3.5 text-[22px] font-bold text-slate-900 placeholder:text-slate-300 bg-transparent outline-none tabular-nums"
-                  />
-                  <span className="pr-4 text-[14px] font-semibold text-primary-500">{product.unit}</span>
-                </div>
-              </div>
-
-              {/* Quick amount chips */}
-              <div>
-                <p className="text-[11px] text-slate-400 mb-2">ចំនួនរហ័ស</p>
-                <div className="flex flex-wrap gap-2">
-                  {QUICK_QTYS.map((qty) => (
-                    <button
-                      key={qty}
-                      type="button"
-                      onClick={() => setInput(String(qty))}
-                      className={[
-                        'h-9 px-4 rounded-xl text-[13px] font-bold transition-colors border',
-                        input === String(qty)
-                          ? 'bg-primary-600 border-primary-600 text-white'
-                          : 'bg-white border-slate-200 text-slate-700 active:bg-slate-100',
-                      ].join(' ')}
-                    >
-                      +{qty}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Note — where the stock came from, supplier, etc. */}
-              <div>
-                <p className="text-[12px] font-semibold text-slate-500 mb-2">កំណត់ចំណាំ (ស្រេចចិត្ត)</p>
+        ) : (
+          <>
+            {/* Amount input */}
+            <div className="flex min-h-[64px] items-center rounded-[18px] bg-bg px-4 focus-within:ring-2 focus-within:ring-ink-900/20">
+              <div className="flex min-w-0 flex-1 flex-col py-1.5">
+                <label htmlFor="restock-qty" className="text-caption font-semibold text-text-subtle">ចំនួនបន្ថែម</label>
                 <input
-                  type="text"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="ឧ. ទិញពី ផ្សារដើមថ្កូវ · 250,000៛"
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-200 text-[13px] placeholder:text-slate-300 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
+                  id="restock-qty"
+                  type="number"
+                  inputMode="numeric"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+                  placeholder="0"
+                  autoFocus
+                  min={1}
+                  className="w-full bg-transparent text-title font-bold tabular-nums text-text outline-none placeholder:text-text-muted"
                 />
               </div>
+              <span className="text-body-sm font-semibold text-text-subtle">{product.unit}</span>
+            </div>
 
-              {/* Stock preview */}
-              {delta > 0 && (
-                <div className="flex items-center justify-between rounded-xl bg-success-50 border border-success-200 px-4 py-3">
-                  <span className="text-[13px] font-semibold text-success-700">ស្តុកបន្ទាប់ពីបន្ថែម</span>
-                  <div className="flex items-center gap-2 tabular-nums">
-                    <span className={[
-                      'text-[14px] font-semibold line-through',
-                      isOut ? 'text-danger-400' : isLow ? 'text-warning-400' : 'text-slate-400',
-                    ].join(' ')}>
-                      {product.stockQty}
-                    </span>
-                    <span className="text-slate-300">→</span>
-                    <span className="text-[18px] font-extrabold text-success-700">
-                      {newQty}
-                      <span className="text-[11px] font-semibold ml-1 opacity-70">{product.unit}</span>
-                    </span>
-                  </div>
+            {/* Quick amount chips */}
+            <div>
+              <p className="mb-2 text-meta text-text-muted">ចំនួនរហ័ស</p>
+              <div className="flex flex-wrap gap-2">
+                {QUICK_QTYS.map((qty) => (
+                  <button
+                    key={qty}
+                    type="button"
+                    onClick={() => setInput(String(qty))}
+                    aria-pressed={input === String(qty)}
+                    className={cx(
+                      'h-12 rounded-sm px-4 text-body-sm font-bold tabular-nums transition-colors',
+                      'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900',
+                      input === String(qty) ? 'bg-ink-900 text-white' : 'bg-bg text-text-subtle active:bg-line',
+                    )}
+                  >
+                    +{qty}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Note — where the stock came from, supplier, etc. */}
+            <div className="flex min-h-[54px] flex-col justify-center rounded-[18px] bg-bg px-4 py-1.5 focus-within:ring-2 focus-within:ring-ink-900/20">
+              <label htmlFor="restock-note" className="text-caption font-semibold text-text-subtle">កំណត់ចំណាំ (ស្រេចចិត្ត)</label>
+              <input
+                id="restock-note"
+                type="text"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="ឧ. ទិញពី ផ្សារដើមថ្កូវ · 250,000៛"
+                className="w-full bg-transparent text-body text-text outline-none placeholder:text-text-muted"
+              />
+            </div>
+
+            {/* Stock preview */}
+            {delta > 0 && (
+              <div className="flex items-center justify-between rounded-md bg-success-bg px-4 py-3">
+                <span className="text-body-sm font-semibold text-success">ស្តុកបន្ទាប់ពីបន្ថែម</span>
+                <div className="flex items-center gap-2 tabular-nums">
+                  <span className="text-body-sm font-semibold text-text-muted line-through">{product.stockQty}</span>
+                  <span className="text-text-muted" aria-hidden="true">→</span>
+                  <span className="text-title-sm font-bold text-success">
+                    {newQty}
+                    <span className="ml-1 text-caption font-semibold opacity-80">{product.unit}</span>
+                  </span>
                 </div>
-              )}
-
-              {/* Confirm button */}
-              <button
-                type="button"
-                disabled={!canSave}
-                onClick={handleSave}
-                className="w-full h-13 py-3.5 rounded-2xl bg-success-600 text-white font-bold text-[15px] disabled:opacity-40 active:bg-success-700 transition-colors flex items-center justify-center gap-2"
-              >
-                {saving ? (
-                  <span className="opacity-70">កំពុងរក្សាទុក…</span>
-                ) : (
-                  <>
-                    <Package size={18} strokeWidth={2.25} />
-                    {delta > 0
-                      ? `បន្ថែម +${delta} ${product.unit}`
-                      : 'វាយចំនួន'}
-                  </>
-                )}
-              </button>
-            </>
-          )}
-        </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
-    </div>
+    </Sheet>
   )
 }

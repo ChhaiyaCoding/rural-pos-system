@@ -1,23 +1,24 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Receipt, X } from 'lucide-react'
+import { Receipt, X, Banknote, NotebookPen, SplitSquareHorizontal, Ban, type LucideIcon } from 'lucide-react'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
+import { dateKHFromISO, formatDateOnlyKm, todayISODate, addDaysISODate, startOfKHDateISO } from '@/lib/date'
+import { newestSales, salesBefore, salesBetween } from '@/db/queries'
 import { ReprintReceipt } from '@/features/sales/components/ReprintReceipt'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Button } from '@/components/ui/Button'
 import { SearchInput } from '@/components/ui/SearchInput'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { Pill, type PillVariant } from '@/components/ui/Pill'
+import { cx } from '@/components/ui/cx'
+import type { KHR } from '@/types'
 import type { Sale } from '@/types'
 import type { TenantId } from '@/types/branded'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
-
-const PAYMENT: Record<Sale['paymentType'], { label: string; cls: string; emoji: string }> = {
-  cash:    { label: 'សាច់ប្រាក់', cls: 'bg-success-100 text-success-700', emoji: '💵' },
-  debt:    { label: 'ជំពាក់',    cls: 'bg-danger-100 text-danger-700',   emoji: '📒' },
-  partial: { label: 'ផ្នែក',     cls: 'bg-warning-100 text-warning-700', emoji: '🔀' },
-}
 
 function timeLabel(iso: string): string {
   return new Date(iso).toLocaleString('km-KH', {
@@ -25,106 +26,175 @@ function timeLabel(iso: string): string {
   })
 }
 
+/** Receipts are read a page at a time (a busy shop has tens of thousands) */
+const PAGE = 60
+
 export default function ReceiptsPage() {
   const [search,  setSearch]  = useState('')
-  const [date,    setDate]    = useState('')          // 'YYYY-MM-DD' filter
+  const [date,    setDate]    = useState('')          // 'YYYY-MM-DD' Cambodia date filter
+  const [limit,   setLimit]   = useState(PAGE)
   const [reprint, setReprint] = useState<Sale | null>(null)
 
-  const sales = useLiveQuery(
-    () => db.sales.where('tenantId').equals(DEMO_TENANT).reverse().sortBy('createdAt'),
-    []
-  ) ?? []
+  // A new search or date starts again from the first page
+  useEffect(() => { setLimit(PAGE) }, [search, date])
 
-  const filtered = useMemo(() => {
+  const result = useLiveQuery(async () => {
     const q = search.trim().toLowerCase()
-    return sales.filter((s) => {
-      const matchNum  = q === '' || (s.receiptNumber ?? '').toLowerCase().includes(q)
-      const matchDate = date === '' || s.createdAt.slice(0, 10) === date
-      return matchNum && matchDate
-    })
-  }, [sales, search, date])
+    const matches = (s: Sale) => q === '' || (s.receiptNumber ?? '').toLowerCase().includes(q)
+    const total = await db.sales.where('tenantId').equals(DEMO_TENANT).count()
+
+    // One Cambodia day: small enough to read whole
+    if (date) {
+      const rows = await salesBetween(DEMO_TENANT, startOfKHDateISO(date), startOfKHDateISO(addDaysISODate(date, 1)))
+        .filter(matches).toArray()
+      return { rows: rows.reverse(), more: false, total }
+    }
+
+    const page = await newestSales(DEMO_TENANT).filter(matches).limit(limit + 1).toArray()
+    let more = page.length > limit
+    let rows = page.slice(0, limit)
+
+    // Without a search, finish the oldest day on the page so its day total is right
+    const oldest = rows[rows.length - 1]
+    if (more && q === '' && oldest) {
+      const dayStart = startOfKHDateISO(dateKHFromISO(oldest.createdAt))
+      const seen = new Set(rows.map((s) => s.id))
+      const rest = (await salesBetween(DEMO_TENANT, dayStart, oldest.createdAt).toArray())
+        .filter((s) => !seen.has(s.id))
+        .reverse()
+      rows = rows.concat(rest)
+      more = (await salesBefore(DEMO_TENANT, dayStart).count()) > 0
+    }
+    return { rows, more, total }
+  }, [search, date, limit])
+
+  const filtered = useMemo(() => result?.rows ?? [], [result])
+  const filtering = search.trim() !== '' || date !== ''
+
+  /* ── Display only: payment styling + group by (Cambodia) day ───── */
+  const PAY_UI: Record<Sale['paymentType'], { label: string; pill: PillVariant; tile: string; icon: LucideIcon }> = {
+    cash:    { label: 'សាច់ប្រាក់', pill: 'success', tile: 'bg-success-bg text-success', icon: Banknote },
+    debt:    { label: 'ជំពាក់',     pill: 'debt',    tile: 'bg-debt-bg text-debt',       icon: NotebookPen },
+    partial: { label: 'បង់ខ្លះ',     pill: 'warn',    tile: 'bg-warn-bg text-warn',       icon: SplitSquareHorizontal },
+  }
+  const today = todayISODate()
+  const dayLabel = (day: string) =>
+    day === today ? 'ថ្ងៃនេះ' : day === addDaysISODate(today, -1) ? 'ម្សិលមិញ' : formatDateOnlyKm(day)
+  const groups: Array<{ day: string; sales: Sale[]; total: KHR }> = []
+  for (const sale of filtered) {
+    const day = dateKHFromISO(sale.createdAt)
+    let g = groups[groups.length - 1]
+    if (!g || g.day !== day) { g = { day, sales: [], total: 0 as KHR }; groups.push(g) }
+    g.sales.push(sale)
+    if (!sale.isVoid) g.total = (g.total + sale.totalAmount) as KHR
+  }
 
   return (
-    <div className="flex flex-col h-full bg-slate-50">
+    <div className="mx-auto w-full max-w-3xl md:px-6">
 
-      {/* Header */}
-      <header className="shrink-0 px-4 pt-5 pb-4 bg-white border-b border-slate-200">
-        <h1 className="text-[19px] font-bold text-slate-900">ប្រវត្តិ​វិក្កយបត្រ</h1>
+      <PageHeader
+        title="ប្រវត្តិ​វិក្កយបត្រ"
+        subtitle={filtering ? `${filtered.length} លទ្ធផល` : `${result?.total ?? 0} វិក្កយបត្រ`}
+        backHref="/more"
+        className="md:px-0"
+      />
 
+      <div className="space-y-2 px-4 md:px-0">
         {/* Search by receipt number */}
-        <SearchInput
-          className="mt-3"
-          value={search}
-          onChange={setSearch}
-          placeholder="ស្វែង​លេខ​វិក្កយបត្រ…"
-        />
+        <SearchInput value={search} onChange={setSearch} placeholder="ស្វែង​លេខ​វិក្កយបត្រ…" />
 
         {/* Filter by date */}
-        <div className="flex items-center gap-2 mt-2">
-          <span className="text-[12px] text-slate-400 shrink-0">ថ្ងៃ៖</span>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="flex-1 h-9 rounded-lg border border-slate-200 px-3 text-[13px] text-slate-900 focus:outline-none focus:border-primary-500"
-          />
+        <div className="flex items-center gap-2">
+          <label className="flex min-h-[52px] flex-1 items-center gap-2 rounded-md border border-line bg-surface px-4">
+            <span className="shrink-0 text-meta font-semibold text-text-subtle">ថ្ងៃ៖</span>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="min-w-0 flex-1 bg-transparent text-body text-text outline-none"
+            />
+          </label>
           {date && (
             <button
               type="button"
               onClick={() => setDate('')}
-              className="shrink-0 h-9 px-3 rounded-lg border border-slate-200 text-slate-500 text-[12px] active:bg-slate-50 flex items-center gap-1"
+              className="flex h-[52px] shrink-0 items-center gap-1 rounded-md border border-line bg-surface px-3 text-body-sm font-semibold text-text-subtle active:bg-surface-2"
             >
-              <X size={13} /> សម្អាត
+              <X size={16} aria-hidden="true" /> សម្អាត
             </button>
           )}
         </div>
-      </header>
+      </div>
 
-      {/* List */}
-      {filtered.length === 0 ? (
-        <EmptyState
-          fullHeight
-          icon={<Receipt size={30} strokeWidth={1.5} />}
-          title={search || date ? 'រក​មិន​ឃើញ​វិក្កយបត្រ' : 'មិន​ទាន់​មាន​វិក្កយបត្រ'}
-          description={search || date ? 'សាក​ប្ដូរ​លេខ ឬ ថ្ងៃ​ស្វែងរក' : undefined}
-        />
-      ) : (
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-          {filtered.map((sale) => {
-            const pt = PAYMENT[sale.paymentType]
-            return (
-              <button
-                key={sale.id}
-                type="button"
-                onClick={() => setReprint(sale)}
-                className={[
-                  'w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors',
-                  sale.isVoid ? 'opacity-50 bg-slate-50' : 'active:bg-slate-50',
-                ].join(' ')}
-              >
-                <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-[18px] ${sale.isVoid ? 'bg-slate-100' : pt.cls}`}>
-                  {sale.isVoid ? '❌' : pt.emoji}
+      {/* List — grouped by day */}
+      <div className="px-4 pb-6 pt-4 md:px-0">
+        {result === undefined ? null : filtered.length === 0 ? (
+          <EmptyState
+            icon={<Receipt size={30} strokeWidth={1.5} />}
+            title={search || date ? 'រក​មិន​ឃើញ​វិក្កយបត្រ' : 'មិន​ទាន់​មាន​វិក្កយបត្រ'}
+            description={search || date ? 'សាក​ប្ដូរ​លេខ ឬ ថ្ងៃ​ស្វែងរក' : undefined}
+          />
+        ) : (
+          <div className="space-y-5">
+            {groups.map((g) => (
+              <section key={g.day}>
+                <div className="mb-2 flex items-baseline justify-between px-1">
+                  <h2 className="text-body-sm font-bold text-text">{dayLabel(g.day)}</h2>
+                  <span className="text-meta font-semibold tabular-nums text-text-muted">
+                    {g.sales.length} · {formatKHR(g.total)}
+                  </span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-slate-900 tabular-nums truncate">
-                    #{sale.receiptNumber || String(sale.id).slice(0, 8).toUpperCase()}
-                  </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    {timeLabel(sale.createdAt)} · {pt.label}
-                    {sale.isVoid && <span className="text-danger-500 font-semibold"> · លុបហើយ</span>}
-                  </p>
+                <div className="space-y-2">
+                  {g.sales.map((sale) => {
+                    const pt = PAY_UI[sale.paymentType]
+                    const Icon = sale.isVoid ? Ban : pt.icon
+                    return (
+                      <button
+                        key={sale.id}
+                        type="button"
+                        onClick={() => setReprint(sale)}
+                        className="flex w-full items-center gap-3 rounded-lg bg-surface px-4 py-3 text-left transition-colors active:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
+                      >
+                        <span
+                          className={cx('flex h-12 w-12 shrink-0 items-center justify-center rounded-md', sale.isVoid ? 'bg-surface-2 text-text-muted' : pt.tile)}
+                          aria-hidden="true"
+                        >
+                          <Icon size={22} strokeWidth={2} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-body-sm font-bold tabular-nums text-text">
+                            #{sale.receiptNumber || String(sale.id).slice(0, 8).toUpperCase()}
+                          </span>
+                          <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <span className="text-meta text-text-muted">{timeLabel(sale.createdAt)}</span>
+                            {sale.isVoid
+                              ? <Pill variant="neutral">លុបហើយ</Pill>
+                              : <Pill variant={pt.pill}>{pt.label}</Pill>}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-right tabular-nums">
+                          <span className={cx('block text-body-sm font-bold', sale.isVoid ? 'text-text-muted line-through' : 'text-text')}>
+                            {formatKHR(sale.totalAmount)}
+                          </span>
+                          <span className={cx('block text-caption font-semibold text-text-muted', sale.isVoid && 'line-through')}>
+                            {formatUSD(sale.totalAmount)}
+                          </span>
+                        </span>
+                      </button>
+                    )
+                  })}
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className={['text-[14px] font-bold tabular-nums', sale.isVoid ? 'line-through text-slate-400' : 'text-slate-900'].join(' ')}>
-                    {formatKHR(sale.totalAmount)}
-                  </p>
-                  <p className="text-[10px] font-bold text-primary-600 tabular-nums">{formatUSD(sale.totalAmount)}</p>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      )}
+              </section>
+            ))}
+            {/* Next page starts after everything shown (a whole day can exceed PAGE) */}
+            {result?.more && (
+              <Button variant="secondary" size="lg" fullWidth onClick={() => setLimit(filtered.length + PAGE)}>
+                មើលបន្ថែម
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Reprint */}
       {reprint && <ReprintReceipt sale={reprint} onClose={() => setReprint(null)} />}

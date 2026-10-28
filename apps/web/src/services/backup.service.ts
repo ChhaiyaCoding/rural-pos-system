@@ -1,13 +1,31 @@
+import Dexie, { type Table } from 'dexie'
 import { db } from '@/db'
 
-const BACKUP_VERSION = 1
-const PROFILE_KEY    = 'pos-store-profile'
+/* v1: IndexedDB tables + store profile.
+   v2: + held invoices, categories, units (B34). Older files still restore. */
+export const BACKUP_VERSION = 2
+
+/* zustand-persisted settings that travel with a backup (raw localStorage JSON) */
+const SETTINGS_KEYS = {
+  profile:    'pos-store-profile',
+  categories: 'pos-categories',
+  units:      'pos-units',
+} as const
+const LAST_BACKUP_KEY = 'pos-last-backup-at'
+
+/** How many days without a backup before the app reminds the shop */
+export const BACKUP_REMINDER_DAYS = 7
 
 export interface BackupFile {
   version:    number
   exportedAt: string
   appName:    string
   profile:    unknown            // zustand-persisted store profile (raw)
+  /** v2+: other persisted settings (raw zustand JSON) */
+  settings?: {
+    categories: unknown
+    units:      unknown
+  }
   tables: {
     products:         unknown[]
     customers:        unknown[]
@@ -17,6 +35,8 @@ export interface BackupFile {
     cashDrawers:      unknown[]
     stockMovements:   unknown[]
     expenses:         unknown[]
+    /** v2+ */
+    heldInvoices?:    unknown[]
   }
 }
 
@@ -27,46 +47,86 @@ export interface BackupStats {
   debts:     number
 }
 
+export class BackupError extends Error {
+  constructor(public readonly code: 'INVALID_BACKUP' | 'BACKUP_TOO_NEW') {
+    super(code)
+  }
+}
+
+/* The data as it was right before the last restore, so a wrong restore can be
+   undone. Kept in its own IndexedDB database — never mixed with shop data. */
+interface Snapshot { id: 'before-restore'; takenAt: string; backup: BackupFile }
+class SnapshotDb extends Dexie {
+  snapshots!: Table<Snapshot>
+  constructor() {
+    super('pos-snapshots')
+    this.version(1).stores({ snapshots: 'id' })
+  }
+}
+let snapshotDb: SnapshotDb | null = null
+const snapshots = () => (snapshotDb ??= new SnapshotDb()).snapshots
+
+const DATA_TABLES = () => [
+  db.products, db.customers, db.sales, db.saleItems, db.debtTransactions,
+  db.cashDrawers, db.stockMovements, db.expenses, db.heldInvoices,
+]
+
+function readSetting(key: string): unknown {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(key) : null
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function writeSetting(key: string, value: unknown): void {
+  try {
+    if (value != null && typeof window !== 'undefined') localStorage.setItem(key, JSON.stringify(value))
+  } catch { /* ignore — e.g. storage full */ }
+}
+
+function statsOf(backup: BackupFile): BackupStats {
+  return {
+    products:  backup.tables.products.length,
+    customers: backup.tables.customers.length,
+    sales:     backup.tables.sales.length,
+    debts:     backup.tables.debtTransactions.length,
+  }
+}
+
 export const backupService = {
 
   /* ── Export everything → BackupFile object ───────────────── */
   async exportAll(): Promise<BackupFile> {
     const [
       products, customers, sales, saleItems,
-      debtTransactions, cashDrawers, stockMovements, expenses,
-    ] = await Promise.all([
-      db.products.toArray(),
-      db.customers.toArray(),
-      db.sales.toArray(),
-      db.saleItems.toArray(),
-      db.debtTransactions.toArray(),
-      db.cashDrawers.toArray(),
-      db.stockMovements.toArray(),
-      db.expenses.toArray(),
-    ])
-
-    let profile: unknown = null
-    try {
-      const raw = typeof window !== 'undefined' ? localStorage.getItem(PROFILE_KEY) : null
-      profile = raw ? JSON.parse(raw) : null
-    } catch { /* ignore */ }
+      debtTransactions, cashDrawers, stockMovements, expenses, heldInvoices,
+    ] = await Promise.all(DATA_TABLES().map((t) => t.toArray()))
 
     return {
       version:    BACKUP_VERSION,
       exportedAt: new Date().toISOString(),
       appName:    'Rural POS System',
-      profile,
+      profile:    readSetting(SETTINGS_KEYS.profile),
+      settings: {
+        categories: readSetting(SETTINGS_KEYS.categories),
+        units:      readSetting(SETTINGS_KEYS.units),
+      },
       tables: {
-        products, customers, sales, saleItems,
-        debtTransactions, cashDrawers, stockMovements, expenses,
+        products: products!, customers: customers!, sales: sales!, saleItems: saleItems!,
+        debtTransactions: debtTransactions!, cashDrawers: cashDrawers!,
+        stockMovements: stockMovements!, expenses: expenses!, heldInvoices: heldInvoices!,
       },
     }
   },
 
+  stats: statsOf,
+
   /* ── Trigger a file download of the backup ───────────────── */
   async downloadBackup(): Promise<BackupStats> {
     const data = await this.exportAll()
-    const json = JSON.stringify(data, null, 2)
+    const json = JSON.stringify(data)
     const blob = new Blob([json], { type: 'application/json' })
     const url  = URL.createObjectURL(blob)
 
@@ -79,12 +139,8 @@ export const backupService = {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
 
-    return {
-      products:  data.tables.products.length,
-      customers: data.tables.customers.length,
-      sales:     data.tables.sales.length,
-      debts:     data.tables.debtTransactions.length,
-    }
+    this.markBackedUp()
+    return statsOf(data)
   },
 
   /* ── Validate a parsed backup object ─────────────────────── */
@@ -96,87 +152,95 @@ export const backupService = {
       !!b.tables &&
       Array.isArray(b.tables.products) &&
       Array.isArray(b.tables.customers) &&
-      Array.isArray(b.tables.sales)
+      Array.isArray(b.tables.sales) &&
+      Array.isArray(b.tables.saleItems) &&
+      Array.isArray(b.tables.debtTransactions)
     )
   },
 
-  /* ── Restore — REPLACES all current data ─────────────────── */
+  /** Throws BackupError unless this app version can restore the file */
+  check(obj: unknown): BackupFile {
+    if (!this.validate(obj)) throw new BackupError('INVALID_BACKUP')
+    if (obj.version > BACKUP_VERSION) throw new BackupError('BACKUP_TOO_NEW')
+    return obj
+  },
+
+  /* ── Restore — REPLACES all current data ─────────────────────
+     The current data is saved first, so undoLastRestore() can bring it back. */
   async restore(backup: BackupFile): Promise<BackupStats> {
+    this.check(backup)
+    const before = await this.exportAll()
+    await snapshots().put({ id: 'before-restore', takenAt: before.exportedAt, backup: before })
+    await this.replaceAll(backup)
+    return statsOf(backup)
+  },
+
+  /** When the data was saved before the last restore (null = nothing to undo) */
+  async lastRestoreSnapshotAt(): Promise<string | null> {
+    return (await snapshots().get('before-restore'))?.takenAt ?? null
+  },
+
+  /** Put back the data exactly as it was before the last restore */
+  async undoLastRestore(): Promise<BackupStats | null> {
+    const snap = await snapshots().get('before-restore')
+    if (!snap) return null
+    await this.replaceAll(snap.backup)
+    await snapshots().delete('before-restore')
+    return statsOf(snap.backup)
+  },
+
+  async replaceAll(backup: BackupFile): Promise<void> {
     const t = backup.tables
+    await db.transaction('rw', DATA_TABLES(), async () => {
+      await Promise.all(DATA_TABLES().map((table) => table.clear()))
+      await db.products.bulkAdd(t.products as never[])
+      await db.customers.bulkAdd(t.customers as never[])
+      await db.sales.bulkAdd(t.sales as never[])
+      await db.saleItems.bulkAdd(t.saleItems as never[])
+      await db.debtTransactions.bulkAdd(t.debtTransactions as never[])
+      await db.cashDrawers.bulkAdd((t.cashDrawers ?? []) as never[])
+      await db.stockMovements.bulkAdd((t.stockMovements ?? []) as never[])
+      await db.expenses.bulkAdd((t.expenses ?? []) as never[])
+      await db.heldInvoices.bulkAdd((t.heldInvoices ?? []) as never[])
+    })
 
-    await db.transaction(
-      'rw',
-      [db.products, db.customers, db.sales, db.saleItems,
-       db.debtTransactions, db.cashDrawers, db.stockMovements, db.expenses],
-      async () => {
-        // Clear current data
-        await Promise.all([
-          db.products.clear(),
-          db.customers.clear(),
-          db.sales.clear(),
-          db.saleItems.clear(),
-          db.debtTransactions.clear(),
-          db.cashDrawers.clear(),
-          db.stockMovements.clear(),
-          db.expenses.clear(),
-        ])
-        // Bulk-insert from backup
-        await db.products.bulkAdd(t.products as never[])
-        await db.customers.bulkAdd(t.customers as never[])
-        await db.sales.bulkAdd(t.sales as never[])
-        await db.saleItems.bulkAdd(t.saleItems as never[])
-        await db.debtTransactions.bulkAdd(t.debtTransactions as never[])
-        await db.cashDrawers.bulkAdd((t.cashDrawers ?? []) as never[])
-        await db.stockMovements.bulkAdd((t.stockMovements ?? []) as never[])
-        await db.expenses.bulkAdd((t.expenses ?? []) as never[])
-      }
-    )
-
-    // Restore store profile (best-effort)
-    try {
-      if (backup.profile && typeof window !== 'undefined') {
-        localStorage.setItem(PROFILE_KEY, JSON.stringify(backup.profile))
-      }
-    } catch { /* ignore */ }
-
-    return {
-      products:  t.products.length,
-      customers: t.customers.length,
-      sales:     t.sales.length,
-      debts:     t.debtTransactions.length,
-    }
+    // Settings (best-effort). A v1 file has no categories/units: keep current ones.
+    writeSetting(SETTINGS_KEYS.profile, backup.profile)
+    writeSetting(SETTINGS_KEYS.categories, backup.settings?.categories)
+    writeSetting(SETTINGS_KEYS.units, backup.settings?.units)
   },
 
   /* ── Wipe every table (factory reset) ────────────────────── */
   async clearAll(): Promise<void> {
-    await db.transaction(
-      'rw',
-      [db.products, db.customers, db.sales, db.saleItems,
-       db.debtTransactions, db.cashDrawers, db.stockMovements, db.expenses, db.heldInvoices, db.syncQueue],
-      async () => {
-        await Promise.all([
-          db.products.clear(),
-          db.customers.clear(),
-          db.sales.clear(),
-          db.saleItems.clear(),
-          db.debtTransactions.clear(),
-          db.cashDrawers.clear(),
-          db.stockMovements.clear(),
-          db.expenses.clear(),
-          db.heldInvoices.clear(),
-          db.syncQueue.clear(),
-        ])
-      }
-    )
+    await db.transaction('rw', [...DATA_TABLES(), db.syncQueue], async () => {
+      await Promise.all([...DATA_TABLES(), db.syncQueue].map((t) => t.clear()))
+    })
   },
 
-  /* ── Read a File → parsed + validated BackupFile ─────────── */
+  /* ── Read a File → parsed + checked BackupFile ───────────── */
   async readFile(file: File): Promise<BackupFile> {
-    const text = await file.text()
-    const obj  = JSON.parse(text)
-    if (!this.validate(obj)) {
-      throw new Error('INVALID_BACKUP')
+    let obj: unknown
+    try {
+      obj = JSON.parse(await file.text())
+    } catch {
+      throw new BackupError('INVALID_BACKUP')
     }
-    return obj
+    return this.check(obj)
+  },
+
+  /* ── Backup reminder ─────────────────────────────────────── */
+  markBackedUp(at: Date = new Date()): void {
+    try { localStorage.setItem(LAST_BACKUP_KEY, at.toISOString()) } catch { /* ignore */ }
+  },
+
+  lastBackupAt(): string | null {
+    try { return localStorage.getItem(LAST_BACKUP_KEY) } catch { return null }
+  },
+
+  /** Whole days since the last backup (null = never backed up on this device) */
+  daysSinceBackup(now: Date = new Date()): number | null {
+    const last = this.lastBackupAt()
+    if (!last) return null
+    return Math.floor((now.getTime() - new Date(last).getTime()) / 86_400_000)
   },
 }

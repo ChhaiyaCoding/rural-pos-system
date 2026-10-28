@@ -1,1 +1,175 @@
-if(!self.define){let e,s={};const a=(a,n)=>(a=new URL(a+".js",n).href,s[a]||new Promise(s=>{if("document"in self){const e=document.createElement("script");e.src=a,e.onload=s,document.head.appendChild(e)}else e=a,importScripts(a),s()}).then(()=>{let e=s[a];if(!e)throw new Error(`Module ${a} didn’t register its module`);return e}));self.define=(n,t)=>{const c=e||("document"in self?document.currentScript.src:"")||location.href;if(s[c])return;let i={};const r=e=>a(e,c),f={module:{uri:c},exports:i,require:r};s[c]=Promise.all(n.map(e=>f[e]||r(e))).then(e=>(t(...e),i))}}define(["./workbox-5194662c"],function(e){"use strict";importScripts(),self.skipWaiting(),e.clientsClaim(),e.precacheAndRoute([{url:"/_next/static/FZIXYgkvfTT8l6sUGOEA_/_buildManifest.js",revision:"4297d7b9276fefd31b776f31cafb6629"},{url:"/_next/static/FZIXYgkvfTT8l6sUGOEA_/_ssgManifest.js",revision:"b6652df95db52feb4daf4eca35380933"},{url:"/_next/static/chunks/154-075e6e9324275d19.js",revision:"075e6e9324275d19"},{url:"/_next/static/chunks/234-577231e8b22c2d9d.js",revision:"577231e8b22c2d9d"},{url:"/_next/static/chunks/255-a5920a190c8b36b8.js",revision:"a5920a190c8b36b8"},{url:"/_next/static/chunks/411-57ad5db14c5434c3.js",revision:"57ad5db14c5434c3"},{url:"/_next/static/chunks/629-2cacd31e041b32fc.js",revision:"2cacd31e041b32fc"},{url:"/_next/static/chunks/872-300dd835f1744bbf.js",revision:"300dd835f1744bbf"},{url:"/_next/static/chunks/911-57411eedf1f77c82.js",revision:"57411eedf1f77c82"},{url:"/_next/static/chunks/937-6b7e1aaf54c8c1fc.js",revision:"6b7e1aaf54c8c1fc"},{url:"/_next/static/chunks/a4ae5d20-1ffa24ca7a56120e.js",revision:"1ffa24ca7a56120e"},{url:"/_next/static/chunks/app/(app)/debt/page-0475192dc2eea376.js",revision:"0475192dc2eea376"},{url:"/_next/static/chunks/app/(app)/inventory/page-be5e0513a7dfb560.js",revision:"be5e0513a7dfb560"},{url:"/_next/static/chunks/app/(app)/layout-2531d0c903687fef.js",revision:"2531d0c903687fef"},{url:"/_next/static/chunks/app/(app)/page-fc99d98c08235d5e.js",revision:"fc99d98c08235d5e"},{url:"/_next/static/chunks/app/(app)/reports/page-42ed73a557eecb2e.js",revision:"42ed73a557eecb2e"},{url:"/_next/static/chunks/app/(app)/settings/page-442aa27abe9f8020.js",revision:"442aa27abe9f8020"},{url:"/_next/static/chunks/app/(auth)/login/page-47fbbfc12826ced9.js",revision:"47fbbfc12826ced9"},{url:"/_next/static/chunks/app/_not-found/page-bda97b692e2a94d5.js",revision:"bda97b692e2a94d5"},{url:"/_next/static/chunks/app/layout-a00af0b7f0ffa042.js",revision:"a00af0b7f0ffa042"},{url:"/_next/static/chunks/f1ac8ffa-9124c471e1d016a2.js",revision:"9124c471e1d016a2"},{url:"/_next/static/chunks/framework-73691aa8483c3b2b.js",revision:"73691aa8483c3b2b"},{url:"/_next/static/chunks/main-9ad05bfa43b613c4.js",revision:"9ad05bfa43b613c4"},{url:"/_next/static/chunks/main-app-a91629870a43a8f5.js",revision:"a91629870a43a8f5"},{url:"/_next/static/chunks/pages/_app-0eed43f2cef13d13.js",revision:"0eed43f2cef13d13"},{url:"/_next/static/chunks/pages/_error-5a24ae21aa237387.js",revision:"5a24ae21aa237387"},{url:"/_next/static/chunks/polyfills-42372ed130431b0a.js",revision:"846118c33b2c0e922d7b3a7676f81f6f"},{url:"/_next/static/chunks/webpack-57285f9e8962ad81.js",revision:"57285f9e8962ad81"},{url:"/_next/static/css/577c0bedd5180a08.css",revision:"577c0bedd5180a08"},{url:"/_next/static/media/1dff1dd9db4a44fb-s.woff2",revision:"0fd2ce73e747d2e773eab2257aad54ad"},{url:"/_next/static/media/2df0f432c3c27475-s.p.woff2",revision:"8f805f750d763b70f1ef999622146f52"},{url:"/_next/static/media/e1fc9bb079dc1c14-s.woff2",revision:"096bb1ba4a06fad82fd44ec1c763da47"},{url:"/manifest.json",revision:"0ad55c008d927ff41a100dd60caf39f9"},{url:"/swe-worker-5c72df51bb1f6ee0.js",revision:"76fdd3369f623a3edcf74ce2200bfdd0"}],{ignoreURLParametersMatching:[/^utm_/,/^fbclid$/]}),e.cleanupOutdatedCaches(),e.registerRoute("/",new e.NetworkFirst({cacheName:"start-url",plugins:[{cacheWillUpdate:function(e){var s=e.response;return _async_to_generator(function(){return _ts_generator(this,function(e){return[2,s&&"opaqueredirect"===s.type?new Response(s.body,{status:200,statusText:"OK",headers:s.headers}):s]})})()}}]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:gstatic)\.com\/.*/i,new e.CacheFirst({cacheName:"google-fonts-webfonts",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:31536e3})]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:googleapis)\.com\/.*/i,new e.StaleWhileRevalidate({cacheName:"google-fonts-stylesheets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,new e.StaleWhileRevalidate({cacheName:"static-font-assets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,new e.StaleWhileRevalidate({cacheName:"static-image-assets",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:2592e3})]}),"GET"),e.registerRoute(/\/_next\/static.+\.js$/i,new e.CacheFirst({cacheName:"next-static-js-assets",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/image\?url=.+$/i,new e.StaleWhileRevalidate({cacheName:"next-image",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp3|wav|ogg)$/i,new e.CacheFirst({cacheName:"static-audio-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp4|webm)$/i,new e.CacheFirst({cacheName:"static-video-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:js)$/i,new e.StaleWhileRevalidate({cacheName:"static-js-assets",plugins:[new e.ExpirationPlugin({maxEntries:48,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:css|less)$/i,new e.StaleWhileRevalidate({cacheName:"static-style-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/data\/.+\/.+\.json$/i,new e.StaleWhileRevalidate({cacheName:"next-data",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:json|xml|csv)$/i,new e.NetworkFirst({cacheName:"static-data-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(function(e){var s=e.sameOrigin,a=e.url.pathname;return!(!s||a.startsWith("/api/auth/callback")||!a.startsWith("/api/"))},new e.NetworkFirst({cacheName:"apis",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:16,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(function(e){var s=e.request,a=e.url.pathname,n=e.sameOrigin;return"1"===s.headers.get("RSC")&&"1"===s.headers.get("Next-Router-Prefetch")&&n&&!a.startsWith("/api/")},new e.NetworkFirst({cacheName:"pages-rsc-prefetch",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(function(e){var s=e.request,a=e.url.pathname,n=e.sameOrigin;return"1"===s.headers.get("RSC")&&n&&!a.startsWith("/api/")},new e.NetworkFirst({cacheName:"pages-rsc",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(function(e){var s=e.url.pathname;return e.sameOrigin&&!s.startsWith("/api/")},new e.NetworkFirst({cacheName:"pages",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(function(e){return!e.sameOrigin},new e.NetworkFirst({cacheName:"cross-origin",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:3600})]}),"GET"),self.__WB_DISABLE_DEV_LOGS=!0});
+/* Rural POS service worker — hand-written, no build step.
+ *
+ * Goal: the app opens and sells with no internet, after it has been opened
+ * online once. The shop's data lives in IndexedDB; this file only caches the
+ * app itself.
+ *
+ *  - Pages (navigations): network first with a short timeout, cached copy when
+ *    offline or too slow. Online users always get the latest deploy, so no
+ *    "update available" prompt is needed and an open shift is never
+ *    interrupted.
+ *  - /_next/static/*: cache first (file names are content-hashed, never change).
+ *  - Icons, manifest: stale-while-revalidate.
+ *  - After login the page sends {type:'WARM'}: every app route and the assets
+ *    it references are fetched into the cache, so screens never opened before
+ *    still work offline.
+ *
+ * Replaces the old next-pwa/workbox worker at the same URL; activate deletes
+ * its caches. Bump VERSION only when this file's caching logic changes.
+ */
+const VERSION = 'v1'
+const PAGES = `pos-pages-${VERSION}`
+const ASSETS = `pos-assets-${VERSION}`
+const ROUTES = [
+  '/', '/sell', '/inventory', '/debt', '/customers', '/reports', '/receipts',
+  '/expenses', '/more', '/settings', '/staff', '/suppliers', '/login',
+]
+const NETWORK_TIMEOUT_MS = 3500
+const MAX_ASSETS = 400
+const WARM_EVERY_MS = 10 * 60 * 1000
+
+const OFFLINE_HTML = `<!doctype html><html lang="km"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>POS ហាង</title>
+<body style="margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center;
+font-family:'Noto Sans Khmer',system-ui,sans-serif;background:#EEF1F5;color:#0F1B2D;text-align:center;padding:24px">
+<div><p style="font-size:20px;font-weight:700;margin:0 0 8px">គ្មានអ៊ីនធឺណិត</p>
+<p style="margin:0 0 20px;color:#5B6576">ទំព័រនេះមិនទាន់បានរក្សាទុកសម្រាប់ប្រើ offline ទេ។<br>សូមភ្ជាប់អ៊ីនធឺណិតម្ដង ហើយបើក app ឡើងវិញ។</p>
+<button onclick="location.reload()" style="height:52px;padding:0 24px;border:0;border-radius:14px;background:#0F1B2D;color:#fff;font:inherit;font-weight:700">សាកម្ដងទៀត</button>
+</div></body></html>`
+
+self.addEventListener('install', () => {
+  // Network-first pages make taking over immediately safe
+  self.skipWaiting()
+})
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    const keep = new Set([PAGES, ASSETS])
+    for (const name of await caches.keys()) {
+      if (!keep.has(name)) await caches.delete(name)   // incl. old workbox caches
+    }
+    await self.clients.claim()
+  })())
+})
+
+let lastWarm = 0
+let warming = false
+self.addEventListener('message', (event) => {
+  if (event.data?.type !== 'WARM') return
+  if (warming || Date.now() - lastWarm < WARM_EVERY_MS) return
+  warming = true
+  event.waitUntil(
+    warm()
+      // Only "done" once signed in (app routes cached), not on the login page
+      .then((cached) => { if (cached > 1) lastWarm = Date.now() })
+      .finally(() => { warming = false }),
+  )
+})
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request
+  if (req.method !== 'GET') return
+  const url = new URL(req.url)
+  if (url.origin !== self.location.origin) return
+
+  if (req.mode === 'navigate') {
+    event.respondWith(page(event, url))
+  } else if (url.pathname.startsWith('/_next/static/')) {
+    event.respondWith(immutable(req))
+  } else if (url.pathname.startsWith('/icons/') || url.pathname === '/manifest.json') {
+    event.respondWith(staleWhileRevalidate(event, req))
+  }
+  // Everything else (RSC payloads, data, dev tools) goes straight to the
+  // network. Offline, Next.js falls back to a full navigation, served above.
+})
+
+/* ── Pages ───────────────────────────────────────────────── */
+async function page(event, url) {
+  const cache = await caches.open(PAGES)
+  const key = url.pathname
+  const network = fetch(event.request).then(async (res) => {
+    // A redirect (e.g. to /login) or an error page is never cached
+    if (res.ok && !res.redirected) await cache.put(key, res.clone())
+    return res
+  })
+  event.waitUntil(network.catch(() => {}))
+
+  try {
+    return await withTimeout(network, NETWORK_TIMEOUT_MS)
+  } catch {
+    return (
+      (await cache.match(key)) ??
+      (await cache.match('/')) ??
+      new Response(OFFLINE_HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+    )
+  }
+}
+
+/* ── Hashed build assets ─────────────────────────────────── */
+async function immutable(req) {
+  const cache = await caches.open(ASSETS)
+  const hit = await cache.match(req)
+  if (hit) return hit
+  const res = await fetch(req)
+  if (res.ok) {
+    await cache.put(req, res.clone())
+    trim(cache)
+  }
+  return res
+}
+
+async function staleWhileRevalidate(event, req) {
+  const cache = await caches.open(ASSETS)
+  const hit = await cache.match(req)
+  const network = fetch(req).then(async (res) => {
+    if (res.ok) await cache.put(req, res.clone())
+    return res
+  })
+  event.waitUntil(network.catch(() => {}))
+  return hit ?? network
+}
+
+/* ── Warm-up: every route + the assets its HTML references ── */
+/** Returns how many routes were cached (1 = only /login: not signed in) */
+async function warm() {
+  let cached = 0
+  const pages = await caches.open(PAGES)
+  const assets = await caches.open(ASSETS)
+  const wanted = new Set(['/manifest.json', '/icons/icon-192x192.png', '/icons/apple-touch-icon.png'])
+
+  for (const route of ROUTES) {
+    try {
+      const res = await fetch(route, { credentials: 'same-origin', cache: 'no-store' })
+      if (!res.ok || res.redirected) continue          // not signed in yet → skip
+      const html = await res.clone().text()
+      await pages.put(route, res)
+      cached++
+      for (const m of html.matchAll(/\/_next\/static\/[^"'\s)\\]+/g)) wanted.add(m[0])
+    } catch { /* offline — try again next time */ }
+  }
+
+  for (const path of wanted) {
+    try {
+      if (await assets.match(path)) continue
+      const res = await fetch(path)
+      if (res.ok) await assets.put(path, res)
+    } catch { /* ignore */ }
+  }
+  trim(assets)
+  return cached
+}
+
+/* ── Helpers ─────────────────────────────────────────────── */
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('timeout')), ms)
+    promise.then((v) => { clearTimeout(t); resolve(v) }, (e) => { clearTimeout(t); reject(e) })
+  })
+}
+
+/** Keep the asset cache bounded: drop the oldest entries beyond MAX_ASSETS */
+async function trim(cache) {
+  const keys = await cache.keys()
+  for (let i = 0; i < keys.length - MAX_ASSETS; i++) await cache.delete(keys[i])
+}

@@ -68,6 +68,9 @@ export interface SaleItem {
   qty: number
   unitPrice: KHR
   subtotal: KHR
+  /** Cost price per unit at the time of sale (for profit). Absent on sales
+   *  made before it was recorded — profit then uses the product's current cost. */
+  unitCost?: KHR
 }
 
 export type DebtPaymentMethod = 'cash' | 'aba' | 'bank'

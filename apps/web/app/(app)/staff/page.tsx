@@ -2,14 +2,12 @@
 
 import { UserCog } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 export default function StaffPage() {
   return (
-    <div className="flex flex-col h-full bg-slate-50">
-      <header className="shrink-0 px-4 pt-5 pb-4 bg-white border-b border-slate-200">
-        <h1 className="text-[19px] font-bold text-slate-900">បុគ្គលិក</h1>
-        <p className="text-[12px] text-slate-400 mt-0.5">អ្នកប្រើ & សិទ្ធិ</p>
-      </header>
+    <div className="flex min-h-full flex-col">
+      <PageHeader title="បុគ្គលិក" subtitle="អ្នកប្រើ & សិទ្ធិ" backHref="/more" />
       <EmptyState
         fullHeight
         icon={<UserCog size={30} strokeWidth={1.5} />}

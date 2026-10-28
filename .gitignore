@@ -20,11 +20,11 @@ supabase/functions/.env
 .DS_Store
 Thumbs.db
 
-# PWA
-public/sw.js
-public/workbox-*.js
-public/worker-*.js
-public/fallback-*.js
+# PWA — apps/web/public/sw.js is hand-written source (tracked); these are
+# leftovers a next-pwa build would generate
+apps/web/public/workbox-*.js
+apps/web/public/worker-*.js
+apps/web/public/fallback-*.js
 .vercel
 apps/web/*.bak
 
