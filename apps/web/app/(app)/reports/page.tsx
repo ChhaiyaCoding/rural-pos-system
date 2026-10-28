@@ -32,6 +32,8 @@ import { salesBetween } from '@/db/queries'
 import { computeProfit } from '@/lib/profit'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
+/** One shared empty list while data loads, so memo dependencies stay stable */
+const NONE: never[] = []
 
 /* ── Period config ────────────────────────────────────────── */
 const PERIODS = [
@@ -95,11 +97,11 @@ export default function ReportsPage() {
     return { sales, allSales, customers, items, products }
   }, [startISO])
 
-  const sales     = report?.sales     ?? []
-  const allSales  = report?.allSales  ?? []
-  const customers = report?.customers ?? []
-  const items     = report?.items     ?? []
-  const products  = report?.products  ?? []
+  const sales     = report?.sales     ?? NONE
+  const allSales  = report?.allSales  ?? NONE
+  const customers = report?.customers ?? NONE
+  const items     = report?.items     ?? NONE
+  const products  = report?.products  ?? NONE
   const isLoading = report === undefined
 
   /* Aggregates */
@@ -117,7 +119,7 @@ export default function ReportsPage() {
       .filter(e => !e.deletedAt && e.spentAt >= startDate)
       .toArray(),
     [startDate]
-  ) ?? []
+  ) ?? NONE
   const totalExpenses = expenses.reduce((s, e) => s + (e.amount as number), 0) as KHR
 
   /* Profit = revenue − cost of the goods sold − expenses (lib/profit) */

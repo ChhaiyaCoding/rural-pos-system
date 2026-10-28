@@ -1,7 +1,7 @@
 import { db } from '@/db'
 import { generateId } from '@/lib/uuid'
 import { nowISO } from '@/lib/date'
-import { addKHR, toKHR } from '@/lib/money'
+import { addKHR } from '@/lib/money'
 import type { CashDrawer } from '@/types'
 import type { TenantId, UserId, KHR } from '@/types/branded'
 import { salesBetween } from '@/db/queries'
