@@ -4,6 +4,7 @@ import { nowISO } from '@/lib/date'
 import { addKHR, toKHR } from '@/lib/money'
 import type { CashDrawer } from '@/types'
 import type { TenantId, UserId, KHR } from '@/types/branded'
+import { salesBetween } from '@/db/queries'
 
 export interface OpenDrawerInput {
   tenantId:       TenantId
@@ -59,13 +60,8 @@ export const cashDrawerService = {
     if (!drawer || drawer.closedAt) return null
 
     // Calculate cash sales during this shift
-    const cashSales = await db.sales
-      .where('tenantId').equals(drawer.tenantId)
-      .filter(s =>
-        !s.isVoid &&
-        s.paymentType === 'cash' &&
-        s.createdAt >= drawer.openedAt
-      )
+    const cashSales = await salesBetween(drawer.tenantId, drawer.openedAt)
+      .filter(s => !s.isVoid && s.paymentType === 'cash')
       .toArray()
 
     const cashSalesTotal = cashSales.reduce(
@@ -110,13 +106,8 @@ export const cashDrawerService = {
 
   /* ── Get cash sales total for current open shift ─── */
   async getLiveCashSales(drawer: CashDrawer): Promise<KHR> {
-    const cashSales = await db.sales
-      .where('tenantId').equals(drawer.tenantId)
-      .filter(s =>
-        !s.isVoid &&
-        s.paymentType === 'cash' &&
-        s.createdAt >= drawer.openedAt
-      )
+    const cashSales = await salesBetween(drawer.tenantId, drawer.openedAt)
+      .filter(s => !s.isVoid && s.paymentType === 'cash')
       .toArray()
     return cashSales.reduce((sum, s) => (sum + s.totalAmount) as KHR, 0 as KHR)
   },
@@ -127,13 +118,8 @@ export const cashDrawerService = {
   async getStoreDaySummary(drawer: CashDrawer): Promise<StoreDaySummary> {
     const until = drawer.closedAt ?? nowISO()
 
-    const sales = await db.sales
-      .where('tenantId').equals(drawer.tenantId)
-      .filter(s =>
-        !s.isVoid &&
-        s.createdAt >= drawer.openedAt &&
-        s.createdAt <= until
-      )
+    const sales = await salesBetween(drawer.tenantId, drawer.openedAt, until)
+      .filter(s => !s.isVoid)
       .toArray()
 
     let cashSales = 0

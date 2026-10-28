@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/Input'
 import { cx } from '@/components/ui/cx'
 import type { Customer, Sale, DebtPaymentMethod } from '@/types'
 import type { TenantId, CustomerId, KHR, UUID } from '@/types/branded'
+import { salesOfCustomer } from '@/db/queries'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
@@ -169,9 +170,8 @@ export function CustomerDetailSheet({ customer, onClose }: Props) {
 
   /* Debt invoices = this customer's debt/partial sales (newest first) */
   const sales = useLiveQuery(
-    () => db.sales
-      .where('tenantId').equals(DEMO_TENANT)
-      .filter((s) => s.customerId === customer.id && !s.isVoid && (s.paymentType === 'debt' || s.paymentType === 'partial'))
+    () => salesOfCustomer(DEMO_TENANT, customer.id as CustomerId)
+      .filter((s) => !s.isVoid && (s.paymentType === 'debt' || s.paymentType === 'partial'))
       .toArray(),
     [customer.id]
   ) ?? []

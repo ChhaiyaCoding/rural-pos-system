@@ -6,6 +6,7 @@ import { addKHR, multiplyKHR } from '@/lib/money'
 import { saleRemaining } from '@/features/debt/reconcile'
 import type { Sale, SaleItem, CartItem, DebtTransaction, Result } from '@/types'
 import type { TenantId, UserId, CustomerId, SaleId, KHR } from '@/types/branded'
+import { newestSales, salesOfCustomer } from '@/db/queries'
 
 export interface CreateSaleInput {
   tenantId: TenantId
@@ -165,13 +166,7 @@ export const saleService = {
   },
 
   async getByTenant(tenantId: TenantId, limit = 50): Promise<Sale[]> {
-    return db.sales
-      .where('tenantId')
-      .equals(tenantId)
-      .filter((s) => !s.isVoid)
-      .reverse()
-      .limit(limit)
-      .sortBy('createdAt')
+    return newestSales(tenantId).filter((s) => !s.isVoid).limit(limit).toArray()
   },
 
   /* ── Void (cancel) a sale ────────────────────────────────────
@@ -280,8 +275,8 @@ export async function saleHasDebtPayments(sale: Sale): Promise<boolean> {
   if (!sale.customerId || (sale.paymentType !== 'debt' && sale.paymentType !== 'partial')) return false
   const customerId = sale.customerId
   const [debtSales, txns] = await Promise.all([
-    db.sales.where('tenantId').equals(sale.tenantId)
-      .filter((s) => s.customerId === customerId && !s.isVoid && (s.paymentType === 'debt' || s.paymentType === 'partial'))
+    salesOfCustomer(sale.tenantId, customerId)
+      .filter((s) => !s.isVoid && (s.paymentType === 'debt' || s.paymentType === 'partial'))
       .toArray(),
     db.debtTransactions.where('customerId').equals(customerId)
       .filter((t) => t.tenantId === sale.tenantId && !t.isVoid)

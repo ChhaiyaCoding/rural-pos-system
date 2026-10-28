@@ -50,6 +50,12 @@ export function startOfDaysAgoISO(n: number): string {
   ).toISOString()
 }
 
+/** Start (Cambodia midnight) of a 'YYYY-MM-DD' Cambodia date, as a UTC ISO string. */
+export function startOfKHDateISO(date: string): string {
+  const [y, m, d] = date.split('-').map(Number)
+  return new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1) - CAMBODIA_UTC_OFFSET_MIN * 60_000).toISOString()
+}
+
 /** Start of "today" in Cambodia time, as a UTC ISO string. */
 export function startOfTodayISO(): string {
   return startOfDaysAgoISO(0)

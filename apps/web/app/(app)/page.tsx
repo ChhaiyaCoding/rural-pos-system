@@ -20,6 +20,7 @@ import { Pill } from '@/components/ui/Pill'
 import { cx } from '@/components/ui/cx'
 import { firstGrapheme } from '@/components/ui/text'
 import type { KHR, TenantId } from '@/types/branded'
+import { salesBetween } from '@/db/queries'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
@@ -30,10 +31,7 @@ export default function HomePage() {
 
   /* Today's sales (non-void) */
   const todaySales = useLiveQuery(
-    () => db.sales
-      .where('tenantId').equals(DEMO_TENANT)
-      .filter(s => !s.isVoid && s.createdAt >= startISO)
-      .toArray(),
+    () => salesBetween(DEMO_TENANT, startISO).filter(s => !s.isVoid).toArray(),
     [startISO]
   ) ?? []
   const todayRevenue = todaySales.reduce((s, x) => s + (x.totalAmount as number), 0) as KHR

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue } from 'react'
 import { Search, Check, Receipt, PauseCircle, Clock, Trash2, ArrowRight, AlertTriangle, Package, Plus, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
@@ -37,6 +37,7 @@ import { CloseShiftSheet } from './CloseShiftSheet'
 import { useStoreProfile } from '@/store/storeProfile.store'
 import { cashDrawerService } from '@/services/cashDrawer.service'
 import type { CashDrawer } from '@/types'
+import { useProgressiveList } from '@/components/shared/useProgressiveList'
 
 const DEMO_TENANT  = 'tenant-demo'  as TenantId
 const DEMO_CASHIER = 'cashier-demo' as UserId
@@ -137,15 +138,19 @@ export function POSScreen() {
   }
 
   /* Filter products by category + smart search (Khmer/English/barcode/price) */
+  /* Typing stays instant; the (possibly long) filter runs on the deferred value */
+  const deferredSearch = useDeferredValue(search)
   const filteredProducts = useMemo(
     () =>
       dbProducts.filter((p) => {
-        const matchSearch = productMatchesQuery(p, search)
+        const matchSearch = productMatchesQuery(p, deferredSearch)
         const matchCat = category === 'all' || p.categoryId === category
         return matchSearch && matchCat
       }),
-    [dbProducts, search, category]
+    [dbProducts, deferredSearch, category]
   )
+  /* Draw the grid a slice at a time (shops can have thousands of products) */
+  const grid = useProgressiveList(filteredProducts, `${deferredSearch}|${category}`)
 
   /* Live per-category counts for the tab badges */
   const categoryCounts = useMemo(() => {
@@ -188,7 +193,8 @@ export function POSScreen() {
   }, [cart.length])
 
   /* ── Fly-to-cart animation ───────────────────────────────────── */
-  const handleFly = (startX: number, startY: number, emoji: string, imageUri: string | null) => {
+  // Stable identity so memoized ProductCards don't re-render on every cart change
+  const handleFly = useCallback((startX: number, startY: number, emoji: string, imageUri: string | null) => {
     const id = `fly-${Date.now()}-${Math.random()}`
     // Defer one frame: the first tap renders the mobile cart bar (count 0→1),
     // so we must read the target *after* that DOM update. We pick whichever
@@ -214,7 +220,7 @@ export function POSScreen() {
 
       setFlyItems(prev => [...prev, { id, emoji, imageUri, startX, startY, endX, endY }])
     })
-  }
+  }, [])
 
   /* Step 1 — open the checkout/confirmation sheet for the chosen method */
   const handlePay = (type: 'cash' | 'debt' | 'partial') => {
@@ -464,7 +470,7 @@ export function POSScreen() {
               />
             ) : (
               <div className="grid grid-cols-2 gap-2.5 md:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] md:gap-3">
-                {filteredProducts.map((product, i) => (
+                {grid.visible.map((product, i) => (
                   <ProductCard
                     key={product.id}
                     product={product}
@@ -472,6 +478,7 @@ export function POSScreen() {
                     onFly={handleFly}
                   />
                 ))}
+                {grid.hasMore && <span ref={grid.sentinelRef} className="col-span-full h-px" aria-hidden="true" />}
               </div>
             )}
           </div>

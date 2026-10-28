@@ -19,6 +19,7 @@ import { LetterAvatar } from '@/components/ui/LetterAvatar'
 import { Pill } from '@/components/ui/Pill'
 import type { Customer, Sale } from '@/types'
 import type { TenantId } from '@/types/branded'
+import { lastPurchaseAt } from '@/db/queries'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
@@ -40,15 +41,12 @@ export default function CustomersPage() {
 
   /* Last-purchase date per customer (from non-void sales) */
   const lastPurchaseByCustomer = useLiveQuery(async () => {
-    const sales = await db.sales
-      .where('tenantId').equals(DEMO_TENANT)
-      .filter(s => !s.isVoid && !!s.customerId)
-      .toArray()
+    const list = await db.customers.where('tenantId').equals(DEMO_TENANT).toArray()
     const map: Record<string, string> = {}
-    for (const s of sales) {
-      const k = s.customerId as unknown as string
-      if (!map[k] || s.createdAt > map[k]) map[k] = s.createdAt
-    }
+    await Promise.all(list.map(async (c) => {
+      const at = await lastPurchaseAt(DEMO_TENANT, c.id)
+      if (at) map[c.id as unknown as string] = at
+    }))
     return map
   }, []) ?? {}
 

@@ -1,13 +1,15 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Receipt, X, Banknote, NotebookPen, SplitSquareHorizontal, Ban, type LucideIcon } from 'lucide-react'
 import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
-import { dateKHFromISO, formatDateOnlyKm, todayISODate, addDaysISODate } from '@/lib/date'
+import { dateKHFromISO, formatDateOnlyKm, todayISODate, addDaysISODate, startOfKHDateISO } from '@/lib/date'
+import { newestSales, salesBefore, salesBetween } from '@/db/queries'
 import { ReprintReceipt } from '@/features/sales/components/ReprintReceipt'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Button } from '@/components/ui/Button'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Pill, type PillVariant } from '@/components/ui/Pill'
@@ -24,24 +26,50 @@ function timeLabel(iso: string): string {
   })
 }
 
+/** Receipts are read a page at a time (a busy shop has tens of thousands) */
+const PAGE = 60
+
 export default function ReceiptsPage() {
   const [search,  setSearch]  = useState('')
-  const [date,    setDate]    = useState('')          // 'YYYY-MM-DD' filter
+  const [date,    setDate]    = useState('')          // 'YYYY-MM-DD' Cambodia date filter
+  const [limit,   setLimit]   = useState(PAGE)
   const [reprint, setReprint] = useState<Sale | null>(null)
 
-  const sales = useLiveQuery(
-    () => db.sales.where('tenantId').equals(DEMO_TENANT).reverse().sortBy('createdAt'),
-    []
-  ) ?? []
+  // A new search or date starts again from the first page
+  useEffect(() => { setLimit(PAGE) }, [search, date])
 
-  const filtered = useMemo(() => {
+  const result = useLiveQuery(async () => {
     const q = search.trim().toLowerCase()
-    return sales.filter((s) => {
-      const matchNum  = q === '' || (s.receiptNumber ?? '').toLowerCase().includes(q)
-      const matchDate = date === '' || s.createdAt.slice(0, 10) === date
-      return matchNum && matchDate
-    })
-  }, [sales, search, date])
+    const matches = (s: Sale) => q === '' || (s.receiptNumber ?? '').toLowerCase().includes(q)
+    const total = await db.sales.where('tenantId').equals(DEMO_TENANT).count()
+
+    // One Cambodia day: small enough to read whole
+    if (date) {
+      const rows = await salesBetween(DEMO_TENANT, startOfKHDateISO(date), startOfKHDateISO(addDaysISODate(date, 1)))
+        .filter(matches).toArray()
+      return { rows: rows.reverse(), more: false, total }
+    }
+
+    const page = await newestSales(DEMO_TENANT).filter(matches).limit(limit + 1).toArray()
+    let more = page.length > limit
+    let rows = page.slice(0, limit)
+
+    // Without a search, finish the oldest day on the page so its day total is right
+    const oldest = rows[rows.length - 1]
+    if (more && q === '' && oldest) {
+      const dayStart = startOfKHDateISO(dateKHFromISO(oldest.createdAt))
+      const seen = new Set(rows.map((s) => s.id))
+      const rest = (await salesBetween(DEMO_TENANT, dayStart, oldest.createdAt).toArray())
+        .filter((s) => !seen.has(s.id))
+        .reverse()
+      rows = rows.concat(rest)
+      more = (await salesBefore(DEMO_TENANT, dayStart).count()) > 0
+    }
+    return { rows, more, total }
+  }, [search, date, limit])
+
+  const filtered = useMemo(() => result?.rows ?? [], [result])
+  const filtering = search.trim() !== '' || date !== ''
 
   /* ── Display only: payment styling + group by (Cambodia) day ───── */
   const PAY_UI: Record<Sale['paymentType'], { label: string; pill: PillVariant; tile: string; icon: LucideIcon }> = {
@@ -64,7 +92,12 @@ export default function ReceiptsPage() {
   return (
     <div className="mx-auto w-full max-w-3xl md:px-6">
 
-      <PageHeader title="ប្រវត្តិ​វិក្កយបត្រ" subtitle={`${filtered.length} វិក្កយបត្រ`} backHref="/more" className="md:px-0" />
+      <PageHeader
+        title="ប្រវត្តិ​វិក្កយបត្រ"
+        subtitle={filtering ? `${filtered.length} លទ្ធផល` : `${result?.total ?? 0} វិក្កយបត្រ`}
+        backHref="/more"
+        className="md:px-0"
+      />
 
       <div className="space-y-2 px-4 md:px-0">
         {/* Search by receipt number */}
@@ -95,7 +128,7 @@ export default function ReceiptsPage() {
 
       {/* List — grouped by day */}
       <div className="px-4 pb-6 pt-4 md:px-0">
-        {filtered.length === 0 ? (
+        {result === undefined ? null : filtered.length === 0 ? (
           <EmptyState
             icon={<Receipt size={30} strokeWidth={1.5} />}
             title={search || date ? 'រក​មិន​ឃើញ​វិក្កយបត្រ' : 'មិន​ទាន់​មាន​វិក្កយបត្រ'}
@@ -153,6 +186,12 @@ export default function ReceiptsPage() {
                 </div>
               </section>
             ))}
+            {/* Next page starts after everything shown (a whole day can exceed PAGE) */}
+            {result?.more && (
+              <Button variant="secondary" size="lg" fullWidth onClick={() => setLimit(filtered.length + PAGE)}>
+                មើលបន្ថែម
+              </Button>
+            )}
           </div>
         )}
       </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useDeferredValue } from 'react'
 import Link from 'next/link'
 import { Plus, Package, PackagePlus, Truck } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -20,6 +20,7 @@ import { cx } from '@/components/ui/cx'
 import type { KHR } from '@/types'
 import type { Product } from '@/types'
 import type { TenantId } from '@/types/branded'
+import { useProgressiveList } from '@/components/shared/useProgressiveList'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
@@ -80,6 +81,8 @@ export default function InventoryPage() {
     if (tab !== 'all' && tab !== 'low' && tab !== 'out' && (categoryCounts[tab] ?? 0) === 0) setTab('all')
   }, [categoryCounts, tab])
 
+  /* Typing stays instant; the filter over a long list runs on the deferred value */
+  const deferredSearch = useDeferredValue(search)
   const filtered = useMemo(() => {
     const base = products.filter((p) => {
       const isAlert     = p.stockQty === 0 || p.stockQty <= p.lowStockThreshold
@@ -87,7 +90,7 @@ export default function InventoryPage() {
                         : tab === 'low' ? isAlert
                         : tab === 'out' ? p.stockQty === 0
                         : p.categoryId === tab
-      const matchSearch = productMatchesQuery(p, search)
+      const matchSearch = productMatchesQuery(p, deferredSearch)
       return matchCat && matchSearch
     })
 
@@ -102,7 +105,9 @@ export default function InventoryPage() {
       })
     }
     return base
-  }, [products, tab, search])
+  }, [products, tab, deferredSearch])
+  /* Draw the list a slice at a time (shops can have thousands of products) */
+  const list = useProgressiveList(filtered, `${deferredSearch}|${tab}`)
 
   /* ── Display only ───────────────────────────────────────────── */
   const stockValue = products.reduce((sum, p) => sum + (p.costPrice as number) * p.stockQty, 0) as KHR
@@ -219,7 +224,7 @@ export default function InventoryPage() {
           </p>
         ) : (
           <div className="space-y-2">
-            {filtered.map((product) => {
+            {list.visible.map((product) => {
               const isOut   = product.stockQty === 0
               const isLow   = !isOut && product.stockQty <= product.lowStockThreshold
               const isAlert = isOut || isLow
@@ -274,6 +279,7 @@ export default function InventoryPage() {
                 </div>
               )
             })}
+            {list.hasMore && <div ref={list.sentinelRef} className="h-px" aria-hidden="true" />}
           </div>
         )}
       </div>

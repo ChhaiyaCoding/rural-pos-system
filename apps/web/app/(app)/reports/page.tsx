@@ -28,6 +28,7 @@ import { expenseCategoryLabel, expenseCategoryEmoji } from '@/services/expense.s
 import { useStoreProfile } from '@/store/storeProfile.store'
 import type { Sale } from '@/types'
 import type { KHR, TenantId, ProductId } from '@/types/branded'
+import { salesBetween } from '@/db/queries'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
@@ -82,10 +83,7 @@ export default function ReportsPage() {
   /* Single reactive query — includes voided sales for history display */
   const report = useLiveQuery(async () => {
     const [allSales, customers, products] = await Promise.all([
-      db.sales
-        .where('tenantId').equals(DEMO_TENANT)
-        .filter(s => s.createdAt >= startISO)
-        .toArray(),
+      salesBetween(DEMO_TENANT, startISO).toArray(),
       db.customers.where('tenantId').equals(DEMO_TENANT).filter(c => !c.deletedAt).toArray(),
       db.products.where('tenantId').equals(DEMO_TENANT).filter(p => !p.deletedAt).toArray(),
     ])

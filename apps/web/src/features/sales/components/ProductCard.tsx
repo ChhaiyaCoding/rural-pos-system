@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { memo, useRef } from 'react'
 import { Plus } from 'lucide-react'
 import { useSaleStore } from '@/store/sale.store'
 import { formatKHR } from '@/lib/money'
@@ -16,7 +16,10 @@ interface ProductCardProps {
   className?: string | undefined
 }
 
-export function ProductCard({ product, onFly, className }: ProductCardProps) {
+/* memo: adding one item to the cart re-renders the POS screen; without memo
+   every card on the grid would render again. Each card still updates through
+   its own cart selector below. */
+export const ProductCard = memo(function ProductCard({ product, onFly, className }: ProductCardProps) {
   const addToCart = useSaleStore((s) => s.addToCart)
   const updateQty = useSaleStore((s) => s.updateQty)
   /* qty of THIS product already in the cart — drives the selected state */
@@ -127,4 +130,4 @@ export function ProductCard({ product, onFly, className }: ProductCardProps) {
       </div>
     </div>
   )
-}
+})

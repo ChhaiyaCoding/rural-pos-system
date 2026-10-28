@@ -17,7 +17,8 @@ import { db } from '@/db'
 import { formatKHR, formatUSD } from '@/lib/money'
 import { formatDateKm, formatDateTimeKm } from '@/lib/date'
 import type { Customer, Sale } from '@/types'
-import type { TenantId, KHR } from '@/types/branded'
+import type { TenantId, KHR, CustomerId } from '@/types/branded'
+import { salesOfCustomer } from '@/db/queries'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
@@ -35,10 +36,7 @@ export function CustomerProfileSheet({ customer, onClose, onEdit, onViewLedger, 
 
   /* This customer's sales (non-void), newest first */
   const sales = useLiveQuery(
-    () => db.sales
-      .where('tenantId').equals(DEMO_TENANT)
-      .filter(s => s.customerId === customer.id && !s.isVoid)
-      .toArray(),
+    () => salesOfCustomer(DEMO_TENANT, customer.id as CustomerId).filter(s => !s.isVoid).toArray(),
     [customer.id]
   ) ?? []
 
