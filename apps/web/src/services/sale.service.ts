@@ -71,6 +71,7 @@ export const saleService = {
       qty: item.qty,
       unitPrice: item.unitPrice,
       subtotal: lineNet(item),   // net after per-line discount
+      unitCost: item.product.costPrice,
     }))
 
     const debtAmount = input.debtAmount ?? (0 as KHR)

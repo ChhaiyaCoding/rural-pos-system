@@ -4,7 +4,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import Link from 'next/link'
 import {
-  TrendingUp, BarChart2, List, Share2, Wallet, Receipt, Banknote, NotebookPen, SplitSquareHorizontal, Ban,
+  TrendingUp, BarChart2, List, Share2, Wallet, Receipt, Banknote, NotebookPen, SplitSquareHorizontal, Ban, AlertTriangle,
   type LucideIcon,
 } from 'lucide-react'
 import { db } from '@/db'
@@ -29,6 +29,7 @@ import { useStoreProfile } from '@/store/storeProfile.store'
 import type { Sale } from '@/types'
 import type { KHR, TenantId, ProductId } from '@/types/branded'
 import { salesBetween } from '@/db/queries'
+import { computeProfit } from '@/lib/profit'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
@@ -118,7 +119,13 @@ export default function ReportsPage() {
     [startDate]
   ) ?? []
   const totalExpenses = expenses.reduce((s, e) => s + (e.amount as number), 0) as KHR
-  const netProfit     = (totalRevenue - totalExpenses) as KHR
+
+  /* Profit = revenue − cost of the goods sold − expenses (lib/profit) */
+  const profit = useMemo(() => {
+    const costById = new Map(products.map((p) => [p.id as string, p.costPrice as number]))
+    return computeProfit({ sales, items, currentCost: (id) => costById.get(id), expenses: totalExpenses })
+  }, [sales, items, products, totalExpenses])
+  const netProfit = profit.net
 
   /* Expense breakdown by category (read-only profit report) */
   const expenseByCat = useMemo(() => {
@@ -480,6 +487,23 @@ export default function ReportsPage() {
               </div>
               <div className="flex items-center justify-between gap-3 px-4 py-3">
                 <span className="flex items-center gap-2 text-body-sm text-text-subtle">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-warn" aria-hidden="true" />
+                  ថ្លៃដើមទំនិញ
+                </span>
+                <span className="text-right tabular-nums">
+                  <span className="block text-body-sm font-bold text-text">{profit.costOfGoods > 0 ? '−' : ''}{formatKHR(profit.costOfGoods)}</span>
+                  <span className="block text-caption text-text-muted">{formatUSD(profit.costOfGoods)}</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 px-4 py-3">
+                <span className="text-body-sm font-semibold text-text">ចំណេញដុល</span>
+                <span className="text-right tabular-nums">
+                  <span className={cx('block text-body-sm font-bold', profit.gross >= 0 ? 'text-text' : 'text-danger')}>{formatKHR(profit.gross)}</span>
+                  <span className="block text-caption text-text-muted">{formatUSD(profit.gross)}</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 px-4 py-3">
+                <span className="flex items-center gap-2 text-body-sm text-text-subtle">
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-debt" aria-hidden="true" />
                   ចំណាយ
                 </span>
@@ -498,6 +522,13 @@ export default function ReportsPage() {
                 </span>
               </div>
             </Card>
+
+            {profit.uncostedLines > 0 && (
+              <p role="note" className="flex items-start gap-2 rounded-md bg-warn-bg px-3.5 py-3 text-meta font-semibold text-warn">
+                <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+                ទំនិញខ្លះមិនទាន់មានថ្លៃដើម ({profit.uncostedLines} បន្ទាត់) — ចំណេញអាចខ្ពស់ជាងការពិត។ សូមបញ្ចូលថ្លៃដើមនៅទំព័រស្តុក។
+              </p>
+            )}
 
             {/* Expense breakdown by category */}
             {expenseByCat.length > 0 && (
@@ -555,6 +586,7 @@ export default function ReportsPage() {
           totalRevenue={totalRevenue}
           totalExpenses={totalExpenses}
           netProfit={netProfit}
+          costOfGoods={profit.costOfGoods}
           salesCount={sales.length}
           cashCount={cashSales.length}
           cashAmount={cashSales.reduce((s, x) => (s + x.totalAmount) as KHR, 0 as KHR)}

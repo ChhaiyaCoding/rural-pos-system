@@ -5,6 +5,7 @@ import { addKHR, toKHR } from '@/lib/money'
 import type { CashDrawer } from '@/types'
 import type { TenantId, UserId, KHR } from '@/types/branded'
 import { salesBetween } from '@/db/queries'
+import { computeProfit } from '@/lib/profit'
 
 export interface OpenDrawerInput {
   tenantId:       TenantId
@@ -26,7 +27,8 @@ export interface StoreDaySummary {
   debtSales:     KHR   // paymentType 'debt' | 'partial'
   abaSales:      KHR   // debt payments received via method 'aba' in window
   totalExpenses: KHR
-  netProfit:     KHR   // totalSales − totalExpenses
+  costOfGoods:   KHR   // cost of the goods sold in the window
+  netProfit:     KHR   // totalSales − costOfGoods − totalExpenses (lib/profit)
   openingCash:   KHR
   openedAt:      string
   closedAt:      string | null
@@ -160,13 +162,19 @@ export const cashDrawerService = {
       .toArray()
     const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0)
 
+    const items = sales.length ? await db.saleItems.where('saleId').anyOf(sales.map((s) => s.id)).toArray() : []
+    const uncosted = [...new Set(items.filter((i) => i.unitCost == null).map((i) => i.productId))]
+    const costs = new Map((await db.products.bulkGet(uncosted)).flatMap((p) => (p ? [[p.id as string, p.costPrice as number]] : [])))
+    const profit = computeProfit({ sales, items, currentCost: (id) => costs.get(id), expenses: totalExpenses })
+
     return {
       totalSales:    totalSales    as KHR,
       cashSales:     cashSales     as KHR,
       debtSales:     debtSales     as KHR,
       abaSales:      abaSales      as KHR,
       totalExpenses: totalExpenses as KHR,
-      netProfit:     (totalSales - totalExpenses) as KHR,
+      costOfGoods:   profit.costOfGoods,
+      netProfit:     (totalSales - profit.costOfGoods - totalExpenses) as KHR,
       openingCash:   drawer.openingBalance,
       openedAt:      drawer.openedAt,
       closedAt:      drawer.closedAt,

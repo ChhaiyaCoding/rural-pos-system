@@ -21,6 +21,7 @@ import { cx } from '@/components/ui/cx'
 import { firstGrapheme } from '@/components/ui/text'
 import type { KHR, TenantId } from '@/types/branded'
 import { salesBetween } from '@/db/queries'
+import { computeProfit } from '@/lib/profit'
 
 const DEMO_TENANT = 'tenant-demo' as TenantId
 
@@ -46,7 +47,22 @@ export default function HomePage() {
     [today]
   ) ?? []
   const todayExpenseTotal = todayExpenses.reduce((s, e) => s + (e.amount as number), 0) as KHR
-  const todayProfit       = (todayRevenue - todayExpenseTotal) as KHR
+
+  /* Today's profit = revenue − cost of goods sold − expenses (lib/profit) */
+  const todayCost = useLiveQuery(async () => {
+    const ids = todaySales.map((s) => s.id)
+    if (ids.length === 0) return { items: [], costs: new Map<string, number>() }
+    const items = await db.saleItems.where('saleId').anyOf(ids).toArray()
+    const productIds = [...new Set(items.filter((i) => i.unitCost == null).map((i) => i.productId))]
+    const products = await db.products.bulkGet(productIds)
+    return { items, costs: new Map(products.flatMap((p) => (p ? [[p.id as string, p.costPrice as number]] : []))) }
+  }, [todaySales])
+  const todayProfit = computeProfit({
+    sales: todaySales,
+    items: todayCost?.items ?? [],
+    currentCost: (id) => todayCost?.costs.get(id),
+    expenses: todayExpenseTotal,
+  }).net
 
   /* Backup reminder: the device holds the only copy of the shop's data */
   const hasSales = (useLiveQuery(() => db.sales.where('tenantId').equals(DEMO_TENANT).count(), []) ?? 0) > 0

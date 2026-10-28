@@ -35,6 +35,8 @@ describe('saleService.create', () => {
     expect(moves.every((m) => m.type === 'sale' && m.saleId === res.data.id)).toBe(true)
     expect(await db.debtTransactions.count()).toBe(0)
     expect((await db.syncQueue.toArray()).map((q) => q.tableName)).toEqual(['sales'])
+    // the cost price at the time of sale is kept for profit
+    expect((await db.saleItems.toArray()).map((i) => i.unitCost)).toEqual([800, 800])
   })
 
   it('debt sale writes the sale and the debt charge together', async () => {

@@ -43,6 +43,8 @@ export function StoreDaySummaryView({ summary }: Props) {
       {/* Totals */}
       <div className="divide-y divide-line overflow-hidden rounded-lg bg-surface">
         <Row label="លក់សរុប" value={summary.totalSales} strong />
+        <Row label="ថ្លៃដើមទំនិញ" value={summary.costOfGoods} prefix={summary.costOfGoods > 0 ? '−' : ''} />
+        <Row label="ចំណាយ" value={summary.totalExpenses} prefix={summary.totalExpenses > 0 ? '−' : ''} />
         <div className="flex items-center justify-between gap-3 px-4 py-3.5">
           <span className="text-body-sm font-bold text-text">ចំណេញសុទ្ធ</span>
           <span className={cx('text-title-sm font-bold tabular-nums', profitPositive ? 'text-success' : 'text-danger')}>

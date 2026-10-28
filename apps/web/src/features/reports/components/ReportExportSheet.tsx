@@ -20,6 +20,8 @@ interface Props {
   totalRevenue: KHR
   totalExpenses: KHR
   netProfit:    KHR
+  /** Cost of the goods sold in the period (netProfit = revenue − this − expenses) */
+  costOfGoods:  KHR
   salesCount:   number
   cashCount:    number
   cashAmount:   KHR
@@ -39,6 +41,7 @@ export function ReportExportSheet({
   totalRevenue,
   totalExpenses,
   netProfit,
+  costOfGoods,
   salesCount,
   cashCount,
   cashAmount,
@@ -121,6 +124,7 @@ export function ReportExportSheet({
                 <div style="font-size:11px;color:#3E4A5C;font-weight:700">${formatUSD(totalExpenses)}</div>
               </div>
             </div>
+            <div class="row"><span class="label">ថ្លៃដើមទំនិញ</span><span class="value">−${formatKHR(costOfGoods)}</span></div>
             <div class="row" style="border-top:1px solid #E2E6EC;padding-top:6px"><span class="label" style="font-weight:700">ចំណេញសុទ្ធ</span><span class="value" style="color:${(netProfit as number) >= 0 ? '#067A55' : '#B42318'};font-weight:800;font-size:16px">${formatKHR(netProfit)} · ${formatUSD(netProfit)}</span></div>
           </div>
 
@@ -203,7 +207,8 @@ export function ReportExportSheet({
       `🛒 ការលក់: ${salesCount} ដង`,
       ``,
       `💸 ចំណាយ: ${formatKHR(totalExpenses)} · ${formatUSD(totalExpenses)}`,
-      `📈 ចំណេញ: ${formatKHR(netProfit)} · ${formatUSD(netProfit)}`,
+      `📦 ថ្លៃដើមទំនិញ: ${formatKHR(costOfGoods)}`,
+      `📈 ចំណេញសុទ្ធ: ${formatKHR(netProfit)} · ${formatUSD(netProfit)}`,
       catLines ? `\n💸 ចំណាយតាមប្រភេទ:\n${catLines}` : '',
       ``,
       `💵 សាច់ប្រាក់: ${cashCount} ដង · ${formatKHR(cashAmount)} · ${formatUSD(cashAmount)}`,
@@ -284,6 +289,10 @@ export function ReportExportSheet({
                   <p className="text-body-sm font-extrabold text-debt tabular-nums leading-tight">{formatKHR(totalExpenses)}</p>
                   <p className="text-caption font-bold text-text-subtle tabular-nums">{formatUSD(totalExpenses)}</p>
                 </div>
+              </div>
+              <div className="mt-2.5 flex items-baseline justify-between">
+                <span className="text-meta font-semibold text-text-muted">ថ្លៃដើមទំនិញ</span>
+                <span className="text-body-sm font-bold tabular-nums text-text">−{formatKHR(costOfGoods)}</span>
               </div>
               <div className="mt-3 flex items-baseline justify-between border-t border-line pt-3">
                 <span className="text-meta font-bold text-text-muted">ចំណេញ​សុទ្ធ</span>
